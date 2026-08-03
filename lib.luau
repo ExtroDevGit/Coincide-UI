@@ -2199,7 +2199,6 @@ function Library:Window(Opts)
 
 			
 
-
 function SecRef:Slider(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Name     = tostring(Opts.Name or Opts.Title or Opts.Text or "Slider");
@@ -2211,7 +2210,7 @@ function SecRef:Slider(Opts)
 	local Callback = typeof(Opts.Callback) == "function" and Opts.Callback or function() end;
 	local Flag     = tostring(Opts.Flag or Opts.Pointer or ("_" .. Name));
 	local Value    = math.clamp(tonumber(Opts.Default) or Min, Min, Max);
-	local IncreaseNumber = tonumber(Opts.increasenumber) or Step;
+	local IncreaseNumber = tonumber(Opts.IncreaseNumber) or Step;
 	Library.Flags[Flag] = Value;
 
 	local Container = Library:CreateInstance("Frame", {
@@ -2226,7 +2225,7 @@ function SecRef:Slider(Opts)
 		Name                   = "Label";
 		Parent                 = Container;
 		Position               = UDim2.new(0, 0, 0, 0);
-		Size                   = UDim2.new(1, -40, 0, 14);
+		Size                   = UDim2.new(1, -90, 0, 14);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 		Text                   = Name;
@@ -2240,7 +2239,7 @@ function SecRef:Slider(Opts)
 		Name                   = "Value";
 		Parent                 = Container;
 		AnchorPoint            = Vector2.new(1, 0);
-		Position               = UDim2.new(1, 0, 0, 0);
+		Position               = UDim2.new(1, -42, 0, 0);
 		Size                   = UDim2.new(0, 40, 0, 14);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
@@ -2255,13 +2254,13 @@ function SecRef:Slider(Opts)
 		ValLbl.FontFace = ProggyCleanFont;
 	end;
 
-	-- YENİ: BUTON CONTAINER
+	-- BUTON CONTAINER
 	local ButtonContainer = Library:CreateInstance("Frame", {
 		Name                   = "ButtonContainer";
 		Parent                 = Container;
-		AnchorPoint            = Vector2.new(1, 1);
-		Position               = UDim2.new(1, -2, 1, 0);
-		Size                   = UDim2.new(0, 36, 0, 10);
+		AnchorPoint            = Vector2.new(1, 0);
+		Position               = UDim2.new(1, 0, 0, 0);
+		Size                   = UDim2.new(0, 40, 0, 14);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 	});
@@ -2269,14 +2268,14 @@ function SecRef:Slider(Opts)
 		Parent        = ButtonContainer;
 		FillDirection = Enum.FillDirection.Horizontal;
 		SortOrder     = Enum.SortOrder.LayoutOrder;
-		Padding       = UDim.new(0, 2);
+		Padding       = UDim.new(0, 1);
 	});
 
-	-- YENİ: - BUTONU
+	-- - BUTONU
 	local MinusBtn = Library:CreateInstance("TextButton", {
 		Name                   = "MinusBtn";
 		Parent                 = ButtonContainer;
-		Size                   = UDim2.new(0, 15, 1, 0);
+		Size                   = UDim2.new(0, 12, 0, 12);
 		BackgroundColor3       = Color3.fromHex("000000");
 		BorderSizePixel        = 0;
 		AutoButtonColor        = false;
@@ -2312,17 +2311,17 @@ function SecRef:Slider(Opts)
 		BackgroundTransparency = 1;
 		Text                   = "−";
 		TextColor3             = Color3.fromHex("FFFFFF");
-		TextSize               = 12;
+		TextSize               = 10;
 		TextXAlignment         = Enum.TextXAlignment.Center;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
 	if ProggyCleanFont then MinusLabel.FontFace = ProggyCleanFont end;
 
-	-- YENİ: + BUTONU
+	-- + BUTONU
 	local PlusBtn = Library:CreateInstance("TextButton", {
 		Name                   = "PlusBtn";
 		Parent                 = ButtonContainer;
-		Size                   = UDim2.new(0, 15, 1, 0);
+		Size                   = UDim2.new(0, 12, 0, 12);
 		BackgroundColor3       = Color3.fromHex("000000");
 		BorderSizePixel        = 0;
 		AutoButtonColor        = false;
@@ -2358,7 +2357,7 @@ function SecRef:Slider(Opts)
 		BackgroundTransparency = 1;
 		Text                   = "+";
 		TextColor3             = Color3.fromHex("FFFFFF");
-		TextSize               = 12;
+		TextSize               = 10;
 		TextXAlignment         = Enum.TextXAlignment.Center;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
@@ -2477,7 +2476,6 @@ function SecRef:Slider(Opts)
 	function Obj:Set(V) SetVal(tonumber(V) or Value) end;
 	return Obj;
 end;
-
 			function SecRef:Button(Opts)
 				Opts = typeof(Opts) == "table" and Opts or {};
 				local Name     = tostring(Opts.Name or Opts.Title or Opts.Text or "Button");
