@@ -5260,7 +5260,7 @@ end;
 					Acc = 0;
 					local Opts = Library.Flags.WatermarkOpts or {};
 					local Parts = {};
-					if Opts.Title              then table.insert(Parts, "Coincide") end;
+					if Opts.Title              then table.insert(Parts, "Hydrogen") end;
 					if Opts.Fps                then table.insert(Parts, Fps .. " fps") end;
 					if Opts.Ping and LP        then table.insert(Parts, math.round(LP:GetNetworkPing() * 1000) .. " ms") end;
 					if Opts["Game Name"]       then table.insert(Parts, GameName) end;
