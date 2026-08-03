@@ -6822,9 +6822,9 @@ function Library:IconBar(Opts)
 
 		local Stroke = self:CreateInstance("UIStroke", {
 			Parent = Btn;
-			Color = Color3.fromHex("FFFFFF");
-			Thickness = 1;
-			Transparency = 0.7;
+			Color = Color3.fromHex("1F1F1F");
+			Thickness = 0.4;
+			Transparency = 0.75;
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
 		});
 
