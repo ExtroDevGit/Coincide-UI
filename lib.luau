@@ -26,7 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -6006,7 +6006,6 @@ function Library:Playerlist(Opts)
 	ContentEdge("BottomBlack", Vector2.new(0, 1), UDim2.new(0, 0, 1, 0),  UDim2.new(1, 0, 0, 1),   "000000");
 	ContentEdge("BottomGray",  Vector2.new(0, 1), UDim2.new(0, 1, 1, -1), UDim2.new(1, -2, 0, 1),  "393939");
 
-	-- SEARCH BOX
 	local SearchBox = self:CreateInstance("Frame", {
 		Name             = "SearchBox";
 		Parent           = Outer;
@@ -6056,7 +6055,6 @@ function Library:Playerlist(Opts)
 	});
 	if ProggyCleanFont then SearchInput.FontFace = ProggyCleanFont end;
 
-	-- PLAYER LIST
 	local PlayerListScroll = self:CreateInstance("ScrollingFrame", {
 		Name                   = "PlayerList";
 		Parent                 = Content;
@@ -6077,63 +6075,65 @@ function Library:Playerlist(Opts)
 		SortOrder     = Enum.SortOrder.LayoutOrder;
 		Padding       = UDim.new(0, 0);
 	});
-	self:CreateInstance("UIPadding", {
-		Parent        = PlayerListScroll;
-		PaddingLeft   = UDim.new(0, 4);
-		PaddingRight  = UDim.new(0, 4);
-		PaddingTop    = UDim.new(0, 4);
-		PaddingBottom = UDim.new(0, 4);
-	});
 
 	self:Draggable(Outer);
 
 	local LP = game:GetService("Players").LocalPlayer;
 	local Players = game:GetService("Players");
+	local PlayerStates = {};
 
-	local function GetPlayerTeam(Player)
+	local function GetPlayerTeamDisplay(Player, State)
 		if Player == LP then
 			return "LocalPlayer";
 		end;
-		if Player.Team then
-			return Player.Team.Name;
-		end;
-		return "Neutral";
+		State = State or "Neutral";
+		return State;
+	end;
+
+	local function GetTeamColor(State)
+		if State == "Friendly" then return Color3.fromHex("00FF00") end;
+		if State == "Priority" then return Color3.fromHex("FF0000") end;
+		return Color3.fromHex("A0A0A0");
 	end;
 
 	local function RefreshPlayerList()
 		for _, Child in PlayerListScroll:GetChildren() do
-			if Child:IsA("Frame") then Child:Destroy() end;
+			if Child:IsA("Frame") and Child.Name:find("PlayerRow") then 
+				Child:Destroy() 
+			end;
 		end;
 
 		local SearchText = string.lower(SearchInput.Text);
 		local PlayerList = {};
 
-		-- LocalPlayer'ı listeye ekle
 		if LP then
-			table.insert(PlayerList, { Name = LP.Name, Player = LP, Team = GetPlayerTeam(LP), Index = 0 });
+			table.insert(PlayerList, { Name = LP.Name, Player = LP, Index = 0 });
 		end;
 
-		-- Diğer oyuncuları ekle
 		for _, Player in Players:GetPlayers() do
 			if Player ~= LP then
 				table.insert(PlayerList, { 
 					Name = Player.Name, 
 					Player = Player, 
-					Team = GetPlayerTeam(Player),
 					Index = #PlayerList + 1
 				});
 			end;
 		end;
 
-		-- Oyuncuları adına göre filtrele
 		for _, PlayerData in PlayerList do
 			if SearchText == "" or string.find(string.lower(PlayerData.Name), SearchText, 1, true) then
-				local Row = self:CreateInstance("Frame", {
+				local State = PlayerStates[PlayerData.Player] or "Neutral";
+
+				local Row = self:CreateInstance("TextButton", {
 					Name                   = "PlayerRow_" .. PlayerData.Name;
 					Parent                 = PlayerListScroll;
-					Size                   = UDim2.new(1, 0, 0, 18);
+					Size                   = UDim2.new(1, 0, 0, 16);
+					BackgroundColor3       = Color3.fromHex("1A1A1A");
 					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
+					BorderSizePixel        = 1;
+					BorderColor3           = Color3.fromHex("2A2A2A");
+					AutoButtonColor        = false;
+					Text                   = "";
 					LayoutOrder            = PlayerData.Index;
 				});
 
@@ -6141,7 +6141,7 @@ function Library:Playerlist(Opts)
 					Name                   = "Name";
 					Parent                 = Row;
 					AnchorPoint            = Vector2.new(0, 0.5);
-					Position               = UDim2.new(0, 0, 0.5, 0);
+					Position               = UDim2.new(0, 4, 0.5, 0);
 					Size                   = UDim2.new(0, 200, 1, 0);
 					BackgroundTransparency = 1;
 					BorderSizePixel        = 0;
@@ -6157,43 +6157,127 @@ function Library:Playerlist(Opts)
 					Name                   = "Team";
 					Parent                 = Row;
 					AnchorPoint            = Vector2.new(1, 0.5);
-					Position               = UDim2.new(1, 0, 0.5, 0);
+					Position               = UDim2.new(1, -4, 0.5, 0);
 					Size                   = UDim2.new(0, 150, 1, 0);
 					BackgroundTransparency = 1;
 					BorderSizePixel        = 0;
-					Text                   = PlayerData.Team;
-					TextColor3             = PlayerData.Team == "LocalPlayer" and Library.Accent or Color3.fromHex("A0A0A0");
+					Text                   = GetPlayerTeamDisplay(PlayerData.Player, State);
+					TextColor3             = GetTeamColor(State);
 					TextSize               = 12;
 					TextXAlignment         = Enum.TextXAlignment.Right;
 					TextYAlignment         = Enum.TextYAlignment.Center;
 				});
 				if ProggyCleanFont then TeamLbl.FontFace = ProggyCleanFont end;
 
-				-- HOVER EFFECT
 				Row.MouseEnter:Connect(function()
-					Row.BackgroundColor3 = Color3.fromHex("1E1E1E");
-					Row.BackgroundTransparency = 0.3;
+					Row.BackgroundTransparency = 0.7;
 				end);
 				Row.MouseLeave:Connect(function()
 					Row.BackgroundTransparency = 1;
+				end);
+
+				Row.MouseButton1Click:Connect(function()
+					local CurrentState = PlayerStates[PlayerData.Player] or "Neutral";
+					local NextState;
+
+					if CurrentState == "Neutral" then
+						NextState = "Friendly";
+					elseif CurrentState == "Friendly" then
+						NextState = "Priority";
+					else
+						NextState = "Neutral";
+					end;
+
+					PlayerStates[PlayerData.Player] = NextState;
+
+					local FlashInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+					TweenService:Create(Row, FlashInfo, { BackgroundTransparency = 0.3 }):Play();
+					task.delay(0.1, function()
+						TweenService:Create(Row, FlashInfo, { BackgroundTransparency = 1 }):Play();
+					end);
+
+					TeamLbl.Text = GetPlayerTeamDisplay(PlayerData.Player, NextState);
+					TeamLbl.TextColor3 = GetTeamColor(NextState);
 				end);
 			end;
 		end;
 	end;
 
-	-- İlk yükle
 	RefreshPlayerList();
 
-	-- Oyuncu katıldığında/ayrıldığında güncelle
 	Players.PlayerAdded:Connect(RefreshPlayerList);
 	Players.PlayerRemoving:Connect(RefreshPlayerList);
-
-	-- Arama kutusunda değişiklik
 	SearchInput:GetPropertyChangedSignal("Text"):Connect(RefreshPlayerList);
 
-	local Obj = { Gui = Gui, Outer = Outer, Content = Content };
+	local FadeProps = {
+		Frame          = { "BackgroundTransparency" };
+		TextLabel      = { "BackgroundTransparency", "TextTransparency" };
+		TextButton     = { "BackgroundTransparency", "TextTransparency" };
+		ScrollingFrame = { "BackgroundTransparency" };
+		UIStroke       = { "Transparency" };
+	};
+
+	local FadeOriginals = nil;
+	local function CaptureFadeOriginals()
+		local Map = {};
+		for _, Inst in Outer:GetDescendants() do
+			local Props = FadeProps[Inst.ClassName];
+			if Props then
+				local PMap = {};
+				for _, P in Props do
+					local Ok, V = pcall(function() return Inst[P] end);
+					if Ok then PMap[P] = V end;
+				end;
+				Map[Inst] = PMap;
+			end;
+		end;
+		local OuterProps = FadeProps[Outer.ClassName];
+		if OuterProps then
+			local PMap = {};
+			for _, P in OuterProps do
+				local Ok, V = pcall(function() return Outer[P] end);
+				if Ok then PMap[P] = V end;
+			end;
+			Map[Outer] = PMap;
+		end;
+		return Map;
+	end;
+
+	local Obj = { Gui = Gui, Outer = Outer, Content = Content, _Visible = true };
+	
+	function Obj:SetVisible(State)
+		if self._Visible == State then return end;
+		self._Visible = State;
+
+		if not FadeOriginals then
+			FadeOriginals = CaptureFadeOriginals();
+		end;
+
+		local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
+		if State then
+			Gui.Enabled = true;
+			for Inst, PMap in FadeOriginals do
+				if Inst.Parent then
+					local Goal = {};
+					for P, V in PMap do Goal[P] = V end;
+					Library:Tween(Inst, Info, Goal):Play();
+				end;
+			end;
+		else
+			for Inst, PMap in FadeOriginals do
+				if Inst.Parent then
+					local Goal = {};
+					for P in PMap do Goal[P] = 1 end;
+					Library:Tween(Inst, Info, Goal):Play();
+				end;
+			end;
+			task.delay(Info.Time, function()
+				if not self._Visible then Gui.Enabled = false end;
+			end);
+		end;
+	end;
+
 	function Obj:Refresh() RefreshPlayerList() end;
-	function Obj:SetVisible(State) Gui.Enabled = State end;
 	function Obj:Destroy() Gui:Destroy() end;
 	return Obj;
 end;
