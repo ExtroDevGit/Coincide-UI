@@ -965,16 +965,13 @@ function Library:Window(Opts)
 				Library:Tween(Lbl, BgInfo, { TextColor3 = Color3.fromHex("8C8F99") }):Play();
 			end;
 		end;
-
 function TabRef:SubTabs(Opts)
     Opts = typeof(Opts) == "table" and Opts or {};
 
-    -- SubTabs birden fazla kez çağrılırsa aynı bar'ı yeniden kullan
-    if self._SubTabBar then
+    if self._SubTabsObj then
         return self._SubTabsObj;
     end;
 
-    -- Ana Left/Right kolonlarını gizle, SubTabs bunların yerine geçiyor
     self.Left.Visible  = false;
     self.Right.Visible = false;
 
@@ -1005,14 +1002,14 @@ function TabRef:SubTabs(Opts)
 
     self._SubTabBar     = SubBar;
     self._SubPageHolder = SubPageHolder;
-    self._SubTabs       = {};
+    self._SubTabsList    = {};
 
     local CpInactiveA, CpInactiveB = Color3.fromHex("1F1F1F"), Color3.fromHex("181818");
     local CpActiveA,   CpActiveB   = Color3.fromHex("161616"), Color3.fromHex("151515");
     local BgInfo   = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
     local PageInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
 
-    local SubTabsList = self._SubTabs;
+    local SubTabsList = self._SubTabsList;
     local SelfTab = self;
 
     local Obj = { SubTabs = SubTabsList };
@@ -1020,6 +1017,8 @@ function TabRef:SubTabs(Opts)
     function Obj:SubTab(NameOrOpts)
         local SubOpts = typeof(NameOrOpts) == "table" and NameOrOpts or { Name = tostring(NameOrOpts) };
         local SubName = tostring(SubOpts.Name or SubOpts.Title or "SubTab");
+
+        local ok, err = pcall(function()
 
         local Btn = Library:CreateInstance("TextButton", {
             Name                   = "SubTab_" .. SubName;
@@ -1197,11 +1196,16 @@ function TabRef:SubTabs(Opts)
             end;
         end;
 
-        -- Section metodunu ana Tab'ın Section fonksiyonuna yönlendir,
-        -- ama Left/Right kolonlarını bu SubTab'ınkiyle değiştir
+        -- Section: ana TabRef:Section'ı, self.Left/self.Right/self.Page yerine
+        -- bu sub-tab'ın kendi Left/Right'ini kullanacak şekilde çağırıyoruz.
+        -- rawset ile doğrudan gerçek bir tablo kullanıyoruz (setmetatable/FakeTab yok).
         function SubTabRef:Section(SecOpts)
-            local FakeTab = setmetatable({ Left = SubLeft, Right = SubRight, Page = SelfTab.Page }, { __index = SelfTab });
-            return SelfTab.Section(FakeTab, SecOpts);
+            local Proxy = {
+                Left  = SubLeft;
+                Right = SubRight;
+                Page  = SelfTab.Page;
+            };
+            return TabRef.Section(Proxy, SecOpts);
         end;
 
         Btn.MouseButton1Click:Connect(function()
@@ -1213,7 +1217,6 @@ function TabRef:SubTabs(Opts)
 
         table.insert(SubTabsList, SubTabRef);
 
-        -- Ayırıcıları güncelle: son sekmenin separator'ı görünmesin
         for I, T in SubTabsList do
             T.Separator.BackgroundTransparency = (I == #SubTabsList) and 1 or (T.Active and 1 or 0);
         end;
@@ -1223,12 +1226,18 @@ function TabRef:SubTabs(Opts)
         end;
 
         return SubTabRef;
+
+        end); -- pcall kapanışı
+
+        if not ok then
+            warn("[SubTabs] SubTab creation failed for '" .. SubName .. "': " .. tostring(err));
+            Library:Log("SubTab error (" .. SubName .. "): " .. tostring(err));
+        end;
     end;
 
     self._SubTabsObj = Obj;
     return Obj;
 end;
-
 		function TabRef:Section(SecOpts)
 			SecOpts = typeof(SecOpts) == "table" and SecOpts or { Name = tostring(SecOpts) };
 			local SecName = tostring(SecOpts.Name or SecOpts.Title or "section");
