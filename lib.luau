@@ -26,7 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -6822,7 +6822,7 @@ function Library:IconBar(Opts)
 
 		local Stroke = self:CreateInstance("UIStroke", {
 			Parent = Btn;
-			Color = Color3.fromHex("1F1F1F");
+			Color = Color3.fromHex("4D4D4D");
 			Thickness = 0.4;
 			Transparency = 0.75;
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
