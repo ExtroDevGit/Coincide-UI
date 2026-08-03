@@ -424,6 +424,30 @@ function Library:Resizable(TargetFrame, Minimum, Maximum)
 	return Grip;
 end;
 
+function Library:AddGlowing(frame,color,transparency)
+	local glow = Instance.new("ImageLabel", frame);
+	glow.Name = "GlowEffect";
+	glow.Image = "rbxassetid://18245826428";
+	glow.ScaleType = Enum.ScaleType.Slice;
+	glow.SliceCenter = Rect.new(10, 10, 60, 60);
+	glow.ImageColor3 = color;
+	glow.ImageTransparency = transparency;
+	glow.BackgroundTransparency = 1;
+	glow.Size = UDim2.new(1, 40, 1, 40);
+	glow.Position = UDim2.new(0, -10, 0, -20);
+	glow.ZIndex = -1;
+end
+
+function Library:AddGlowingV2(frame,color,transparency)
+	local glow = Library:CreateInstance("UIShadow");
+	glow.BlurRadius = UDim.new(0, 10);
+	glow.Color = color;
+	glow.Transparency = transparency;
+	glow.Parent = frame;
+	glow.Enabled = true;
+end
+
+
 local ProggyCleanFont;
 do
 	local Asset = Library:RegisterFont("ProggyClean", "https://github.com/networph-private874612748471/curly-octo-memory/raw/refs/heads/main/fs-tahoma-8px.ttf", 400, "normal");
@@ -595,6 +619,7 @@ function Library:Window(Opts)
 		BackgroundTransparency = 1;
 		BorderSizePixel = 0;
 	});
+	Library:AddGlowingV2(InnerOutline,Library.Accent,0.4)
 	self:CreateInstance("UIStroke", {
 		Parent          = InnerOutline;
 		Color           = Color3.fromHex("393939");
@@ -5909,6 +5934,8 @@ function Library:Playerlist(Opts)
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
 	});
+	Library:AddGlowingV2(Outer,Library.Accent,0.4)
+
 	self:CreateInstance("UIGradient", {
 		Parent   = Outer;
 		Rotation = 90;
@@ -6342,6 +6369,8 @@ function Library:LogWindow(Opts)
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
 	});
+	Library:AddGlowingV2(Outer,Library.Accent,0.4)
+
 	self:CreateInstance("UIGradient", {
 		Parent   = Outer;
 		Rotation = 90;
@@ -6682,5 +6711,3 @@ function Library:Unload()
 	self.Options = {};
 	self:Log("Unload complete");
 end;
-
-return Library;
