@@ -26,7 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -5883,7 +5883,6 @@ function Library:Notify(Text, Time)
 
 	return Wrapper;
 end;
-
 function Library:Playerlist(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Title = tostring(Opts.Title or "Playerlist");
@@ -5891,19 +5890,19 @@ function Library:Playerlist(Opts)
 	local Height = tonumber(Opts.Height) or 400;
 
 	local Gui = self:CreateInstance("ScreenGui", {
-		Name = "PlayerlistGui";
-		Parent = (gethui and gethui()) or CoreGui;
+		Name           = "PlayerlistGui";
+		Parent         = (gethui and gethui()) or CoreGui;
 		IgnoreGuiInset = true;
-		ResetOnSpawn = false;
+		ResetOnSpawn   = false;
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
 	});
 
 	local Outer = self:CreateInstance("Frame", {
-		Name = "Outer";
-		Parent = Gui;
-		AnchorPoint = Vector2.new(0, 0.5);
-		Position = UDim2.new(0, 450, 0.5, 0);
-		Size = UDim2.fromOffset(Width, Height);
+		Name            = "Outer";
+		Parent          = Gui;
+		AnchorPoint     = Vector2.new(1, 0.5);
+		Position        = UDim2.new(0, 0, 0.5, 0);
+		Size            = UDim2.fromOffset(Width, Height);
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel = 0;
 	});
@@ -5924,12 +5923,11 @@ function Library:Playerlist(Opts)
 	});
 
 	local InnerOutline = self:CreateInstance("Frame", {
-		Name = "InnerOutline";
-		Parent = Outer;
-		Position = UDim2.new(0, 1, 0, 1);
-		Size = UDim2.new(1, -2, 1, -2);
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 1, 0, 1);
+		Size                   = UDim2.new(1, -2, 1, -2);
 		BackgroundTransparency = 1;
-		BorderSizePixel = 0;
+		BorderSizePixel        = 0;
 	});
 	self:CreateInstance("UIStroke", {
 		Parent          = InnerOutline;
@@ -5940,38 +5938,32 @@ function Library:Playerlist(Opts)
 	});
 
 	local TopLine = self:CreateInstance("Frame", {
-		Name = "TopLine";
-		Parent = Outer;
-		Position = UDim2.new(0, 1, 0, 1);
-		Size = UDim2.new(1, -2, 0, 1);
+		Parent           = Outer;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 0, 1);
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
-		BorderSizePixel = 0;
-		ZIndex = 10;
+		BorderSizePixel  = 0;
+		ZIndex           = 10;
 	});
-	local TopLineGradient = self:CreateInstance("UIGradient", {
-		Parent = TopLine;
+	Library:RegisterAccentGradient(self:CreateInstance("UIGradient", {
+		Parent   = TopLine;
 		Rotation = 0;
-	});
-	Library:RegisterAccentGradient(TopLineGradient);
+	}));
 
-	local TitleText = Title;
-	local Title_Obj = self:CreateInstance("TextLabel", {
-		Name                   = "Title";
+	local TitleLbl = self:CreateInstance("TextLabel", {
 		Parent                 = Outer;
 		Position               = UDim2.new(0, 6, 0, 9);
 		Size                   = UDim2.new(0, 200, 0, 18);
 		BackgroundTransparency = 1;
-		BorderSizePixel        = 0;
-		Text                   = TitleText;
+		Text                   = Title;
 		TextColor3             = Color3.fromHex("FFFFFF");
 		TextSize               = 12;
 		TextXAlignment         = Enum.TextXAlignment.Left;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
-	if ProggyCleanFont then Title_Obj.FontFace = ProggyCleanFont end;
+	if ProggyCleanFont then TitleLbl.FontFace = ProggyCleanFont end;
 
 	local Content = self:CreateInstance("Frame", {
-		Name             = "Content";
 		Parent           = Outer;
 		Position         = UDim2.new(0, 5, 0, 34);
 		Size             = UDim2.new(1, -10, 1, -50);
@@ -5987,9 +5979,8 @@ function Library:Playerlist(Opts)
 		});
 	});
 
-	local function ContentEdge(Name, Anchor, Pos, Sz, Color)
+	local function ContentEdge(Anchor, Pos, Sz, Color)
 		self:CreateInstance("Frame", {
-			Name             = Name;
 			Parent           = Content;
 			AnchorPoint      = Anchor;
 			Position         = Pos;
@@ -5999,15 +5990,14 @@ function Library:Playerlist(Opts)
 			ZIndex           = 10;
 		});
 	end;
-	ContentEdge("LeftBlack",   Vector2.new(0, 0), UDim2.new(0, 0, 0, 0),  UDim2.new(0, 1, 1, 0),   "000000");
-	ContentEdge("LeftGray",    Vector2.new(0, 0), UDim2.new(0, 1, 0, 1),  UDim2.new(0, 1, 1, -2),  "393939");
-	ContentEdge("RightBlack",  Vector2.new(1, 0), UDim2.new(1, 0, 0, 0),  UDim2.new(0, 1, 1, 0),   "000000");
-	ContentEdge("RightGray",   Vector2.new(1, 0), UDim2.new(1, -1, 0, 1), UDim2.new(0, 1, 1, -2),  "393939");
-	ContentEdge("BottomBlack", Vector2.new(0, 1), UDim2.new(0, 0, 1, 0),  UDim2.new(1, 0, 0, 1),   "000000");
-	ContentEdge("BottomGray",  Vector2.new(0, 1), UDim2.new(0, 1, 1, -1), UDim2.new(1, -2, 0, 1),  "393939");
+	ContentEdge(Vector2.new(0,0), UDim2.new(0,0,0,0),    UDim2.new(0,1,1,0),    "000000");
+	ContentEdge(Vector2.new(0,0), UDim2.new(0,1,0,1),    UDim2.new(0,1,1,-2),   "393939");
+	ContentEdge(Vector2.new(1,0), UDim2.new(1,0,0,0),    UDim2.new(0,1,1,0),    "000000");
+	ContentEdge(Vector2.new(1,0), UDim2.new(1,-1,0,1),   UDim2.new(0,1,1,-2),   "393939");
+	ContentEdge(Vector2.new(0,1), UDim2.new(0,0,1,0),    UDim2.new(1,0,0,1),    "000000");
+	ContentEdge(Vector2.new(0,1), UDim2.new(0,1,1,-1),   UDim2.new(1,-2,0,1),   "393939");
 
 	local SearchBox = self:CreateInstance("Frame", {
-		Name             = "SearchBox";
 		Parent           = Outer;
 		AnchorPoint      = Vector2.new(0, 1);
 		Position         = UDim2.new(0, 5, 1, -5);
@@ -6038,35 +6028,35 @@ function Library:Playerlist(Opts)
 		});
 	});
 	local SearchInput = self:CreateInstance("TextBox", {
-		Parent                 = SearchBoxInside;
-		Position               = UDim2.new(0, 4, 0, 0);
-		Size                   = UDim2.new(1, -8, 1, 0);
+		Parent            = SearchBoxInside;
+		Position          = UDim2.new(0, 4, 0, 0);
+		Size              = UDim2.new(1, -8, 1, 0);
 		BackgroundTransparency = 1;
-		BorderSizePixel        = 0;
-		ClearTextOnFocus       = false;
-		Text                   = "";
-		PlaceholderText        = "Type here...";
-		PlaceholderColor3      = Color3.fromHex("5E626B");
-		TextColor3             = Color3.fromHex("FFFFFF");
-		TextSize               = 12;
-		TextXAlignment         = Enum.TextXAlignment.Left;
-		TextYAlignment         = Enum.TextYAlignment.Center;
-		ClipsDescendants       = true;
+		BorderSizePixel   = 0;
+		ClearTextOnFocus  = false;
+		Text              = "";
+		PlaceholderText   = "Type here...";
+		PlaceholderColor3 = Color3.fromHex("5E626B");
+		TextColor3        = Color3.fromHex("FFFFFF");
+		TextSize          = 12;
+		TextXAlignment    = Enum.TextXAlignment.Left;
+		TextYAlignment    = Enum.TextYAlignment.Center;
+		ClipsDescendants  = true;
 	});
 	if ProggyCleanFont then SearchInput.FontFace = ProggyCleanFont end;
 
 	local PlayerListScroll = self:CreateInstance("ScrollingFrame", {
-		Name                   = "PlayerList";
-		Parent                 = Content;
-		Size                   = UDim2.new(1, 0, 1, 0);
+		Parent              = Content;
+		Position            = UDim2.new(0, 2, 0, 2);
+		Size                = UDim2.new(1, -4, 1, -4);
 		BackgroundTransparency = 1;
-		BorderSizePixel        = 0;
-		CanvasSize             = UDim2.new(0, 0, 0, 0);
-		AutomaticCanvasSize    = Enum.AutomaticSize.Y;
-		ScrollBarThickness     = 2;
-		ScrollBarImageColor3   = Library.Accent;
-		ScrollingDirection     = Enum.ScrollingDirection.Y;
-		ClipsDescendants       = true;
+		BorderSizePixel     = 0;
+		CanvasSize          = UDim2.new(0, 0, 0, 0);
+		AutomaticCanvasSize = Enum.AutomaticSize.Y;
+		ScrollBarThickness  = 2;
+		ScrollBarImageColor3 = Library.Accent;
+		ScrollingDirection  = Enum.ScrollingDirection.Y;
+		ClipsDescendants    = true;
 	});
 	Library:RegisterAccent(PlayerListScroll, "ScrollBarImageColor3");
 	self:CreateInstance("UIListLayout", {
@@ -6078,150 +6068,180 @@ function Library:Playerlist(Opts)
 
 	self:Draggable(Outer);
 
-	local LP = game:GetService("Players").LocalPlayer;
-	local Players = game:GetService("Players");
+	local LP         = game:GetService("Players").LocalPlayer;
+	local Players    = game:GetService("Players");
 	local PlayerStates = {};
+	local RowRefs    = {};
 
-	local function GetPlayerTeamDisplay(Player, State)
-		if Player == LP then
-			return "LocalPlayer";
-		end;
-		State = State or "Neutral";
-		return State;
-	end;
-
-	local function GetTeamColor(State)
-		if State == "Friendly" then return Color3.fromHex("00FF00") end;
-		if State == "Priority" then return Color3.fromHex("FF0000") end;
+	local function GetStateColor(Player, State)
+		if Player == LP then return Library.Accent end;
+		if State == "Friendly" then return Color3.fromRGB(0, 210, 0) end;
+		if State == "Priority" then return Color3.fromRGB(220, 0, 0) end;
 		return Color3.fromHex("A0A0A0");
 	end;
 
-	local function RefreshPlayerList()
-		for _, Child in PlayerListScroll:GetChildren() do
-			if Child:IsA("Frame") and Child.Name:find("PlayerRow") then 
-				Child:Destroy() 
-			end;
+	local function GetStateText(Player, State)
+		if Player == LP then return "LocalPlayer" end;
+		return State or "Neutral";
+	end;
+
+	local function BuildRow(Player, Index)
+		local State = PlayerStates[Player] or "Neutral";
+
+		local Row = self:CreateInstance("Frame", {
+			Name             = "Row_" .. Player.Name;
+			Parent           = PlayerListScroll;
+			Size             = UDim2.new(1, -4, 0, 18);
+			BackgroundColor3 = Color3.fromHex("1E1E1E");
+			BackgroundTransparency = 1;
+			BorderSizePixel  = 0;
+			LayoutOrder      = Index;
+		});
+
+		local RowOutlineBlack = self:CreateInstance("Frame", {
+			Parent           = Row;
+			AnchorPoint      = Vector2.new(0, 1);
+			Position         = UDim2.new(0, 0, 1, 0);
+			Size             = UDim2.new(1, 0, 0, 1);
+			BackgroundColor3 = Color3.fromHex("000000");
+			BorderSizePixel  = 0;
+			ZIndex           = 2;
+		});
+
+		local RowOutlineGray = self:CreateInstance("Frame", {
+			Parent           = Row;
+			AnchorPoint      = Vector2.new(0, 1);
+			Position         = UDim2.new(0, 1, 1, -1);
+			Size             = UDim2.new(1, -2, 0, 1);
+			BackgroundColor3 = Color3.fromHex("2A2A2A");
+			BorderSizePixel  = 0;
+			ZIndex           = 3;
+		});
+
+		local Btn = self:CreateInstance("TextButton", {
+			Parent                 = Row;
+			Size                   = UDim2.new(1, 0, 1, 0);
+			BackgroundTransparency = 1;
+			BorderSizePixel        = 0;
+			AutoButtonColor        = false;
+			Text                   = "";
+			ZIndex                 = 4;
+		});
+
+		local NameLbl = self:CreateInstance("TextLabel", {
+			Parent                 = Row;
+			AnchorPoint            = Vector2.new(0, 0.5);
+			Position               = UDim2.new(0, 4, 0.5, 0);
+			Size                   = UDim2.new(0.6, 0, 1, 0);
+			BackgroundTransparency = 1;
+			Text                   = Player.Name;
+			TextColor3             = Color3.fromHex("FFFFFF");
+			TextSize               = 12;
+			TextXAlignment         = Enum.TextXAlignment.Left;
+			TextYAlignment         = Enum.TextYAlignment.Center;
+			ZIndex                 = 5;
+		});
+		if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
+
+		local StateLbl = self:CreateInstance("TextLabel", {
+			Parent                 = Row;
+			AnchorPoint            = Vector2.new(1, 0.5);
+			Position               = UDim2.new(1, -4, 0.5, 0);
+			Size                   = UDim2.new(0.4, 0, 1, 0);
+			BackgroundTransparency = 1;
+			Text                   = GetStateText(Player, State);
+			TextColor3             = GetStateColor(Player, State);
+			TextSize               = 12;
+			TextXAlignment         = Enum.TextXAlignment.Right;
+			TextYAlignment         = Enum.TextYAlignment.Center;
+			ZIndex                 = 5;
+		});
+		if ProggyCleanFont then StateLbl.FontFace = ProggyCleanFont end;
+
+		Btn.MouseEnter:Connect(function()
+			TweenService:Create(Row, TweenInfo.new(0.1), { BackgroundTransparency = 0.7 }):Play();
+		end);
+		Btn.MouseLeave:Connect(function()
+			TweenService:Create(Row, TweenInfo.new(0.1), { BackgroundTransparency = 1 }):Play();
+		end);
+
+		if Player ~= LP then
+			Btn.MouseButton1Click:Connect(function()
+				local Cur = PlayerStates[Player] or "Neutral";
+				local Next = Cur == "Neutral" and "Friendly" or Cur == "Friendly" and "Priority" or "Neutral";
+				PlayerStates[Player] = Next;
+
+				TweenService:Create(Row, TweenInfo.new(0.08), { BackgroundTransparency = 0.2 }):Play();
+				task.delay(0.08, function()
+					TweenService:Create(Row, TweenInfo.new(0.12), { BackgroundTransparency = 1 }):Play();
+				end);
+
+				StateLbl.Text       = GetStateText(Player, Next);
+				StateLbl.TextColor3 = GetStateColor(Player, Next);
+			end);
 		end;
 
-		local SearchText = string.lower(SearchInput.Text);
-		local PlayerList = {};
+		return Row;
+	end;
 
-		if LP then
-			table.insert(PlayerList, { Name = LP.Name, Player = LP, Index = 0 });
+	local function RefreshPlayerList()
+		for _, Ref in RowRefs do
+			if Ref and Ref.Parent then Ref:Destroy() end;
+		end;
+		table.clear(RowRefs);
+
+		local SearchText = string.lower(SearchInput.Text);
+		local Idx = 0;
+
+		if LP and (SearchText == "" or string.find(string.lower(LP.Name), SearchText, 1, true)) then
+			local Row = BuildRow(LP, Idx);
+			table.insert(RowRefs, Row);
+			Idx = Idx + 1;
 		end;
 
 		for _, Player in Players:GetPlayers() do
 			if Player ~= LP then
-				table.insert(PlayerList, { 
-					Name = Player.Name, 
-					Player = Player, 
-					Index = #PlayerList + 1
-				});
-			end;
-		end;
-
-		for _, PlayerData in PlayerList do
-			if SearchText == "" or string.find(string.lower(PlayerData.Name), SearchText, 1, true) then
-				local State = PlayerStates[PlayerData.Player] or "Neutral";
-
-				local Row = self:CreateInstance("TextButton", {
-					Name                   = "PlayerRow_" .. PlayerData.Name;
-					Parent                 = PlayerListScroll;
-					Size                   = UDim2.new(1, 0, 0, 16);
-					BackgroundColor3       = Color3.fromHex("1A1A1A");
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 1;
-					BorderColor3           = Color3.fromHex("2A2A2A");
-					AutoButtonColor        = false;
-					Text                   = "";
-					LayoutOrder            = PlayerData.Index;
-				});
-
-				local NameLbl = self:CreateInstance("TextLabel", {
-					Name                   = "Name";
-					Parent                 = Row;
-					AnchorPoint            = Vector2.new(0, 0.5);
-					Position               = UDim2.new(0, 4, 0.5, 0);
-					Size                   = UDim2.new(0, 200, 1, 0);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-					Text                   = PlayerData.Name;
-					TextColor3             = Color3.fromHex("FFFFFF");
-					TextSize               = 12;
-					TextXAlignment         = Enum.TextXAlignment.Left;
-					TextYAlignment         = Enum.TextYAlignment.Center;
-				});
-				if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
-
-				local TeamLbl = self:CreateInstance("TextLabel", {
-					Name                   = "Team";
-					Parent                 = Row;
-					AnchorPoint            = Vector2.new(1, 0.5);
-					Position               = UDim2.new(1, -4, 0.5, 0);
-					Size                   = UDim2.new(0, 150, 1, 0);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-					Text                   = GetPlayerTeamDisplay(PlayerData.Player, State);
-					TextColor3             = GetTeamColor(State);
-					TextSize               = 12;
-					TextXAlignment         = Enum.TextXAlignment.Right;
-					TextYAlignment         = Enum.TextYAlignment.Center;
-				});
-				if ProggyCleanFont then TeamLbl.FontFace = ProggyCleanFont end;
-
-				Row.MouseEnter:Connect(function()
-					Row.BackgroundTransparency = 0.7;
-				end);
-				Row.MouseLeave:Connect(function()
-					Row.BackgroundTransparency = 1;
-				end);
-
-				Row.MouseButton1Click:Connect(function()
-					local CurrentState = PlayerStates[PlayerData.Player] or "Neutral";
-					local NextState;
-
-					if CurrentState == "Neutral" then
-						NextState = "Friendly";
-					elseif CurrentState == "Friendly" then
-						NextState = "Priority";
-					else
-						NextState = "Neutral";
-					end;
-
-					PlayerStates[PlayerData.Player] = NextState;
-
-					local FlashInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
-					TweenService:Create(Row, FlashInfo, { BackgroundTransparency = 0.3 }):Play();
-					task.delay(0.1, function()
-						TweenService:Create(Row, FlashInfo, { BackgroundTransparency = 1 }):Play();
-					end);
-
-					TeamLbl.Text = GetPlayerTeamDisplay(PlayerData.Player, NextState);
-					TeamLbl.TextColor3 = GetTeamColor(NextState);
-				end);
+				if SearchText == "" or string.find(string.lower(Player.Name), SearchText, 1, true) then
+					local Row = BuildRow(Player, Idx);
+					table.insert(RowRefs, Row);
+					Idx = Idx + 1;
+				end;
 			end;
 		end;
 	end;
 
 	RefreshPlayerList();
 
-	Players.PlayerAdded:Connect(RefreshPlayerList);
-	Players.PlayerRemoving:Connect(RefreshPlayerList);
+	Players.PlayerAdded:Connect(function() RefreshPlayerList() end);
+	Players.PlayerRemoving:Connect(function() RefreshPlayerList() end);
 	SearchInput:GetPropertyChangedSignal("Text"):Connect(RefreshPlayerList);
 
-	local FadeProps = {
-		Frame          = { "BackgroundTransparency" };
-		TextLabel      = { "BackgroundTransparency", "TextTransparency" };
-		TextButton     = { "BackgroundTransparency", "TextTransparency" };
-		ScrollingFrame = { "BackgroundTransparency" };
-		UIStroke       = { "Transparency" };
-	};
+	Library:OnAccent(function()
+		for _, Ref in RowRefs do
+			if Ref and Ref.Parent then
+				local StateLbl = Ref:FindFirstChild("StateLbl", true);
+				if StateLbl then
+					local Player = Players:FindFirstChild(Ref.Name:sub(5));
+					if Player and Player == LP then
+						StateLbl.TextColor3 = Library.Accent;
+					end;
+				end;
+			end;
+		end;
+	end);
 
-	local FadeOriginals = nil;
-	local function CaptureFadeOriginals()
+	local function CaptureFade()
 		local Map = {};
-		for _, Inst in Outer:GetDescendants() do
-			local Props = FadeProps[Inst.ClassName];
+		local Types = {
+			Frame          = { "BackgroundTransparency" };
+			TextLabel      = { "BackgroundTransparency", "TextTransparency" };
+			TextButton     = { "BackgroundTransparency", "TextTransparency" };
+			TextBox        = { "BackgroundTransparency", "TextTransparency" };
+			ScrollingFrame = { "BackgroundTransparency" };
+			UIStroke       = { "Transparency" };
+		};
+		local function Capture(Inst)
+			local Props = Types[Inst.ClassName];
 			if Props then
 				local PMap = {};
 				for _, P in Props do
@@ -6231,33 +6251,32 @@ function Library:Playerlist(Opts)
 				Map[Inst] = PMap;
 			end;
 		end;
-		local OuterProps = FadeProps[Outer.ClassName];
-		if OuterProps then
-			local PMap = {};
-			for _, P in OuterProps do
-				local Ok, V = pcall(function() return Outer[P] end);
-				if Ok then PMap[P] = V end;
-			end;
-			Map[Outer] = PMap;
-		end;
+		Capture(Outer);
+		for _, Inst in Outer:GetDescendants() do Capture(Inst) end;
 		return Map;
 	end;
 
-	local Obj = { Gui = Gui, Outer = Outer, Content = Content, _Visible = true };
-	
+	local FadeOriginals = nil;
+	local FadeToken    = 0;
+	local Visible      = true;
+
+	local Obj = { Gui = Gui, Outer = Outer, _Visible = true };
+
 	function Obj:SetVisible(State)
 		if self._Visible == State then return end;
 		self._Visible = State;
+		FadeToken = FadeToken + 1;
+		local Mine = FadeToken;
 
 		if not FadeOriginals then
-			FadeOriginals = CaptureFadeOriginals();
+			FadeOriginals = CaptureFade();
 		end;
 
 		local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
 		if State then
 			Gui.Enabled = true;
 			for Inst, PMap in FadeOriginals do
-				if Inst.Parent then
+				if Inst and Inst.Parent then
 					local Goal = {};
 					for P, V in PMap do Goal[P] = V end;
 					Library:Tween(Inst, Info, Goal):Play();
@@ -6265,23 +6284,53 @@ function Library:Playerlist(Opts)
 			end;
 		else
 			for Inst, PMap in FadeOriginals do
-				if Inst.Parent then
+				if Inst and Inst.Parent then
 					local Goal = {};
 					for P in PMap do Goal[P] = 1 end;
 					Library:Tween(Inst, Info, Goal):Play();
 				end;
 			end;
-			task.delay(Info.Time, function()
-				if not self._Visible then Gui.Enabled = false end;
+			task.delay(Info.Time + 0.05, function()
+				if FadeToken == Mine and not self._Visible then
+					Gui.Enabled = false;
+				end;
 			end);
 		end;
+	end;
+
+	function Obj:SyncWithWindow(Window)
+		local OrigToggle = Window.Toggle;
+		Window.Toggle = function(Win)
+			OrigToggle(Win);
+			self:SetVisible(Win.Visible);
+		end;
+		local OrigSetVisible = Window.SetVisible;
+		Window.SetVisible = function(Win, State)
+			OrigSetVisible(Win, State);
+			self:SetVisible(State);
+		end;
+	end;
+
+	function Obj:PositionNextTo(Window)
+		task.defer(function()
+			local WinOuter = Window.Outer;
+			if not WinOuter then return end;
+			local function UpdatePos()
+				local WinPos  = WinOuter.AbsolutePosition;
+				local WinSize = WinOuter.AbsoluteSize;
+				Outer.Position = UDim2.fromOffset(WinPos.X - Width - 2, WinPos.Y + WinSize.Y / 2);
+				Outer.AnchorPoint = Vector2.new(0, 0.5);
+			end;
+			UpdatePos();
+			WinOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
+			WinOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
+		end);
 	end;
 
 	function Obj:Refresh() RefreshPlayerList() end;
 	function Obj:Destroy() Gui:Destroy() end;
 	return Obj;
 end;
-
 function Library:Unload()
 	self:Log("Unload requested");
 	for _, Conn in self.Connections do
