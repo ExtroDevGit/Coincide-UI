@@ -26,7 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -619,7 +619,7 @@ function Library:Window(Opts)
 		BackgroundTransparency = 1;
 		BorderSizePixel = 0;
 	});
-	Library:AddGlowingV2(InnerOutline,Library.Accent,0.4)
+	--Library:AddGlowingV2(InnerOutline,Library.Accent,0.4)
 	self:CreateInstance("UIStroke", {
 		Parent          = InnerOutline;
 		Color           = Color3.fromHex("393939");
@@ -6730,6 +6730,7 @@ function Library:IconBar(Opts)
 		BackgroundColor3 = Color3.fromHex("000000");
 		BorderSizePixel  = 0;
 	});
+	Library:AddGlowingV2(Outer,Library.Accent,0.4)
 	self:CreateInstance("UIPadding", {
 		Parent        = Outer;
 		PaddingLeft   = UDim.new(0, 1);
@@ -6817,6 +6818,29 @@ function Library:IconBar(Opts)
 			Text             = "";
 			LayoutOrder      = Order;
 		});
+
+
+		local Stroke = self:CreateInstance("UIStroke", {
+			Parent = Btn;
+			Color = Color3.fromHex("FFFFFF");
+			Thickness = 1;
+			Transparency = 0.7;
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		});
+
+Btn.MouseEnter:Connect(function()
+	if not Active then
+		Library:Tween(Lbl, HoverInfo, { TextColor3 = Color3.fromHex("FFFFFF") }):Play();
+		Library:Tween(Stroke, HoverInfo, { Transparency = 0.2 }):Play();
+	end;
+end);
+
+Btn.MouseLeave:Connect(function()
+	if not Active then
+		Library:Tween(Lbl, HoverInfo, { TextColor3 = Color3.fromHex("8C8F99") }):Play();
+		Library:Tween(Stroke, HoverInfo, { Transparency = 0.7 }):Play();
+	end;
+end);
 
 		local Lbl = self:CreateInstance("TextLabel", {
 			Parent                 = Btn;
