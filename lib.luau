@@ -2222,7 +2222,7 @@ function Library:Window(Opts)
 				return Obj;
 			end;
 
-			
+
 function SecRef:Slider(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Name     = tostring(Opts.Name or Opts.Title or Opts.Text or "Slider");
@@ -6340,7 +6340,8 @@ function Library:Playerlist(Opts)
 			local WinPos  = WinOuter.AbsolutePosition;
 			local WinSize = WinOuter.AbsoluteSize;
 			Outer.AnchorPoint = Vector2.new(1, 0);
-			Outer.Position = UDim2.fromOffset(WinPos.X - 2, WinPos.Y);
+			-- FIX: ui frame alignment issue with GuiInset
+			Outer.Position = UDim2.fromOffset(WinPos.X - 2, WinPos.Y + GuiInset);
 		end;
 		task.defer(UpdatePos);
 		WinOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
@@ -6695,7 +6696,8 @@ function Library:LogWindow(Opts)
 			local P = OtherOuter.AbsolutePosition;
 			local S = OtherOuter.AbsoluteSize;
 			Outer.AnchorPoint = Vector2.new(1, 0);
-			Outer.Position = UDim2.fromOffset(P.X, P.Y + S.Y + 2);
+			-- FIX: ui frame alignment issue with GuiInset
+			Outer.Position = UDim2.fromOffset(P.X + S.X, P.Y + S.Y + 2 + GuiInset);
 		end;
 		task.defer(UpdatePos);
 		OtherOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);

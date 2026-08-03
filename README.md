@@ -12,6 +12,14 @@ local Window = Library:Window({
     }
 );
 
+local PlayerList = Library:Playerlist({
+    Title = "Players",
+    Width = 200,
+    Height = 300
+});
+PlayerList:PositionNextTo(Window);
+PlayerList:SyncWithWindow(Window);
+
 local TabLegit    = Window:Tab({ Name = "legit" });
 local TabRage     = Window:Tab({ Name = "rage" });
 local TabPlayers  = Window:Tab({ Name = "players" });
@@ -247,11 +255,59 @@ local Preview = SecPrev:Preview({
     }
 );
 
-SecEsp:Toggle({ Name = "Enabled", Callback = function(S) Preview:Set("Enabled", S) end });
+local SecPlayers = TabPlayers:Section({
+    Name = "Controls",
+    Side = "Left"
+    }
+);
 
-SecEsp:Toggle({ Name = "Box", Callback = function(S) Preview:Set("Box", S) end })
-	:AddColorpicker({ Default = Color3.fromRGB(255, 255, 255), Callback = function(C, A) Preview:Set("BoxColorHigh", C, A) end })
-	:AddColorpicker({ Default = Color3.fromRGB(255, 255, 255), Callback = function(C, A) Preview:Set("BoxColorLow", C, A) end });
+SecPlayers:Button({
+    Name = "Refresh List",
+    Tooltip = "Manually re-scan current players",
+    Callback = function()
+        PlayerList:Refresh()
+    end
+    }
+);
+
+SecPlayers:Button({
+    Name = "Destroy List",
+    Confirm = true,
+    Callback = function()
+        PlayerList:Destroy()
+    end
+    }
+);
+
+SecEsp:Toggle({
+    Name = "Enabled",
+    Callback = function(S)
+        Preview:Set("Enabled", S)
+    end
+    }
+);
+
+SecEsp:Toggle({
+    Name = "Box",
+        Callback = function(S)
+            Preview:Set("Box", S)
+        end
+        }
+    )
+	:AddColorpicker({
+        Default = Color3.fromRGB(255, 255, 255),
+        Callback = function(C, A)
+            Preview:Set("BoxColorHigh", C, A)
+        end
+        }
+    )
+	:AddColorpicker({
+        Default = Color3.fromRGB(255, 255, 255),
+        Callback = function(C, A)
+            Preview:Set("BoxColorLow", C, A)
+        end
+    }
+);
 
 SecEsp:Toggle({
     Name = "Box Fill",
