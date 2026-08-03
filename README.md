@@ -133,7 +133,7 @@ SecA:Dropdown({
         "Value 3"
         },
         Default = "Value 1"
-        }
+	}
 );
 
 SecA:Dropdown({
