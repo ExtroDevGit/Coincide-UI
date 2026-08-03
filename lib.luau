@@ -6709,7 +6709,175 @@ function Library:LogWindow(Opts)
 end;
 
 
+function Library:IconBar(Opts)
+	Opts = typeof(Opts) == "table" and Opts or {};
 
+	local Gui = self:CreateInstance("ScreenGui", {
+		Name           = "IconBar";
+		Parent         = (gethui and gethui()) or CoreGui;
+		IgnoreGuiInset = true;
+		ResetOnSpawn   = false;
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+	});
+
+	local Outer = self:CreateInstance("Frame", {
+		Name             = "Outer";
+		Parent           = Gui;
+		AnchorPoint      = Vector2.new(0.5, 1);
+		Position         = UDim2.new(0.5, 0, 1, -10);
+		Size             = UDim2.new(0, 0, 0, 26);
+		AutomaticSize    = Enum.AutomaticSize.X;
+		BackgroundColor3 = Color3.fromHex("000000");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIPadding", {
+		Parent        = Outer;
+		PaddingLeft   = UDim.new(0, 1);
+		PaddingRight  = UDim.new(0, 1);
+		PaddingTop    = UDim.new(0, 1);
+		PaddingBottom = UDim.new(0, 1);
+	});
+
+	local Gray = self:CreateInstance("Frame", {
+		Parent           = Outer;
+		Size             = UDim2.new(1, 0, 1, 0);
+		AutomaticSize    = Enum.AutomaticSize.X;
+		BackgroundColor3 = Color3.fromHex("393939");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIPadding", {
+		Parent        = Gray;
+		PaddingLeft   = UDim.new(0, 1);
+		PaddingRight  = UDim.new(0, 1);
+		PaddingTop    = UDim.new(0, 1);
+		PaddingBottom = UDim.new(0, 1);
+	});
+
+	local Inside = self:CreateInstance("Frame", {
+		Parent           = Gray;
+		Size             = UDim2.new(1, 0, 1, 0);
+		AutomaticSize    = Enum.AutomaticSize.X;
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIGradient", {
+		Parent   = Inside;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("1F1F1F"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("161616"));
+		});
+	});
+
+	local TopLine = self:CreateInstance("Frame", {
+		Parent           = Outer;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 0, 1);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+		ZIndex           = 10;
+	});
+	Library:RegisterAccentGradient(self:CreateInstance("UIGradient", {
+		Parent = TopLine; Rotation = 0;
+	}));
+
+	local IconRow = self:CreateInstance("Frame", {
+		Parent           = Inside;
+		Size             = UDim2.new(1, 0, 1, 0);
+		AutomaticSize    = Enum.AutomaticSize.X;
+		BackgroundTransparency = 1;
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIListLayout", {
+		Parent        = IconRow;
+		FillDirection = Enum.FillDirection.Horizontal;
+		SortOrder     = Enum.SortOrder.LayoutOrder;
+		Padding       = UDim.new(0, 1);
+	});
+	self:CreateInstance("UIPadding", {
+		Parent       = IconRow;
+		PaddingLeft  = UDim.new(0, 2);
+		PaddingRight = UDim.new(0, 2);
+	});
+
+	self:Draggable(Outer);
+
+	local Icons = {};
+	local IconSize = 22;
+
+	local function MakeIcon(Label, Order, Callback)
+		local Btn = self:CreateInstance("TextButton", {
+			Name             = "Icon_" .. Label;
+			Parent           = IconRow;
+			Size             = UDim2.fromOffset(IconSize, IconSize);
+			BackgroundColor3 = Color3.fromHex("FFFFFF");
+			BackgroundTransparency = 1;
+			BorderSizePixel  = 0;
+			AutoButtonColor  = false;
+			Text             = "";
+			LayoutOrder      = Order;
+		});
+
+		local Lbl = self:CreateInstance("TextLabel", {
+			Parent                 = Btn;
+			Size                   = UDim2.new(1, 0, 1, 0);
+			BackgroundTransparency = 1;
+			Text                   = Label;
+			TextColor3             = Color3.fromHex("8C8F99");
+			TextSize               = 12;
+			TextXAlignment         = Enum.TextXAlignment.Center;
+			TextYAlignment         = Enum.TextYAlignment.Center;
+		});
+		if ProggyCleanFont then Lbl.FontFace = ProggyCleanFont end;
+
+		local Active = false;
+		local HoverInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+
+		Btn.MouseEnter:Connect(function()
+			if not Active then
+				Library:Tween(Lbl, HoverInfo, { TextColor3 = Color3.fromHex("FFFFFF") }):Play();
+			end;
+		end);
+		Btn.MouseLeave:Connect(function()
+			if not Active then
+				Library:Tween(Lbl, HoverInfo, { TextColor3 = Color3.fromHex("8C8F99") }):Play();
+			end;
+		end);
+
+		local IconRef = { Btn = Btn, Label = Lbl, Active = false };
+
+		function IconRef:SetActive(State)
+			self.Active = State;
+			Active = State;
+			local Target = State and Library.Accent or Color3.fromHex("8C8F99");
+			Library:Tween(Lbl, HoverInfo, { TextColor3 = Target }):Play();
+		end;
+
+		Btn.MouseButton1Click:Connect(function()
+			Callback(IconRef);
+		end);
+
+		table.insert(Icons, IconRef);
+		return IconRef;
+	end;
+
+	local Obj = { Gui = Gui, Outer = Outer, Icons = Icons };
+
+	function Obj:AddIcon(Label, Order, Callback)
+		return MakeIcon(Label, Order, Callback);
+	end;
+
+	function Obj:SetVisible(State)
+		Gui.Enabled = State;
+	end;
+
+	function Obj:Destroy()
+		Gui:Destroy();
+	end;
+
+	Library._IconBar = Obj;
+	return Obj;
+end;
 
 
 
