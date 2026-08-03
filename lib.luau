@@ -26,7 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -965,6 +965,269 @@ function Library:Window(Opts)
 				Library:Tween(Lbl, BgInfo, { TextColor3 = Color3.fromHex("8C8F99") }):Play();
 			end;
 		end;
+
+function TabRef:SubTabs(Opts)
+    Opts = typeof(Opts) == "table" and Opts or {};
+
+    -- SubTabs birden fazla kez çağrılırsa aynı bar'ı yeniden kullan
+    if self._SubTabBar then
+        return self._SubTabsObj;
+    end;
+
+    -- Ana Left/Right kolonlarını gizle, SubTabs bunların yerine geçiyor
+    self.Left.Visible  = false;
+    self.Right.Visible = false;
+
+    local SubBar = Library:CreateInstance("Frame", {
+        Name                   = "SubTabBar";
+        Parent                 = self.Page;
+        Position               = UDim2.new(0, 0, 0, 0);
+        Size                   = UDim2.new(1, 0, 0, 20);
+        BackgroundTransparency = 1;
+        BorderSizePixel        = 0;
+        ZIndex                 = 5;
+    });
+    Library:CreateInstance("UIListLayout", {
+        Parent        = SubBar;
+        FillDirection = Enum.FillDirection.Horizontal;
+        SortOrder     = Enum.SortOrder.LayoutOrder;
+        Padding       = UDim.new(0, 0);
+    });
+
+    local SubPageHolder = Library:CreateInstance("Frame", {
+        Name                   = "SubTabPages";
+        Parent                 = self.Page;
+        Position               = UDim2.new(0, 0, 0, 24);
+        Size                   = UDim2.new(1, 0, 1, -24);
+        BackgroundTransparency = 1;
+        BorderSizePixel        = 0;
+    });
+
+    self._SubTabBar     = SubBar;
+    self._SubPageHolder = SubPageHolder;
+    self._SubTabs       = {};
+
+    local CpInactiveA, CpInactiveB = Color3.fromHex("1F1F1F"), Color3.fromHex("181818");
+    local CpActiveA,   CpActiveB   = Color3.fromHex("161616"), Color3.fromHex("151515");
+    local BgInfo   = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+    local PageInfo = TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+
+    local SubTabsList = self._SubTabs;
+    local SelfTab = self;
+
+    local Obj = { SubTabs = SubTabsList };
+
+    function Obj:SubTab(NameOrOpts)
+        local SubOpts = typeof(NameOrOpts) == "table" and NameOrOpts or { Name = tostring(NameOrOpts) };
+        local SubName = tostring(SubOpts.Name or SubOpts.Title or "SubTab");
+
+        local Btn = Library:CreateInstance("TextButton", {
+            Name                   = "SubTab_" .. SubName;
+            Parent                 = SubBar;
+            Size                   = UDim2.new(1, 0, 1, 0);
+            BackgroundTransparency = 1;
+            BorderSizePixel        = 0;
+            AutoButtonColor        = false;
+            Text                   = "";
+            LayoutOrder            = #SubTabsList + 1;
+        });
+
+        local Bg = Library:CreateInstance("Frame", {
+            Name             = "Bg";
+            Parent           = Btn;
+            Size             = UDim2.new(1, 0, 1, 0);
+            BackgroundColor3 = Color3.fromHex("FFFFFF");
+            BorderSizePixel  = 0;
+        });
+        local Gradient = Library:CreateInstance("UIGradient", {
+            Parent   = Bg;
+            Rotation = 90;
+            Color    = NewColorSequence({
+                NewColorSequenceKeypoint(0, CpInactiveA);
+                NewColorSequenceKeypoint(1, CpInactiveB);
+            });
+        });
+
+        local Separator = Library:CreateInstance("Frame", {
+            Name                   = "Separator";
+            Parent                 = Bg;
+            AnchorPoint            = Vector2.new(1, 0);
+            Position               = UDim2.new(1, 0, 0, 2);
+            Size                   = UDim2.new(0, 1, 1, -4);
+            BackgroundColor3       = Color3.fromHex("393939");
+            BorderSizePixel        = 0;
+            BackgroundTransparency = 1;
+        });
+
+        local Lbl = Library:CreateInstance("TextLabel", {
+            Name                   = "Label";
+            Parent                 = Bg;
+            Size                   = UDim2.new(1, 0, 1, 0);
+            BackgroundTransparency = 1;
+            BorderSizePixel        = 0;
+            Text                   = SubName;
+            TextSize               = 12;
+            TextColor3             = Color3.fromHex("8C8F99");
+            TextXAlignment         = Enum.TextXAlignment.Center;
+            TextYAlignment         = Enum.TextYAlignment.Center;
+        });
+        if ProggyCleanFont then Lbl.FontFace = ProggyCleanFont end;
+
+        local TopGradient = Library:CreateInstance("Frame", {
+            Name                   = "TopGradient";
+            Parent                 = Bg;
+            Position               = UDim2.new(0, 0, 0, 0);
+            Size                   = UDim2.new(1, 0, 0, 1);
+            BackgroundColor3       = Color3.fromHex("FFFFFF");
+            BorderSizePixel        = 0;
+            BackgroundTransparency = 1;
+        });
+        local SubTopGradient = Library:CreateInstance("UIGradient", { Parent = TopGradient; Rotation = 0 });
+        Library:RegisterAccentGradient(SubTopGradient);
+
+        local SubPage = Library:CreateInstance("CanvasGroup", {
+            Name                   = "SubPage_" .. SubName;
+            Parent                 = SubPageHolder;
+            Size                   = UDim2.new(1, 0, 1, 0);
+            BackgroundTransparency = 1;
+            BorderSizePixel        = 0;
+            Visible                = false;
+            GroupTransparency      = 1;
+        });
+
+        local SubLeft = Library:CreateInstance("ScrollingFrame", {
+            Name                   = "Left";
+            Parent                 = SubPage;
+            Position               = UDim2.new(0, 0, 0, -2);
+            Size                   = UDim2.new(0.5, -3, 1, 2);
+            BackgroundTransparency = 1;
+            BorderSizePixel        = 0;
+            CanvasSize             = UDim2.new(0, 0, 0, 0);
+            AutomaticCanvasSize    = Enum.AutomaticSize.Y;
+            ScrollBarThickness     = 0;
+            ScrollingDirection     = Enum.ScrollingDirection.Y;
+            ClipsDescendants       = true;
+        });
+        Library:CreateInstance("UIListLayout", {
+            Parent        = SubLeft;
+            FillDirection = Enum.FillDirection.Vertical;
+            SortOrder     = Enum.SortOrder.LayoutOrder;
+            Padding       = UDim.new(0, 6);
+        });
+        Library:CreateInstance("UIPadding", {
+            Parent        = SubLeft;
+            PaddingTop    = UDim.new(0, 4);
+            PaddingBottom = UDim.new(0, 6);
+        });
+
+        local SubRight = Library:CreateInstance("ScrollingFrame", {
+            Name                   = "Right";
+            Parent                 = SubPage;
+            AnchorPoint            = Vector2.new(1, 0);
+            Position               = UDim2.new(1, 0, 0, -2);
+            Size                   = UDim2.new(0.5, -3, 1, 2);
+            BackgroundTransparency = 1;
+            BorderSizePixel        = 0;
+            CanvasSize             = UDim2.new(0, 0, 0, 0);
+            AutomaticCanvasSize    = Enum.AutomaticSize.Y;
+            ScrollBarThickness     = 0;
+            ScrollingDirection     = Enum.ScrollingDirection.Y;
+            ClipsDescendants       = true;
+        });
+        Library:CreateInstance("UIListLayout", {
+            Parent        = SubRight;
+            FillDirection = Enum.FillDirection.Vertical;
+            SortOrder     = Enum.SortOrder.LayoutOrder;
+            Padding       = UDim.new(0, 6);
+        });
+        Library:CreateInstance("UIPadding", {
+            Parent        = SubRight;
+            PaddingTop    = UDim.new(0, 4);
+            PaddingBottom = UDim.new(0, 6);
+        });
+
+        local SubTabRef = {
+            Name      = SubName;
+            Button    = Btn;
+            Bg        = Bg;
+            Label     = Lbl;
+            Page      = SubPage;
+            Left      = SubLeft;
+            Right     = SubRight;
+            Separator = Separator;
+            TopGradient = TopGradient;
+            Active    = false;
+        };
+
+        local GradT, GradTarget = 0, 0;
+        local function ApplyGrad()
+            Gradient.Color = NewColorSequence({
+                NewColorSequenceKeypoint(0, CpInactiveA:Lerp(CpActiveA, GradT));
+                NewColorSequenceKeypoint(1, CpInactiveB:Lerp(CpActiveB, GradT));
+            });
+        end;
+        ApplyGrad();
+        Library:Connection(RunService.Heartbeat, function(Dt)
+            if math.abs(GradTarget - GradT) < 0.001 then
+                if GradT ~= GradTarget then GradT = GradTarget; ApplyGrad() end;
+                return;
+            end;
+            GradT = GradT + (GradTarget - GradT) * (1 - math.exp(-Dt * 16));
+            ApplyGrad();
+        end);
+
+        function SubTabRef:SetActive(State)
+            self.Active = State;
+            if State then
+                self.Page.Visible = true;
+                Library:Tween(self.Page, PageInfo, { GroupTransparency = 0 }):Play();
+                GradTarget = 1;
+                Library:Tween(Lbl, BgInfo, { TextColor3 = Color3.fromHex("FFFFFF") }):Play();
+                Library:Tween(TopGradient, BgInfo, { BackgroundTransparency = 0 }):Play();
+                Library:Tween(Separator, BgInfo, { BackgroundTransparency = 1 }):Play();
+            else
+                local P = self.Page;
+                Library:Tween(P, PageInfo, { GroupTransparency = 1 }):Play();
+                task.delay(PageInfo.Time, function()
+                    if not self.Active then P.Visible = false end;
+                end);
+                GradTarget = 0;
+                Library:Tween(Lbl, BgInfo, { TextColor3 = Color3.fromHex("8C8F99") }):Play();
+                Library:Tween(TopGradient, BgInfo, { BackgroundTransparency = 1 }):Play();
+            end;
+        end;
+
+        -- Section metodunu ana Tab'ın Section fonksiyonuna yönlendir,
+        -- ama Left/Right kolonlarını bu SubTab'ınkiyle değiştir
+        function SubTabRef:Section(SecOpts)
+            local FakeTab = setmetatable({ Left = SubLeft, Right = SubRight, Page = SelfTab.Page }, { __index = SelfTab });
+            return SelfTab.Section(FakeTab, SecOpts);
+        end;
+
+        Btn.MouseButton1Click:Connect(function()
+            for _, T in SubTabsList do
+                if T ~= SubTabRef and T.Active then T:SetActive(false) end;
+            end;
+            SubTabRef:SetActive(true);
+        end);
+
+        table.insert(SubTabsList, SubTabRef);
+
+        -- Ayırıcıları güncelle: son sekmenin separator'ı görünmesin
+        for I, T in SubTabsList do
+            T.Separator.BackgroundTransparency = (I == #SubTabsList) and 1 or (T.Active and 1 or 0);
+        end;
+
+        if #SubTabsList == 1 then
+            SubTabRef:SetActive(true);
+        end;
+
+        return SubTabRef;
+    end;
+
+    self._SubTabsObj = Obj;
+    return Obj;
+end;
 
 		function TabRef:Section(SecOpts)
 			SecOpts = typeof(SecOpts) == "table" and SecOpts or { Name = tostring(SecOpts) };
@@ -5377,6 +5640,7 @@ end;
 		ScrollingFrame = { "BackgroundTransparency", "ScrollBarImageTransparency" };
 		CanvasGroup    = { "BackgroundTransparency", "GroupTransparency" };
 		UIStroke       = { "Transparency" };
+		UIShadow       = { "Transparency" };
 	};
 	local function CaptureOriginals()
 		local Map = {};
