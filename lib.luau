@@ -26,6 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -61,6 +62,12 @@ function Library:RegisterAccent(Inst, Prop)
 	table.insert(self.AccentParts, { Inst = Inst, Prop = Prop });
 	Inst[Prop] = self.Accent;
 end;
+
+function Library:GetVersion()
+	return Library.Version or "Unknown"
+end
+
+print(Library:GetVersion())
 
 function Library:RegisterAccentGradient(Gradient)
 	table.insert(self.AccentGradients, Gradient);
@@ -2190,165 +2197,286 @@ function Library:Window(Opts)
 				return Obj;
 			end;
 
-			function SecRef:Slider(Opts)
-				Opts = typeof(Opts) == "table" and Opts or {};
-				local Name     = tostring(Opts.Name or Opts.Title or Opts.Text or "Slider");
-				local Min      = tonumber(Opts.Min) or 0;
-				local Max      = tonumber(Opts.Max) or 100;
-				local Step     = tonumber(Opts.Step) or 1;
-				local Suffix   = tostring(Opts.Suffix or "");
-				local Decimals = tonumber(Opts.Decimals) or 0;
-				local Callback = typeof(Opts.Callback) == "function" and Opts.Callback or function() end;
-				local Flag     = tostring(Opts.Flag or Opts.Pointer or ("_" .. Name));
-				local Value    = math.clamp(tonumber(Opts.Default) or Min, Min, Max);
-				Library.Flags[Flag] = Value;
+			
 
-				local Container = Library:CreateInstance("Frame", {
-					Name                   = "Slider_" .. Name;
-					Parent                 = self.Body;
-					Size                   = UDim2.new(1, 0, 0, 26);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-				});
 
-				local Lbl = Library:CreateInstance("TextLabel", {
-					Name                   = "Label";
-					Parent                 = Container;
-					Position               = UDim2.new(0, 0, 0, 0);
-					Size                   = UDim2.new(1, -40, 0, 14);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-					Text                   = Name;
-					TextColor3             = Color3.fromHex("FFFFFF");
-					TextSize               = 12;
-					TextXAlignment         = Enum.TextXAlignment.Left;
-					TextYAlignment         = Enum.TextYAlignment.Center;
-				});
+function SecRef:Slider(Opts)
+	Opts = typeof(Opts) == "table" and Opts or {};
+	local Name     = tostring(Opts.Name or Opts.Title or Opts.Text or "Slider");
+	local Min      = tonumber(Opts.Min) or 0;
+	local Max      = tonumber(Opts.Max) or 100;
+	local Step     = tonumber(Opts.Step) or 1;
+	local Suffix   = tostring(Opts.Suffix or "");
+	local Decimals = tonumber(Opts.Decimals) or 0;
+	local Callback = typeof(Opts.Callback) == "function" and Opts.Callback or function() end;
+	local Flag     = tostring(Opts.Flag or Opts.Pointer or ("_" .. Name));
+	local Value    = math.clamp(tonumber(Opts.Default) or Min, Min, Max);
+	local IncreaseNumber = tonumber(Opts.increasenumber) or Step;
+	Library.Flags[Flag] = Value;
 
-				local ValLbl = Library:CreateInstance("TextLabel", {
-					Name                   = "Value";
-					Parent                 = Container;
-					AnchorPoint            = Vector2.new(1, 0);
-					Position               = UDim2.new(1, 0, 0, 0);
-					Size                   = UDim2.new(0, 40, 0, 14);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-					TextColor3             = Color3.fromHex("8C8F99");
-					TextSize               = 12;
-					TextXAlignment         = Enum.TextXAlignment.Right;
-					TextYAlignment         = Enum.TextYAlignment.Center;
-					Text                   = "";
-				});
-				if ProggyCleanFont then
-					Lbl.FontFace    = ProggyCleanFont;
-					ValLbl.FontFace = ProggyCleanFont;
-				end;
+	local Container = Library:CreateInstance("Frame", {
+		Name                   = "Slider_" .. Name;
+		Parent                 = self.Body;
+		Size                   = UDim2.new(1, 0, 0, 26);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
 
-				local Track = Library:CreateInstance("TextButton", {
-					Name             = "Track";
-					Parent           = Container;
-					AnchorPoint      = Vector2.new(0, 1);
-					Position         = UDim2.new(0, 0, 1, 0);
-					Size             = UDim2.new(1, 0, 0, 10);
-					BackgroundColor3 = Color3.fromHex("000000");
-					BorderSizePixel  = 0;
-					AutoButtonColor  = false;
-					Text             = "";
-				});
-				local TrackGray = Library:CreateInstance("Frame", {
-					Parent           = Track;
-					Position         = UDim2.new(0, 1, 0, 1);
-					Size             = UDim2.new(1, -2, 1, -2);
-					BackgroundColor3 = Color3.fromHex("393939");
-					BorderSizePixel  = 0;
-				});
-				local TrackInside = Library:CreateInstance("Frame", {
-					Parent           = TrackGray;
-					Position         = UDim2.new(0, 1, 0, 1);
-					Size             = UDim2.new(1, -2, 1, -2);
-					BackgroundColor3 = Color3.fromHex("131313");
-					BorderSizePixel  = 0;
-				});
+	local Lbl = Library:CreateInstance("TextLabel", {
+		Name                   = "Label";
+		Parent                 = Container;
+		Position               = UDim2.new(0, 0, 0, 0);
+		Size                   = UDim2.new(1, -40, 0, 14);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		Text                   = Name;
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
 
-				local Fill = Library:CreateInstance("Frame", {
-					Name             = "Fill";
-					Parent           = TrackInside;
-					Position         = UDim2.new(0, 1, 0, 1);
-					Size             = UDim2.new(0, 0, 1, -2);
-					BackgroundColor3 = Color3.fromHex("3972EC");
-					BorderSizePixel  = 0;
-				});
-				Library:RegisterAccent(Fill);
+	local ValLbl = Library:CreateInstance("TextLabel", {
+		Name                   = "Value";
+		Parent                 = Container;
+		AnchorPoint            = Vector2.new(1, 0);
+		Position               = UDim2.new(1, 0, 0, 0);
+		Size                   = UDim2.new(0, 40, 0, 14);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Right;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+		Text                   = "";
+	});
+	if ProggyCleanFont then
+		Lbl.FontFace    = ProggyCleanFont;
+		ValLbl.FontFace = ProggyCleanFont;
+	end;
 
-				local function FormatVal(V)
-					if Decimals > 0 then
-						return string.format("%." .. Decimals .. "f", V) .. Suffix;
-					end;
-					return tostring(math.round(V)) .. Suffix;
-				end;
+	-- YENİ: BUTON CONTAINER
+	local ButtonContainer = Library:CreateInstance("Frame", {
+		Name                   = "ButtonContainer";
+		Parent                 = Container;
+		AnchorPoint            = Vector2.new(1, 1);
+		Position               = UDim2.new(1, -2, 1, 0);
+		Size                   = UDim2.new(0, 36, 0, 10);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+	Library:CreateInstance("UIListLayout", {
+		Parent        = ButtonContainer;
+		FillDirection = Enum.FillDirection.Horizontal;
+		SortOrder     = Enum.SortOrder.LayoutOrder;
+		Padding       = UDim.new(0, 2);
+	});
 
-				local VisualT = (Value - Min) / (Max - Min);
-				local TargetT = VisualT;
+	-- YENİ: - BUTONU
+	local MinusBtn = Library:CreateInstance("TextButton", {
+		Name                   = "MinusBtn";
+		Parent                 = ButtonContainer;
+		Size                   = UDim2.new(0, 15, 1, 0);
+		BackgroundColor3       = Color3.fromHex("000000");
+		BorderSizePixel        = 0;
+		AutoButtonColor        = false;
+		Text                   = "";
+		LayoutOrder            = 1;
+	});
+	local MinusBtnGray = Library:CreateInstance("Frame", {
+		Parent           = MinusBtn;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("393939");
+		BorderSizePixel  = 0;
+	});
+	local MinusBtnInside = Library:CreateInstance("Frame", {
+		Parent           = MinusBtnGray;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	Library:CreateInstance("UIGradient", {
+		Parent   = MinusBtnInside;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("1B1B1B"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("121212"));
+		});
+	});
+	local MinusLabel = Library:CreateInstance("TextLabel", {
+		Name                   = "Label";
+		Parent                 = MinusBtnInside;
+		Size                   = UDim2.new(1, 0, 1, 0);
+		BackgroundTransparency = 1;
+		Text                   = "−";
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Center;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then MinusLabel.FontFace = ProggyCleanFont end;
 
-				local function Render()
-					TargetT = (Value - Min) / (Max - Min);
-					ValLbl.Text = FormatVal(Value);
-				end;
-				Render();
-				Fill.Size = UDim2.new(VisualT, -2, 1, -2);
+	-- YENİ: + BUTONU
+	local PlusBtn = Library:CreateInstance("TextButton", {
+		Name                   = "PlusBtn";
+		Parent                 = ButtonContainer;
+		Size                   = UDim2.new(0, 15, 1, 0);
+		BackgroundColor3       = Color3.fromHex("000000");
+		BorderSizePixel        = 0;
+		AutoButtonColor        = false;
+		Text                   = "";
+		LayoutOrder            = 2;
+	});
+	local PlusBtnGray = Library:CreateInstance("Frame", {
+		Parent           = PlusBtn;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("393939");
+		BorderSizePixel  = 0;
+	});
+	local PlusBtnInside = Library:CreateInstance("Frame", {
+		Parent           = PlusBtnGray;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	Library:CreateInstance("UIGradient", {
+		Parent   = PlusBtnInside;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("1B1B1B"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("121212"));
+		});
+	});
+	local PlusLabel = Library:CreateInstance("TextLabel", {
+		Name                   = "Label";
+		Parent                 = PlusBtnInside;
+		Size                   = UDim2.new(1, 0, 1, 0);
+		BackgroundTransparency = 1;
+		Text                   = "+";
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Center;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then PlusLabel.FontFace = ProggyCleanFont end;
 
-				Library:Connection(RunService.Heartbeat, function(Dt)
-					if math.abs(TargetT - VisualT) < 0.001 then return end;
-					local Alpha = 1 - math.exp(-Dt * 14);
-					VisualT   = VisualT + (TargetT - VisualT) * Alpha;
-					Fill.Size = UDim2.new(VisualT, -2, 1, -2);
-				end);
+	local Track = Library:CreateInstance("TextButton", {
+		Name             = "Track";
+		Parent           = Container;
+		AnchorPoint      = Vector2.new(0, 1);
+		Position         = UDim2.new(0, 0, 1, 0);
+		Size             = UDim2.new(1, 0, 0, 10);
+		BackgroundColor3 = Color3.fromHex("000000");
+		BorderSizePixel  = 0;
+		AutoButtonColor  = false;
+		Text             = "";
+	});
+	local TrackGray = Library:CreateInstance("Frame", {
+		Parent           = Track;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("393939");
+		BorderSizePixel  = 0;
+	});
+	local TrackInside = Library:CreateInstance("Frame", {
+		Parent           = TrackGray;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("131313");
+		BorderSizePixel  = 0;
+	});
 
-				local function SetVal(V, Fire)
-					V = math.clamp(math.floor((V - Min) / Step + 0.5) * Step + Min, Min, Max);
-					if V == Value then return end;
-					Value = V;
-					Library.Flags[Flag] = Value;
-					Render();
-					if Fire ~= false then Callback(Value) end;
-				end;
+	local Fill = Library:CreateInstance("Frame", {
+		Name             = "Fill";
+		Parent           = TrackInside;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(0, 0, 1, -2);
+		BackgroundColor3 = Color3.fromHex("3972EC");
+		BorderSizePixel  = 0;
+	});
+	Library:RegisterAccent(Fill);
 
-				local Dragging = false;
-				local function UpdateFromInput(Px)
-					local AbsX, AbsW = TrackInside.AbsolutePosition.X, TrackInside.AbsoluteSize.X;
-					if AbsW <= 0 then return end;
-					local T = math.clamp((Px - AbsX) / AbsW, 0, 1);
-					SetVal(Min + T * (Max - Min));
-				end;
+	local function FormatVal(V)
+		if Decimals > 0 then
+			return string.format("%." .. Decimals .. "f", V) .. Suffix;
+		end;
+		return tostring(math.round(V)) .. Suffix;
+	end;
 
-				Library:Connection(Track.InputBegan, function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-						Dragging = true;
-						UpdateFromInput(Input.Position.X);
-					end;
-				end);
-				Library:Connection(Track.InputEnded, function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-						Dragging = false;
-					end;
-				end);
-				Library:Connection(UserInputService.InputChanged, function(Input)
-					if not Dragging then return end;
-					if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
-						UpdateFromInput(Input.Position.X);
-					end;
-				end);
+	local VisualT = (Value - Min) / (Max - Min);
+	local TargetT = VisualT;
 
-				if Opts.Tooltip then Library:Tooltip(Container, Opts.Tooltip) end;
-				if Opts.Dependency and typeof(Opts.Dependency.OnChange) == "function" then
-					Opts.Dependency:OnChange(function(S) Container.Visible = S end);
-				end;
+	local function Render()
+		TargetT = (Value - Min) / (Max - Min);
+		ValLbl.Text = FormatVal(Value);
+	end;
+	Render();
+	Fill.Size = UDim2.new(VisualT, -2, 1, -2);
 
-				local Obj = { Container = Container, Track = Track, Fill = Fill };
-				function Obj:Get() return Value end;
-				function Obj:Set(V) SetVal(tonumber(V) or Value) end;
-				return Obj;
-			end;
+	Library:Connection(RunService.Heartbeat, function(Dt)
+		if math.abs(TargetT - VisualT) < 0.001 then return end;
+		local Alpha = 1 - math.exp(-Dt * 14);
+		VisualT   = VisualT + (TargetT - VisualT) * Alpha;
+		Fill.Size = UDim2.new(VisualT, -2, 1, -2);
+	end);
+
+	local function SetVal(V, Fire)
+		V = math.clamp(math.floor((V - Min) / Step + 0.5) * Step + Min, Min, Max);
+		if V == Value then return end;
+		Value = V;
+		Library.Flags[Flag] = Value;
+		Render();
+		if Fire ~= false then Callback(Value) end;
+	end;
+
+	local Dragging = false;
+	local function UpdateFromInput(Px)
+		local AbsX, AbsW = TrackInside.AbsolutePosition.X, TrackInside.AbsoluteSize.X;
+		if AbsW <= 0 then return end;
+		local T = math.clamp((Px - AbsX) / AbsW, 0, 1);
+		SetVal(Min + T * (Max - Min));
+	end;
+
+	Library:Connection(Track.InputBegan, function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Dragging = true;
+			UpdateFromInput(Input.Position.X);
+		end;
+	end);
+	Library:Connection(Track.InputEnded, function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Dragging = false;
+		end;
+	end);
+	Library:Connection(UserInputService.InputChanged, function(Input)
+		if not Dragging then return end;
+		if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+			UpdateFromInput(Input.Position.X);
+		end;
+	end);
+
+	MinusBtn.MouseButton1Click:Connect(function()
+		SetVal(Value - IncreaseNumber);
+	end);
+
+	PlusBtn.MouseButton1Click:Connect(function()
+		SetVal(Value + IncreaseNumber);
+	end);
+
+	if Opts.Tooltip then Library:Tooltip(Container, Opts.Tooltip) end;
+	if Opts.Dependency and typeof(Opts.Dependency.OnChange) == "function" then
+		Opts.Dependency:OnChange(function(S) Container.Visible = S end);
+	end;
+
+	local Obj = { Container = Container, Track = Track, Fill = Fill };
+	function Obj:Get() return Value end;
+	function Obj:Set(V) SetVal(tonumber(V) or Value) end;
+	return Obj;
+end;
 
 			function SecRef:Button(Opts)
 				Opts = typeof(Opts) == "table" and Opts or {};
