@@ -26,7 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -2198,7 +2198,6 @@ function Library:Window(Opts)
 			end;
 
 			
-
 function SecRef:Slider(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Name     = tostring(Opts.Name or Opts.Title or Opts.Text or "Slider");
@@ -2225,7 +2224,7 @@ function SecRef:Slider(Opts)
 		Name                   = "Label";
 		Parent                 = Container;
 		Position               = UDim2.new(0, 0, 0, 0);
-		Size                   = UDim2.new(1, -90, 0, 14);
+		Size                   = UDim2.new(1, -60, 0, 14);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 		Text                   = Name;
@@ -2239,8 +2238,8 @@ function SecRef:Slider(Opts)
 		Name                   = "Value";
 		Parent                 = Container;
 		AnchorPoint            = Vector2.new(1, 0);
-		Position               = UDim2.new(1, -42, 0, 0);
-		Size                   = UDim2.new(0, 40, 0, 14);
+		Position               = UDim2.new(1, -26, 0, 0);
+		Size                   = UDim2.new(0, 24, 0, 14);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 		TextColor3             = Color3.fromHex("8C8F99");
@@ -2260,7 +2259,7 @@ function SecRef:Slider(Opts)
 		Parent                 = Container;
 		AnchorPoint            = Vector2.new(1, 0);
 		Position               = UDim2.new(1, 0, 0, 0);
-		Size                   = UDim2.new(0, 40, 0, 14);
+		Size                   = UDim2.new(0, 24, 0, 14);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 	});
@@ -2268,50 +2267,28 @@ function SecRef:Slider(Opts)
 		Parent        = ButtonContainer;
 		FillDirection = Enum.FillDirection.Horizontal;
 		SortOrder     = Enum.SortOrder.LayoutOrder;
-		Padding       = UDim.new(0, 1);
+		Padding       = UDim.new(0, 0);
 	});
 
 	-- - BUTONU
 	local MinusBtn = Library:CreateInstance("TextButton", {
 		Name                   = "MinusBtn";
 		Parent                 = ButtonContainer;
-		Size                   = UDim2.new(0, 12, 0, 12);
-		BackgroundColor3       = Color3.fromHex("000000");
+		Size                   = UDim2.new(0, 10, 1, 0);
+		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 		AutoButtonColor        = false;
 		Text                   = "";
 		LayoutOrder            = 1;
 	});
-	local MinusBtnGray = Library:CreateInstance("Frame", {
-		Parent           = MinusBtn;
-		Position         = UDim2.new(0, 1, 0, 1);
-		Size             = UDim2.new(1, -2, 1, -2);
-		BackgroundColor3 = Color3.fromHex("393939");
-		BorderSizePixel  = 0;
-	});
-	local MinusBtnInside = Library:CreateInstance("Frame", {
-		Parent           = MinusBtnGray;
-		Position         = UDim2.new(0, 1, 0, 1);
-		Size             = UDim2.new(1, -2, 1, -2);
-		BackgroundColor3 = Color3.fromHex("FFFFFF");
-		BorderSizePixel  = 0;
-	});
-	Library:CreateInstance("UIGradient", {
-		Parent   = MinusBtnInside;
-		Rotation = 90;
-		Color    = NewColorSequence({
-			NewColorSequenceKeypoint(0, Color3.fromHex("1B1B1B"));
-			NewColorSequenceKeypoint(1, Color3.fromHex("121212"));
-		});
-	});
 	local MinusLabel = Library:CreateInstance("TextLabel", {
 		Name                   = "Label";
-		Parent                 = MinusBtnInside;
+		Parent                 = MinusBtn;
 		Size                   = UDim2.new(1, 0, 1, 0);
 		BackgroundTransparency = 1;
 		Text                   = "−";
-		TextColor3             = Color3.fromHex("FFFFFF");
-		TextSize               = 10;
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 12;
 		TextXAlignment         = Enum.TextXAlignment.Center;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
@@ -2321,43 +2298,21 @@ function SecRef:Slider(Opts)
 	local PlusBtn = Library:CreateInstance("TextButton", {
 		Name                   = "PlusBtn";
 		Parent                 = ButtonContainer;
-		Size                   = UDim2.new(0, 12, 0, 12);
-		BackgroundColor3       = Color3.fromHex("000000");
+		Size                   = UDim2.new(0, 10, 1, 0);
+		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 		AutoButtonColor        = false;
 		Text                   = "";
 		LayoutOrder            = 2;
 	});
-	local PlusBtnGray = Library:CreateInstance("Frame", {
-		Parent           = PlusBtn;
-		Position         = UDim2.new(0, 1, 0, 1);
-		Size             = UDim2.new(1, -2, 1, -2);
-		BackgroundColor3 = Color3.fromHex("393939");
-		BorderSizePixel  = 0;
-	});
-	local PlusBtnInside = Library:CreateInstance("Frame", {
-		Parent           = PlusBtnGray;
-		Position         = UDim2.new(0, 1, 0, 1);
-		Size             = UDim2.new(1, -2, 1, -2);
-		BackgroundColor3 = Color3.fromHex("FFFFFF");
-		BorderSizePixel  = 0;
-	});
-	Library:CreateInstance("UIGradient", {
-		Parent   = PlusBtnInside;
-		Rotation = 90;
-		Color    = NewColorSequence({
-			NewColorSequenceKeypoint(0, Color3.fromHex("1B1B1B"));
-			NewColorSequenceKeypoint(1, Color3.fromHex("121212"));
-		});
-	});
 	local PlusLabel = Library:CreateInstance("TextLabel", {
 		Name                   = "Label";
-		Parent                 = PlusBtnInside;
+		Parent                 = PlusBtn;
 		Size                   = UDim2.new(1, 0, 1, 0);
 		BackgroundTransparency = 1;
 		Text                   = "+";
-		TextColor3             = Color3.fromHex("FFFFFF");
-		TextSize               = 10;
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 12;
 		TextXAlignment         = Enum.TextXAlignment.Center;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
