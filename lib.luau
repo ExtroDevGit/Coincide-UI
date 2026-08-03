@@ -4546,483 +4546,7 @@ end;
 			end;
 
 			function SecRef:Preview(Opts)
-				Opts = typeof(Opts) == "table" and Opts or {};
-				local Height = tonumber(Opts.Height) or 260;
-
-				local Settings = {
-					Enabled        = Opts.Enabled == true;
-					Box            = false;
-					BoxColorHigh   = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
-					BoxColorLow    = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
-					Fill           = false;
-					FillColorHigh  = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
-					FillColorLow   = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
-					Glow           = false;
-					GlowColorHigh  = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
-					GlowColorLow   = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
-					Healthbar      = false;
-					HealthbarText  = false;
-					HealthHigh     = { Color = Color3.fromRGB(38, 255, 0),  Alpha = 1 };
-					HealthMid      = { Color = Color3.fromRGB(255, 179, 0), Alpha = 1 };
-					HealthLow      = { Color = Color3.fromRGB(255, 0, 0),   Alpha = 1 };
-					Name           = false;
-					NameColor      = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
-					Distance       = false;
-					DistanceColor  = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
-					Weapon         = false;
-					WeaponColor    = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
-					Flags          = false;
-					FlagsColor     = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
-					BoxRotation    = 90;
-					FillRotation   = 90;
-					GlowRotation   = 90;
-					AutoRotate     = true;
-					RotationSpeed  = 0.01;
-					ZoomMultiplier = 2;
-				};
-
-				local Container = Library:CreateInstance("Frame", {
-					Name             = "Preview";
-					Parent           = self.Body;
-					Size             = UDim2.new(1, 0, 0, Height);
-					BackgroundColor3 = Color3.fromHex("000000");
-					BorderSizePixel  = 0;
-				});
-				local BoxGray = Library:CreateInstance("Frame", {
-					Parent = Container; Position = UDim2.new(0, 1, 0, 1);
-					Size = UDim2.new(1, -2, 1, -2); BackgroundColor3 = Color3.fromHex("393939"); BorderSizePixel = 0;
-				});
-				local BoxInside = Library:CreateInstance("Frame", {
-					Parent = BoxGray; Position = UDim2.new(0, 1, 0, 1);
-					Size = UDim2.new(1, -2, 1, -2); BackgroundColor3 = Color3.fromHex("FFFFFF"); BorderSizePixel = 0;
-				});
-				Library:CreateInstance("UIGradient", {
-					Parent = BoxInside; Rotation = 90;
-					Color = NewColorSequence({
-						NewColorSequenceKeypoint(0, Color3.fromHex("161616"));
-						NewColorSequenceKeypoint(1, Color3.fromHex("101010"));
-					});
-				});
-
-				local Area = Library:CreateInstance("TextButton", {
-					Name                   = "Area";
-					Parent                 = BoxInside;
-					Size                   = UDim2.new(1, 0, 1, 0);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-					AutoButtonColor        = false;
-					Text                   = "";
-					ClipsDescendants       = true;
-				});
-				local Viewport = Library:CreateInstance("ViewportFrame", {
-					Name                   = "Viewport";
-					Parent                 = Area;
-					AnchorPoint            = Vector2.new(0.5, 0.5);
-					Position               = UDim2.new(0.5, 0, 0.5, 0);
-					Size                   = UDim2.new(0, Height, 0, Height);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-				});
-
-				local Esp = Library:CreateInstance("Frame", {
-					Name                   = "Esp";
-					Parent                 = Area;
-					AnchorPoint            = Vector2.new(0.5, 0);
-					Size                   = UDim2.new(0, 150, 0, 250);
-					BackgroundColor3       = Color3.fromRGB(255, 255, 255);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-					Visible                = false;
-					ZIndex                 = 2;
-				});
-				local FillGradient = Library:CreateInstance("UIGradient", {
-					Parent       = Esp;
-					Rotation     = 90;
-					Transparency = NewNumberSequence({
-						NewNumberSequenceKeypoint(0, 1);
-						NewNumberSequenceKeypoint(1, 0);
-					});
-				});
-				local BoxOutline = Library:CreateInstance("UIStroke", {
-					Parent       = Esp;
-					Thickness    = 3;
-					Color        = Color3.fromHex("000000");
-					LineJoinMode = Enum.LineJoinMode.Miter;
-					Transparency = 0.5;
-					Enabled      = false;
-				});
-				local BoxAccent = Library:CreateInstance("UIStroke", {
-					Parent       = Esp;
-					Thickness    = 1;
-					Color        = Color3.fromRGB(255, 255, 255);
-					LineJoinMode = Enum.LineJoinMode.Miter;
-					Enabled      = false;
-				});
-				local BoxGradient = Library:CreateInstance("UIGradient", { Parent = BoxAccent; Rotation = 90 });
-				local Glow = Library:CreateInstance("ImageLabel", {
-					Name                   = "Glow";
-					Parent                 = Esp;
-					Position               = UDim2.new(0, -23, 0, -23);
-					Size                   = UDim2.new(1, 45, 1, 45);
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-					Image                  = "rbxassetid://18245826428";
-					ImageColor3            = Color3.fromRGB(255, 255, 255);
-					ImageTransparency      = 0.8;
-					ScaleType              = Enum.ScaleType.Slice;
-					SliceCenter            = Rect.new(Vector2.new(21, 21), Vector2.new(80, 80));
-					Visible                = false;
-				});
-				local GlowGradient = Library:CreateInstance("UIGradient", { Parent = Glow; Rotation = 90 });
-
-				local Healthbar = Library:CreateInstance("Frame", {
-					Name                   = "Healthbar";
-					Parent                 = Esp;
-					AnchorPoint            = Vector2.new(1, 0);
-					Position               = UDim2.new(0, -4, 0, -2);
-					Size                   = UDim2.new(0, 4, 1, 4);
-					BackgroundColor3       = Color3.fromRGB(0, 0, 0);
-					BackgroundTransparency = 0.5;
-					BorderSizePixel        = 0;
-					Visible                = false;
-					ZIndex                 = 2;
-				});
-				local HealthAccent = Library:CreateInstance("Frame", {
-					Parent           = Healthbar;
-					Position         = UDim2.new(0, 1, 0, 1);
-					Size             = UDim2.new(1, -2, 1, -2);
-					BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-					BorderSizePixel  = 0;
-					ZIndex           = 2;
-				});
-				local HealthGradient = Library:CreateInstance("UIGradient", {
-					Parent   = HealthAccent;
-					Rotation = 90;
-					Color    = NewColorSequence({
-						NewColorSequenceKeypoint(0,   Settings.HealthHigh.Color);
-						NewColorSequenceKeypoint(0.5, Settings.HealthMid.Color);
-						NewColorSequenceKeypoint(1,   Settings.HealthLow.Color);
-					});
-				});
-				local HealthFade = Library:CreateInstance("Frame", {
-					Parent           = Healthbar;
-					Position         = UDim2.new(0, 1, 0, 1);
-					Size             = UDim2.new(1, -2, 0, 0);
-					BackgroundColor3 = Color3.fromRGB(0, 0, 0);
-					BorderSizePixel  = 0;
-					ZIndex           = 3;
-				});
-				local HealthText = Library:CreateInstance("TextLabel", {
-					Name                   = "HealthText";
-					Parent                 = Healthbar;
-					AnchorPoint            = Vector2.new(1, 0.5);
-					Position               = UDim2.new(0, -2, 0, 0);
-					AutomaticSize          = Enum.AutomaticSize.XY;
-					BackgroundTransparency = 1;
-					Text                   = "100";
-					TextColor3             = Color3.fromRGB(0, 255, 0);
-					TextSize               = 12;
-					Visible                = false;
-					ZIndex                 = 2;
-				});
-				Library:CreateInstance("UIStroke", { Parent = HealthText; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
-
-				local NameLbl = Library:CreateInstance("TextLabel", {
-					Name                   = "Name";
-					Parent                 = Esp;
-					AnchorPoint            = Vector2.new(0.5, 1);
-					Position               = UDim2.new(0.5, 0, 0, -4);
-					AutomaticSize          = Enum.AutomaticSize.XY;
-					BackgroundTransparency = 1;
-					Text                   = "Player";
-					TextColor3             = Color3.fromRGB(255, 255, 255);
-					TextSize               = 12;
-					Visible                = false;
-					ZIndex                 = 2;
-				});
-				Library:CreateInstance("UIStroke", { Parent = NameLbl; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
-
-				local BottomHolder = Library:CreateInstance("Frame", {
-					Name                   = "Bottom";
-					Parent                 = Esp;
-					Position               = UDim2.new(0, -2, 1, 4);
-					Size                   = UDim2.new(1, 4, 0, 0);
-					AutomaticSize          = Enum.AutomaticSize.Y;
-					BackgroundTransparency = 1;
-					BorderSizePixel        = 0;
-					ZIndex                 = 2;
-				});
-				Library:CreateInstance("UIListLayout", {
-					Parent    = BottomHolder;
-					Padding   = UDim.new(0, 1);
-					SortOrder = Enum.SortOrder.LayoutOrder;
-				});
-				local DistLbl = Library:CreateInstance("TextLabel", {
-					Name                   = "Distance";
-					Parent                 = BottomHolder;
-					Size                   = UDim2.new(1, 0, 0, 0);
-					AutomaticSize          = Enum.AutomaticSize.Y;
-					BackgroundTransparency = 1;
-					Text                   = "0st";
-					TextColor3             = Color3.fromRGB(255, 255, 255);
-					TextSize               = 12;
-					Visible                = false;
-					ZIndex                 = 2;
-				});
-				Library:CreateInstance("UIStroke", { Parent = DistLbl; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
-				local WeaponLbl = Library:CreateInstance("TextLabel", {
-					Name                   = "Weapon";
-					Parent                 = BottomHolder;
-					Size                   = UDim2.new(1, 0, 0, 0);
-					AutomaticSize          = Enum.AutomaticSize.Y;
-					BackgroundTransparency = 1;
-					Text                   = "none";
-					TextColor3             = Color3.fromRGB(255, 255, 255);
-					TextSize               = 12;
-					Visible                = false;
-					ZIndex                 = 2;
-				});
-				Library:CreateInstance("UIStroke", { Parent = WeaponLbl; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
-
-				local FlagsLbl = Library:CreateInstance("TextLabel", {
-					Name                   = "Flags";
-					Parent                 = Esp;
-					Position               = UDim2.new(1, 4, 0, -2);
-					AutomaticSize          = Enum.AutomaticSize.XY;
-					BackgroundTransparency = 1;
-					Text                   = "Flags";
-					TextColor3             = Color3.fromRGB(255, 255, 255);
-					TextSize               = 12;
-					TextXAlignment         = Enum.TextXAlignment.Left;
-					Visible                = false;
-					ZIndex                 = 2;
-				});
-				Library:CreateInstance("UIStroke", { Parent = FlagsLbl; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
-
-				if ProggyCleanFont then
-					for _, L in { HealthText, NameLbl, DistLbl, WeaponLbl, FlagsLbl } do
-						L.FontFace = ProggyCleanFont;
-					end;
-				end;
-
-				local function Render()
-					BoxOutline.Enabled         = Settings.Box;
-					BoxAccent.Enabled          = Settings.Box;
-					Esp.BackgroundTransparency = Settings.Fill and 0 or 1;
-					Glow.Visible               = Settings.Glow;
-					Healthbar.Visible          = Settings.Healthbar;
-					HealthText.Visible         = Settings.HealthbarText;
-					NameLbl.Visible            = Settings.Name;
-					DistLbl.Visible            = Settings.Distance;
-					WeaponLbl.Visible          = Settings.Weapon;
-					FlagsLbl.Visible           = Settings.Flags;
-
-					NameLbl.TextColor3   = Settings.NameColor.Color;
-					DistLbl.TextColor3   = Settings.DistanceColor.Color;
-					WeaponLbl.TextColor3 = Settings.WeaponColor.Color;
-					FlagsLbl.TextColor3  = Settings.FlagsColor.Color;
-
-					FillGradient.Color = NewColorSequence({
-						NewColorSequenceKeypoint(0, Settings.FillColorHigh.Color);
-						NewColorSequenceKeypoint(1, Settings.FillColorLow.Color);
-					});
-					FillGradient.Transparency = NewNumberSequence({
-						NewNumberSequenceKeypoint(0, 1 - Settings.FillColorHigh.Alpha);
-						NewNumberSequenceKeypoint(1, 1 - Settings.FillColorLow.Alpha);
-					});
-					BoxGradient.Color = NewColorSequence({
-						NewColorSequenceKeypoint(0, Settings.BoxColorHigh.Color);
-						NewColorSequenceKeypoint(1, Settings.BoxColorLow.Color);
-					});
-					GlowGradient.Color = NewColorSequence({
-						NewColorSequenceKeypoint(0, Settings.GlowColorHigh.Color);
-						NewColorSequenceKeypoint(1, Settings.GlowColorLow.Color);
-					});
-					GlowGradient.Transparency = NewNumberSequence({
-						NewNumberSequenceKeypoint(0, 1 - Settings.GlowColorHigh.Alpha);
-						NewNumberSequenceKeypoint(1, 1 - Settings.GlowColorLow.Alpha);
-					});
-					HealthGradient.Color = NewColorSequence({
-						NewColorSequenceKeypoint(0,   Settings.HealthHigh.Color);
-						NewColorSequenceKeypoint(0.5, Settings.HealthMid.Color);
-						NewColorSequenceKeypoint(1,   Settings.HealthLow.Color);
-					});
-
-					FillGradient.Rotation = Settings.FillRotation;
-					BoxGradient.Rotation  = Settings.BoxRotation;
-					GlowGradient.Rotation = Settings.GlowRotation;
-
-					if not Settings.Enabled then Esp.Visible = false end;
-				end;
-				Render();
-
-				local ViewportCamera, Model, OriginalModel;
-				local RotationX, RotationY = 0, 0;
-				local Distance = 10;
-				local Dragging = false;
-				local Hovering = false;
-				local LastPos  = Vector3.zero;
-
-				local function StopViewing()
-					ViewportCamera = nil;
-					Model = nil;
-					Viewport:ClearAllChildren();
-				end;
-
-				local function ViewModel(Item)
-					if not Item then return end;
-					StopViewing();
-					if Item:IsA("Model") then
-						Item.Archivable = true;
-						if #Item:GetChildren() == 0 then return end;
-						Model = Item:Clone();
-						Model.Parent = Viewport;
-						if not Model.PrimaryPart then
-							local Found = false;
-							for _, Child in Model:GetDescendants() do
-								if Child:IsA("BasePart") then
-									Model.PrimaryPart = Child;
-									Found = true;
-									break;
-								end;
-							end;
-							if not Found then Model:Destroy(); Model = nil; return end;
-						end;
-					elseif Item:IsA("BasePart") then
-						Model = Instance.new("Model");
-						Model.Parent = Viewport;
-						local Clone = Item:Clone();
-						Clone.Parent = Model;
-						Clone.CFrame = CFrame.new();
-						Model.PrimaryPart = Clone;
-					else
-						return;
-					end;
-					OriginalModel = Item;
-					ViewportCamera = Library:CreateInstance("Camera", { Parent = Viewport; FieldOfView = 60 });
-					Viewport.CurrentCamera = ViewportCamera;
-				end;
-
-				local function BoxSolve(Root)
-					local UpVec    = Root.CFrame.UpVector;
-					local RootPos  = Root.Position;
-					local CamCF    = ViewportCamera.CFrame;
-					local WorldTop    = RootPos + (UpVec * 1.8) + CamCF.UpVector;
-					local WorldBottom = RootPos - (UpVec * 2.5) - CamCF.UpVector;
-					local Dist = (RootPos - CamCF.Position).Magnitude;
-					local HolderSize = Viewport.AbsoluteSize;
-
-					local Top = ViewportCamera:WorldToScreenPoint(WorldTop);
-					Top = Vector2.new(Top.X * HolderSize.X, Top.Y * HolderSize.Y);
-					local Bottom = ViewportCamera:WorldToScreenPoint(WorldBottom);
-					Bottom = Vector2.new(Bottom.X * HolderSize.X, Bottom.Y * HolderSize.Y);
-
-					local Width   = math.max(math.floor(math.abs(Top.X - Bottom.X)), 9);
-					local BoxH    = math.max(math.floor(math.max(math.abs(Bottom.Y - Top.Y), Width / 2)), 12);
-					local BoxSize = Vector2.new(math.floor(math.max(BoxH / 1.5, Width)), BoxH);
-					local BoxPos  = Vector2.new(
-						math.floor(Top.X * 0.5 + Bottom.X * 0.5 - BoxSize.X * 0.5),
-						math.floor(math.min(Top.Y, Bottom.Y))
-					);
-					return BoxSize, BoxPos, math.floor(Dist * 0.333);
-				end;
-
-				local function ChangeHealth()
-					local Value = math.abs(math.sin(tick()));
-					local Eased = TweenService:GetValue(Value, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut);
-					HealthFade.Size = UDim2.new(1, -2, 1 - Eased, 0);
-					local C = Settings.HealthLow.Color:Lerp(Settings.HealthMid.Color, Eased):Lerp(Settings.HealthHigh.Color, Eased);
-					HealthText.TextColor3 = C;
-					HealthText.Text       = tostring(math.floor(Eased * 100 + 0.5));
-					HealthText.Position   = UDim2.new(0, -2, 1 - Eased, 0);
-				end;
-
-				Area.MouseEnter:Connect(function() Hovering = true end);
-				Area.MouseLeave:Connect(function() Hovering = false end);
-				Library:Connection(Area.InputBegan, function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-						Dragging = true;
-						LastPos = Input.Position;
-					end;
-				end);
-				Library:Connection(Area.InputEnded, function(Input)
-					if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-						Dragging = false;
-					end;
-				end);
-				Library:Connection(UserInputService.InputChanged, function(Input)
-					if Dragging and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
-						local Delta = Input.Position - LastPos;
-						LastPos = Input.Position;
-						RotationY = RotationY - Delta.X * 0.01;
-						RotationX = math.clamp(RotationX - Delta.Y * 0.01, -math.pi / 2 + 0.1, math.pi / 2 - 0.1);
-					elseif Hovering and Input.UserInputType == Enum.UserInputType.MouseWheel then
-						local Mult = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and 10 or Settings.ZoomMultiplier;
-						Distance = math.clamp(Distance - Input.Position.Z * Mult, 1, 100);
-					end;
-				end);
-
-				Library:Connection(RunService.RenderStepped, function()
-					if not (ViewportCamera and Model) then return end;
-					if not Library:IsEffectivelyVisible(Area) then return end;
-
-					if not Dragging and Settings.AutoRotate then
-						RotationY = RotationY + Settings.RotationSpeed;
-					end;
-					local Root = Model.PrimaryPart or Model:FindFirstChild("HumanoidRootPart");
-					if not Root then return end;
-
-					local Center   = Root.Position;
-					local Rotation = CFrame.Angles(0, RotationY, 0) * CFrame.Angles(RotationX, 0, 0);
-					local CamCF    = CFrame.new(Center) * Rotation * CFrame.new(0, 0, Distance);
-					ViewportCamera.CFrame = CFrame.lookAt(CamCF.Position, Center + Vector3.new(0, -1, 0));
-
-					if Settings.Enabled then
-						local BoxSize, BoxPos, Dist = BoxSolve(Root);
-						Esp.Visible  = true;
-						Esp.Position = UDim2.new(0.5, 0, 0, BoxPos.Y);
-						Esp.Size     = UDim2.fromOffset(BoxSize.X, BoxSize.Y);
-						DistLbl.Text = Dist .. "st";
-						ChangeHealth();
-					else
-						Esp.Visible = false;
-					end;
-				end);
-
-				task.defer(function()
-					if OriginalModel then return end;
-					local LP = game:GetService("Players").LocalPlayer;
-					local Char = LP and (LP.Character or LP.CharacterAdded:Wait());
-					if Char and not OriginalModel then ViewModel(Char) end;
-				end);
-
-				if Opts.Tooltip then Library:Tooltip(Container, Opts.Tooltip) end;
-				if Opts.Dependency and typeof(Opts.Dependency.OnChange) == "function" then
-					Opts.Dependency:OnChange(function(S) Container.Visible = S end);
-				end;
-
-				local Obj = { Container = Container, Viewport = Viewport, Settings = Settings };
-				function Obj:Get(Key) return Settings[Key] end;
-				function Obj:Set(Key, Value, Alpha)
-					local Cur = Settings[Key];
-					if Cur == nil then return end;
-					if typeof(Cur) == "table" and typeof(Value) == "Color3" then
-						Cur.Color = Value;
-						if Alpha ~= nil then Cur.Alpha = math.clamp(tonumber(Alpha) or 1, 0, 1) end;
-					else
-						Settings[Key] = Value;
-					end;
-					Render();
-				end;
-				function Obj:Update() Render() end;
-				function Obj:SetText(Which, Text)
-					local Map = { Name = NameLbl, Distance = DistLbl, Weapon = WeaponLbl, Flags = FlagsLbl };
-					local L = Map[tostring(Which)];
-					if L then L.Text = tostring(Text) end;
-				end;
-				function Obj:ViewModel(M) ViewModel(M) end;
-				function Obj:Refresh() if OriginalModel then ViewModel(OriginalModel) end end;
-				return Obj;
+				return Library:_BuildPreview(self.Body, Opts);
 			end;
 
 			return SecRef;
@@ -6351,6 +5875,673 @@ function Library:Playerlist(Opts)
 	function Obj:Refresh() RefreshPlayerList() end;
 	function Obj:Destroy() Gui:Destroy() end;
 	Library._Playerlist = Obj;
+	return Obj;
+end;
+
+function Library:_BuildPreview(Parent, Opts)
+	Opts = typeof(Opts) == "table" and Opts or {};
+	local Height = tonumber(Opts.Height) or 260;
+
+	local Settings = {
+		Enabled        = Opts.Enabled == true;
+		Box            = false;
+		BoxColorHigh   = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		BoxColorLow    = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		Fill           = false;
+		FillColorHigh  = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
+		FillColorLow   = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
+		Glow           = false;
+		GlowColorHigh  = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
+		GlowColorLow   = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
+		Healthbar      = false;
+		HealthbarText  = false;
+		HealthHigh     = { Color = Color3.fromRGB(38, 255, 0),  Alpha = 1 };
+		HealthMid      = { Color = Color3.fromRGB(255, 179, 0), Alpha = 1 };
+		HealthLow      = { Color = Color3.fromRGB(255, 0, 0),   Alpha = 1 };
+		Name           = false;
+		NameColor      = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		Distance       = false;
+		DistanceColor  = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		Weapon         = false;
+		WeaponColor    = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		Flags          = false;
+		FlagsColor     = { Color = Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		BoxRotation    = 90;
+		FillRotation   = 90;
+		GlowRotation   = 90;
+		AutoRotate     = true;
+		RotationSpeed  = 0.01;
+		ZoomMultiplier = 2;
+	};
+
+	local Container = Library:CreateInstance("Frame", {
+		Name             = "Preview";
+		Parent           = Parent;
+		Size             = Opts.Size or UDim2.new(1, 0, 0, Height);
+		BackgroundColor3 = Color3.fromHex("000000");
+		BorderSizePixel  = 0;
+	});
+	local BoxGray = Library:CreateInstance("Frame", {
+		Parent = Container; Position = UDim2.new(0, 1, 0, 1);
+		Size = UDim2.new(1, -2, 1, -2); BackgroundColor3 = Color3.fromHex("393939"); BorderSizePixel = 0;
+	});
+	local BoxInside = Library:CreateInstance("Frame", {
+		Parent = BoxGray; Position = UDim2.new(0, 1, 0, 1);
+		Size = UDim2.new(1, -2, 1, -2); BackgroundColor3 = Color3.fromHex("FFFFFF"); BorderSizePixel = 0;
+	});
+	Library:CreateInstance("UIGradient", {
+		Parent = BoxInside; Rotation = 90;
+		Color = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("161616"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("101010"));
+		});
+	});
+
+	local Area = Library:CreateInstance("TextButton", {
+		Name                   = "Area";
+		Parent                 = BoxInside;
+		Size                   = UDim2.new(1, 0, 1, 0);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		AutoButtonColor        = false;
+		Text                   = "";
+		ClipsDescendants       = true;
+	});
+	local Viewport = Library:CreateInstance("ViewportFrame", {
+		Name                   = "Viewport";
+		Parent                 = Area;
+		AnchorPoint            = Vector2.new(0.5, 0.5);
+		Position               = UDim2.new(0.5, 0, 0.5, 0);
+		Size                   = UDim2.new(0, Height, 0, Height);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+
+	local Esp = Library:CreateInstance("Frame", {
+		Name                   = "Esp";
+		Parent                 = Area;
+		AnchorPoint            = Vector2.new(0.5, 0);
+		Size                   = UDim2.new(0, 150, 0, 250);
+		BackgroundColor3       = Color3.fromRGB(255, 255, 255);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		Visible                = false;
+		ZIndex                 = 2;
+	});
+	local FillGradient = Library:CreateInstance("UIGradient", {
+		Parent       = Esp;
+		Rotation     = 90;
+		Transparency = NewNumberSequence({
+			NewNumberSequenceKeypoint(0, 1);
+			NewNumberSequenceKeypoint(1, 0);
+		});
+	});
+	local BoxOutline = Library:CreateInstance("UIStroke", {
+		Parent       = Esp;
+		Thickness    = 3;
+		Color        = Color3.fromHex("000000");
+		LineJoinMode = Enum.LineJoinMode.Miter;
+		Transparency = 0.5;
+		Enabled      = false;
+	});
+	local BoxAccent = Library:CreateInstance("UIStroke", {
+		Parent       = Esp;
+		Thickness    = 1;
+		Color        = Color3.fromRGB(255, 255, 255);
+		LineJoinMode = Enum.LineJoinMode.Miter;
+		Enabled      = false;
+	});
+	local BoxGradient = Library:CreateInstance("UIGradient", { Parent = BoxAccent; Rotation = 90 });
+	local Glow = Library:CreateInstance("ImageLabel", {
+		Name                   = "Glow";
+		Parent                 = Esp;
+		Position               = UDim2.new(0, -23, 0, -23);
+		Size                   = UDim2.new(1, 45, 1, 45);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		Image                  = "rbxassetid://18245826428";
+		ImageColor3            = Color3.fromRGB(255, 255, 255);
+		ImageTransparency      = 0.8;
+		ScaleType              = Enum.ScaleType.Slice;
+		SliceCenter            = Rect.new(Vector2.new(21, 21), Vector2.new(80, 80));
+		Visible                = false;
+	});
+	local GlowGradient = Library:CreateInstance("UIGradient", { Parent = Glow; Rotation = 90 });
+
+	local Healthbar = Library:CreateInstance("Frame", {
+		Name                   = "Healthbar";
+		Parent                 = Esp;
+		AnchorPoint            = Vector2.new(1, 0);
+		Position               = UDim2.new(0, -4, 0, -2);
+		Size                   = UDim2.new(0, 4, 1, 4);
+		BackgroundColor3       = Color3.fromRGB(0, 0, 0);
+		BackgroundTransparency = 0.5;
+		BorderSizePixel        = 0;
+		Visible                = false;
+		ZIndex                 = 2;
+	});
+	local HealthAccent = Library:CreateInstance("Frame", {
+		Parent           = Healthbar;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+		BorderSizePixel  = 0;
+		ZIndex           = 2;
+	});
+	local HealthGradient = Library:CreateInstance("UIGradient", {
+		Parent   = HealthAccent;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0,   Settings.HealthHigh.Color);
+			NewColorSequenceKeypoint(0.5, Settings.HealthMid.Color);
+			NewColorSequenceKeypoint(1,   Settings.HealthLow.Color);
+		});
+	});
+	local HealthFade = Library:CreateInstance("Frame", {
+		Parent           = Healthbar;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 0, 0);
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0);
+		BorderSizePixel  = 0;
+		ZIndex           = 3;
+	});
+	local HealthText = Library:CreateInstance("TextLabel", {
+		Name                   = "HealthText";
+		Parent                 = Healthbar;
+		AnchorPoint            = Vector2.new(1, 0.5);
+		Position               = UDim2.new(0, -2, 0, 0);
+		AutomaticSize          = Enum.AutomaticSize.XY;
+		BackgroundTransparency = 1;
+		Text                   = "100";
+		TextColor3             = Color3.fromRGB(0, 255, 0);
+		TextSize               = 12;
+		Visible                = false;
+		ZIndex                 = 2;
+	});
+	Library:CreateInstance("UIStroke", { Parent = HealthText; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
+
+	local NameLbl = Library:CreateInstance("TextLabel", {
+		Name                   = "Name";
+		Parent                 = Esp;
+		AnchorPoint            = Vector2.new(0.5, 1);
+		Position               = UDim2.new(0.5, 0, 0, -4);
+		AutomaticSize          = Enum.AutomaticSize.XY;
+		BackgroundTransparency = 1;
+		Text                   = "Player";
+		TextColor3             = Color3.fromRGB(255, 255, 255);
+		TextSize               = 12;
+		Visible                = false;
+		ZIndex                 = 2;
+	});
+	Library:CreateInstance("UIStroke", { Parent = NameLbl; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
+
+	local BottomHolder = Library:CreateInstance("Frame", {
+		Name                   = "Bottom";
+		Parent                 = Esp;
+		Position               = UDim2.new(0, -2, 1, 4);
+		Size                   = UDim2.new(1, 4, 0, 0);
+		AutomaticSize          = Enum.AutomaticSize.Y;
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		ZIndex                 = 2;
+	});
+	Library:CreateInstance("UIListLayout", {
+		Parent    = BottomHolder;
+		Padding   = UDim.new(0, 1);
+		SortOrder = Enum.SortOrder.LayoutOrder;
+	});
+	local DistLbl = Library:CreateInstance("TextLabel", {
+		Name                   = "Distance";
+		Parent                 = BottomHolder;
+		Size                   = UDim2.new(1, 0, 0, 0);
+		AutomaticSize          = Enum.AutomaticSize.Y;
+		BackgroundTransparency = 1;
+		Text                   = "0st";
+		TextColor3             = Color3.fromRGB(255, 255, 255);
+		TextSize               = 12;
+		Visible                = false;
+		ZIndex                 = 2;
+	});
+	Library:CreateInstance("UIStroke", { Parent = DistLbl; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
+	local WeaponLbl = Library:CreateInstance("TextLabel", {
+		Name                   = "Weapon";
+		Parent                 = BottomHolder;
+		Size                   = UDim2.new(1, 0, 0, 0);
+		AutomaticSize          = Enum.AutomaticSize.Y;
+		BackgroundTransparency = 1;
+		Text                   = "none";
+		TextColor3             = Color3.fromRGB(255, 255, 255);
+		TextSize               = 12;
+		Visible                = false;
+		ZIndex                 = 2;
+	});
+	Library:CreateInstance("UIStroke", { Parent = WeaponLbl; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
+
+	local FlagsLbl = Library:CreateInstance("TextLabel", {
+		Name                   = "Flags";
+		Parent                 = Esp;
+		Position               = UDim2.new(1, 4, 0, -2);
+		AutomaticSize          = Enum.AutomaticSize.XY;
+		BackgroundTransparency = 1;
+		Text                   = "Flags";
+		TextColor3             = Color3.fromRGB(255, 255, 255);
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		Visible                = false;
+		ZIndex                 = 2;
+	});
+	Library:CreateInstance("UIStroke", { Parent = FlagsLbl; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5 });
+
+	if ProggyCleanFont then
+		for _, L in { HealthText, NameLbl, DistLbl, WeaponLbl, FlagsLbl } do
+			L.FontFace = ProggyCleanFont;
+		end;
+	end;
+
+	local function Render()
+		BoxOutline.Enabled         = Settings.Box;
+		BoxAccent.Enabled          = Settings.Box;
+		Esp.BackgroundTransparency = Settings.Fill and 0 or 1;
+		Glow.Visible               = Settings.Glow;
+		Healthbar.Visible          = Settings.Healthbar;
+		HealthText.Visible         = Settings.HealthbarText;
+		NameLbl.Visible            = Settings.Name;
+		DistLbl.Visible            = Settings.Distance;
+		WeaponLbl.Visible          = Settings.Weapon;
+		FlagsLbl.Visible           = Settings.Flags;
+
+		NameLbl.TextColor3   = Settings.NameColor.Color;
+		DistLbl.TextColor3   = Settings.DistanceColor.Color;
+		WeaponLbl.TextColor3 = Settings.WeaponColor.Color;
+		FlagsLbl.TextColor3  = Settings.FlagsColor.Color;
+
+		FillGradient.Color = NewColorSequence({
+			NewColorSequenceKeypoint(0, Settings.FillColorHigh.Color);
+			NewColorSequenceKeypoint(1, Settings.FillColorLow.Color);
+		});
+		FillGradient.Transparency = NewNumberSequence({
+			NewNumberSequenceKeypoint(0, 1 - Settings.FillColorHigh.Alpha);
+			NewNumberSequenceKeypoint(1, 1 - Settings.FillColorLow.Alpha);
+		});
+		BoxGradient.Color = NewColorSequence({
+			NewColorSequenceKeypoint(0, Settings.BoxColorHigh.Color);
+			NewColorSequenceKeypoint(1, Settings.BoxColorLow.Color);
+		});
+		GlowGradient.Color = NewColorSequence({
+			NewColorSequenceKeypoint(0, Settings.GlowColorHigh.Color);
+			NewColorSequenceKeypoint(1, Settings.GlowColorLow.Color);
+		});
+		GlowGradient.Transparency = NewNumberSequence({
+			NewNumberSequenceKeypoint(0, 1 - Settings.GlowColorHigh.Alpha);
+			NewNumberSequenceKeypoint(1, 1 - Settings.GlowColorLow.Alpha);
+		});
+		HealthGradient.Color = NewColorSequence({
+			NewColorSequenceKeypoint(0,   Settings.HealthHigh.Color);
+			NewColorSequenceKeypoint(0.5, Settings.HealthMid.Color);
+			NewColorSequenceKeypoint(1,   Settings.HealthLow.Color);
+		});
+
+		FillGradient.Rotation = Settings.FillRotation;
+		BoxGradient.Rotation  = Settings.BoxRotation;
+		GlowGradient.Rotation = Settings.GlowRotation;
+
+		if not Settings.Enabled then Esp.Visible = false end;
+	end;
+	Render();
+
+	local ViewportCamera, Model, OriginalModel;
+	local RotationX, RotationY = 0, 0;
+	local Distance = 10;
+	local Dragging = false;
+	local Hovering = false;
+	local LastPos  = Vector3.zero;
+
+	local function StopViewing()
+		ViewportCamera = nil;
+		Model = nil;
+		Viewport:ClearAllChildren();
+	end;
+
+	local function ViewModel(Item)
+		if not Item then return end;
+		StopViewing();
+		if Item:IsA("Model") then
+			Item.Archivable = true;
+			if #Item:GetChildren() == 0 then return end;
+			Model = Item:Clone();
+			Model.Parent = Viewport;
+			if not Model.PrimaryPart then
+				local Found = false;
+				for _, Child in Model:GetDescendants() do
+					if Child:IsA("BasePart") then
+						Model.PrimaryPart = Child;
+						Found = true;
+						break;
+					end;
+				end;
+				if not Found then Model:Destroy(); Model = nil; return end;
+			end;
+		elseif Item:IsA("BasePart") then
+			Model = Instance.new("Model");
+			Model.Parent = Viewport;
+			local Clone = Item:Clone();
+			Clone.Parent = Model;
+			Clone.CFrame = CFrame.new();
+			Model.PrimaryPart = Clone;
+		else
+			return;
+		end;
+		OriginalModel = Item;
+		ViewportCamera = Library:CreateInstance("Camera", { Parent = Viewport; FieldOfView = 60 });
+		Viewport.CurrentCamera = ViewportCamera;
+	end;
+
+	local function BoxSolve(Root)
+		local UpVec    = Root.CFrame.UpVector;
+		local RootPos  = Root.Position;
+		local CamCF    = ViewportCamera.CFrame;
+		local WorldTop    = RootPos + (UpVec * 1.8) + CamCF.UpVector;
+		local WorldBottom = RootPos - (UpVec * 2.5) - CamCF.UpVector;
+		local Dist = (RootPos - CamCF.Position).Magnitude;
+		local HolderSize = Viewport.AbsoluteSize;
+
+		local Top = ViewportCamera:WorldToScreenPoint(WorldTop);
+		Top = Vector2.new(Top.X * HolderSize.X, Top.Y * HolderSize.Y);
+		local Bottom = ViewportCamera:WorldToScreenPoint(WorldBottom);
+		Bottom = Vector2.new(Bottom.X * HolderSize.X, Bottom.Y * HolderSize.Y);
+
+		local Width   = math.max(math.floor(math.abs(Top.X - Bottom.X)), 9);
+		local BoxH    = math.max(math.floor(math.max(math.abs(Bottom.Y - Top.Y), Width / 2)), 12);
+		local BoxSize = Vector2.new(math.floor(math.max(BoxH / 1.5, Width)), BoxH);
+		local BoxPos  = Vector2.new(
+			math.floor(Top.X * 0.5 + Bottom.X * 0.5 - BoxSize.X * 0.5),
+			math.floor(math.min(Top.Y, Bottom.Y))
+		);
+		return BoxSize, BoxPos, math.floor(Dist * 0.333);
+	end;
+
+	local function ChangeHealth()
+		local Value = math.abs(math.sin(tick()));
+		local Eased = TweenService:GetValue(Value, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut);
+		HealthFade.Size = UDim2.new(1, -2, 1 - Eased, 0);
+		local C = Settings.HealthLow.Color:Lerp(Settings.HealthMid.Color, Eased):Lerp(Settings.HealthHigh.Color, Eased);
+		HealthText.TextColor3 = C;
+		HealthText.Text       = tostring(math.floor(Eased * 100 + 0.5));
+		HealthText.Position   = UDim2.new(0, -2, 1 - Eased, 0);
+	end;
+
+	Area.MouseEnter:Connect(function() Hovering = true end);
+	Area.MouseLeave:Connect(function() Hovering = false end);
+	Library:Connection(Area.InputBegan, function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Dragging = true;
+			LastPos = Input.Position;
+		end;
+	end);
+	Library:Connection(Area.InputEnded, function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Dragging = false;
+		end;
+	end);
+	Library:Connection(UserInputService.InputChanged, function(Input)
+		if Dragging and (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch) then
+			local Delta = Input.Position - LastPos;
+			LastPos = Input.Position;
+			RotationY = RotationY - Delta.X * 0.01;
+			RotationX = math.clamp(RotationX - Delta.Y * 0.01, -math.pi / 2 + 0.1, math.pi / 2 - 0.1);
+		elseif Hovering and Input.UserInputType == Enum.UserInputType.MouseWheel then
+			local Mult = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) and 10 or Settings.ZoomMultiplier;
+			Distance = math.clamp(Distance - Input.Position.Z * Mult, 1, 100);
+		end;
+	end);
+
+	Library:Connection(RunService.RenderStepped, function()
+		if not (ViewportCamera and Model) then return end;
+		if not Library:IsEffectivelyVisible(Area) then return end;
+
+		if not Dragging and Settings.AutoRotate then
+			RotationY = RotationY + Settings.RotationSpeed;
+		end;
+		local Root = Model.PrimaryPart or Model:FindFirstChild("HumanoidRootPart");
+		if not Root then return end;
+
+		local Center   = Root.Position;
+		local Rotation = CFrame.Angles(0, RotationY, 0) * CFrame.Angles(RotationX, 0, 0);
+		local CamCF    = CFrame.new(Center) * Rotation * CFrame.new(0, 0, Distance);
+		ViewportCamera.CFrame = CFrame.lookAt(CamCF.Position, Center + Vector3.new(0, -1, 0));
+
+		if Settings.Enabled then
+			local BoxSize, BoxPos, Dist = BoxSolve(Root);
+			Esp.Visible  = true;
+			Esp.Position = UDim2.new(0.5, 0, 0, BoxPos.Y);
+			Esp.Size     = UDim2.fromOffset(BoxSize.X, BoxSize.Y);
+			DistLbl.Text = Dist .. "st";
+			ChangeHealth();
+		else
+			Esp.Visible = false;
+		end;
+	end);
+
+	task.defer(function()
+		if OriginalModel then return end;
+		local LP = game:GetService("Players").LocalPlayer;
+		local Char = LP and (LP.Character or LP.CharacterAdded:Wait());
+		if Char and not OriginalModel then ViewModel(Char) end;
+	end);
+
+	if Opts.Tooltip then Library:Tooltip(Container, Opts.Tooltip) end;
+	if Opts.Dependency and typeof(Opts.Dependency.OnChange) == "function" then
+		Opts.Dependency:OnChange(function(S) Container.Visible = S end);
+	end;
+
+	local Obj = { Container = Container, Viewport = Viewport, Settings = Settings };
+	function Obj:Get(Key) return Settings[Key] end;
+	function Obj:Set(Key, Value, Alpha)
+		local Cur = Settings[Key];
+		if Cur == nil then return end;
+		if typeof(Cur) == "table" and typeof(Value) == "Color3" then
+			Cur.Color = Value;
+			if Alpha ~= nil then Cur.Alpha = math.clamp(tonumber(Alpha) or 1, 0, 1) end;
+		else
+			Settings[Key] = Value;
+		end;
+		Render();
+	end;
+	function Obj:Update() Render() end;
+	function Obj:SetText(Which, Text)
+		local Map = { Name = NameLbl, Distance = DistLbl, Weapon = WeaponLbl, Flags = FlagsLbl };
+		local L = Map[tostring(Which)];
+		if L then L.Text = tostring(Text) end;
+	end;
+	function Obj:ViewModel(M) ViewModel(M) end;
+	function Obj:Refresh() if OriginalModel then ViewModel(OriginalModel) end end;
+	return Obj;
+end;
+
+function Library:PreviewWindow(Opts)
+	Opts = typeof(Opts) == "table" and Opts or {};
+	local Title  = tostring(Opts.Title or "Preview");
+	local Width  = tonumber(Opts.Width) or 240;
+	local Height = tonumber(Opts.Height) or 320;
+
+	local Gui = self:CreateInstance("ScreenGui", {
+		Name           = "PreviewGui";
+		Parent         = (gethui and gethui()) or CoreGui;
+		IgnoreGuiInset = true;
+		ResetOnSpawn   = false;
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+	});
+
+	local Outer = self:CreateInstance("Frame", {
+		Name             = "Outer";
+		Parent           = Gui;
+		Position         = UDim2.fromOffset(0, 0);
+		Size             = UDim2.fromOffset(Width, Height);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	Library:AddGlowingV2(Outer, Library.Accent, 0.4);
+
+	self:CreateInstance("UIGradient", {
+		Parent   = Outer;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("212121"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("1A1A1A"));
+		});
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = Outer;
+		Color           = Color3.fromHex("000000");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		LineJoinMode    = Enum.LineJoinMode.Miter;
+	});
+
+	local InnerOutline = self:CreateInstance("Frame", {
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 1, 0, 1);
+		Size                   = UDim2.new(1, -2, 1, -2);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = InnerOutline;
+		Color           = Color3.fromHex("393939");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		LineJoinMode    = Enum.LineJoinMode.Miter;
+	});
+
+	local TopLine = self:CreateInstance("Frame", {
+		Parent           = Outer;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 0, 1);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+		ZIndex           = 10;
+	});
+	Library:RegisterAccentGradient(self:CreateInstance("UIGradient", {
+		Parent = TopLine; Rotation = 0;
+	}));
+
+	local TitleLbl = self:CreateInstance("TextLabel", {
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 6, 0, 9);
+		Size                   = UDim2.new(0, 200, 0, 18);
+		BackgroundTransparency = 1;
+		Text                   = Title;
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then TitleLbl.FontFace = ProggyCleanFont end;
+
+	self:Draggable(Outer);
+
+	local Core = self:_BuildPreview(Outer, {
+		Height  = Height;
+		Size    = UDim2.new(1, -10, 1, -39);
+		Enabled = Opts.Enabled;
+	});
+	Core.Container.Position = UDim2.new(0, 5, 0, 34);
+
+	local FadeOriginals = nil;
+	local FadeToken = 0;
+
+	local function CaptureFade()
+		local Map = {};
+		local Types = {
+			Frame = {"BackgroundTransparency"};
+			TextLabel = {"BackgroundTransparency","TextTransparency"};
+			TextButton = {"BackgroundTransparency","TextTransparency"};
+			ImageLabel = {"BackgroundTransparency","ImageTransparency"};
+			ViewportFrame = {"ImageTransparency"};
+			UIStroke = {"Transparency"};
+		};
+		local function Cap(Inst)
+			local Props = Types[Inst.ClassName];
+			if not Props then return end;
+			local PMap = {};
+			for _, P in Props do
+				local Ok, V = pcall(function() return Inst[P] end);
+				if Ok then PMap[P] = V end;
+			end;
+			Map[Inst] = PMap;
+		end;
+		Cap(Outer);
+		for _, D in Outer:GetDescendants() do Cap(D) end;
+		return Map;
+	end;
+
+	local Obj = { Gui = Gui, Outer = Outer, Preview = Core, _Visible = true };
+
+	function Obj:SetVisible(State)
+		if self._Visible == State then return end;
+		self._Visible = State;
+		FadeToken += 1;
+		local Mine = FadeToken;
+		if not FadeOriginals then FadeOriginals = CaptureFade() end;
+		local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
+		if State then
+			Gui.Enabled = true;
+			for Inst, PMap in FadeOriginals do
+				if Inst and Inst.Parent then
+					local Goal = {};
+					for P, V in PMap do Goal[P] = V end;
+					Library:Tween(Inst, Info, Goal):Play();
+				end;
+			end;
+		else
+			for Inst, PMap in FadeOriginals do
+				if Inst and Inst.Parent then
+					local Goal = {};
+					for P in PMap do Goal[P] = 1 end;
+					Library:Tween(Inst, Info, Goal):Play();
+				end;
+			end;
+			task.delay(Info.Time + 0.05, function()
+				if FadeToken == Mine and not self._Visible then Gui.Enabled = false end;
+			end);
+		end;
+	end;
+
+	function Obj:SyncWithWindow(Window)
+		local OrigSetVisible = Window.SetVisible;
+		Window.SetVisible = function(Win, State)
+			OrigSetVisible(Win, State);
+			self:SetVisible(State);
+		end;
+		local OrigToggle = Window.Toggle;
+		Window.Toggle = function(Win)
+			OrigToggle(Win);
+			self:SetVisible(Win.Visible);
+		end;
+	end;
+
+	function Obj:PositionNextTo(Window)
+		local WinOuter = Window.Outer;
+		if not WinOuter then return end;
+		local function UpdatePos()
+			local WinPos  = WinOuter.AbsolutePosition;
+			local WinSize = WinOuter.AbsoluteSize;
+			Outer.AnchorPoint = Vector2.new(0, 0);
+			Outer.Position = UDim2.fromOffset(WinPos.X + WinSize.X + 2, WinPos.Y + GuiInset);
+		end;
+		task.defer(UpdatePos);
+		WinOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
+		WinOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
+	end;
+
+	function Obj:Get(...) return Core:Get(...) end;
+	function Obj:Set(...) return Core:Set(...) end;
+	function Obj:Update(...) return Core:Update(...) end;
+	function Obj:SetText(...) return Core:SetText(...) end;
+	function Obj:ViewModel(...) return Core:ViewModel(...) end;
+	function Obj:Refresh(...) return Core:Refresh(...) end;
+	function Obj:Destroy() Gui:Destroy() end;
+	Library._PreviewWindow = Obj;
 	return Obj;
 end;
 

@@ -20,6 +20,14 @@ local PlayerList = Library:Playerlist({
 PlayerList:PositionNextTo(Window);
 PlayerList:SyncWithWindow(Window);
 
+local Preview = Library:PreviewWindow({
+    Title = "Preview",
+    Width = 240,
+    Height = 320
+});
+Preview:PositionNextTo(Window);
+Preview:SyncWithWindow(Window);
+
 local TabLegit    = Window:Tab({ Name = "legit" });
 local TabRage     = Window:Tab({ Name = "rage" });
 local TabPlayers  = Window:Tab({ Name = "players" });
@@ -241,17 +249,6 @@ SecC:Slider({
 local SecEsp  = TabVisuals:Section({
     Name = "ESP",
     Side = "Left"
-    }
-);
-
-local SecPrev = TabVisuals:Section({
-    Name = "Preview",
-    Side = "Right"
-    }
-);
-
-local Preview = SecPrev:Preview({
-    Height = 260
     }
 );
 
