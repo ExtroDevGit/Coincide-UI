@@ -5746,167 +5746,189 @@ function Library:Watermark(Opts)
 	return Obj;
 end;
 
-function Library:Notify(Text, Time)
-	Text = tostring(Text or "");
-	Time = tonumber(Time) or 3;
+function Library:Notify(Text, Time, Color)
+    Text = tostring(Text or "");
+    Time = tonumber(Time) or 3;
+    Color = Color or Library.Accent or Color3.fromHex("FFFFFF");
 
-	if not self._NotifyStack then
-		local Gui = self:CreateInstance("ScreenGui", {
-			Name           = "Notifications";
-			Parent         = (gethui and gethui()) or CoreGui;
-			IgnoreGuiInset = true;
-			ResetOnSpawn   = false;
-			ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
-		});
-		local Stack = self:CreateInstance("Frame", {
-			Name                   = "Stack";
-			Parent                 = Gui;
-			AnchorPoint            = Vector2.new(0, 0);
-			Position               = UDim2.new(0, 10, 0, 200);
-			Size                   = UDim2.new(0, 200, 1, -210);
-			BackgroundTransparency = 1;
-			BorderSizePixel        = 0;
-		});
-		self:CreateInstance("UIListLayout", {
-			Parent              = Stack;
-			FillDirection       = Enum.FillDirection.Vertical;
-			SortOrder           = Enum.SortOrder.LayoutOrder;
-			VerticalAlignment   = Enum.VerticalAlignment.Top;
-			HorizontalAlignment = Enum.HorizontalAlignment.Left;
-			Padding             = UDim.new(0, 6);
-		});
-		self._NotifyGui   = Gui;
-		self._NotifyStack = Stack;
-		self._NotifyOrder = 0;
-	end;
+    -- Notification Stack'i oluştur (eğer yoksa)
+    if not self._NotifyStack then
+        local Gui = self:CreateInstance("ScreenGui", {
+            Name           = "Notifications";
+            Parent         = (gethui and gethui()) or CoreGui;
+            IgnoreGuiInset = true;
+            ResetOnSpawn   = false;
+            ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+        });
+        local Stack = self:CreateInstance("Frame", {
+            Name                   = "Stack";
+            Parent                 = Gui;
+            AnchorPoint            = Vector2.new(0, 0);
+            Position               = UDim2.new(0, 10, 0, 200);
+            Size                   = UDim2.new(0, 200, 1, -210);
+            BackgroundTransparency = 1;
+            BorderSizePixel        = 0;
+        });
+        self:CreateInstance("UIListLayout", {
+            Parent              = Stack;
+            FillDirection       = Enum.FillDirection.Vertical;
+            SortOrder           = Enum.SortOrder.LayoutOrder;
+            VerticalAlignment   = Enum.VerticalAlignment.Top;
+            HorizontalAlignment = Enum.HorizontalAlignment.Left;
+            Padding             = UDim.new(0, 6);
+        });
+        self._NotifyGui   = Gui;
+        self._NotifyStack = Stack;
+        self._NotifyOrder = 0;
+    end;
 
-	self._NotifyOrder = self._NotifyOrder + 1;
+    self._NotifyOrder = self._NotifyOrder + 1;
 
-	local Wrapper = self:CreateInstance("Frame", {
-		Name                   = "NotifWrapper";
-		Parent                 = self._NotifyStack;
-		Size                   = UDim2.new(0, 0, 0, 0);
-		AutomaticSize          = Enum.AutomaticSize.XY;
-		BackgroundTransparency = 1;
-		BorderSizePixel        = 0;
-		LayoutOrder            = self._NotifyOrder;
-		ClipsDescendants       = false;
-	});
+    -- Notification Wrapper (ana taşıyıcı)
+    local Wrapper = self:CreateInstance("Frame", {
+        Name                   = "NotifWrapper";
+        Parent                 = self._NotifyStack;
+        Size                   = UDim2.new(0, 0, 0, 0);
+        AutomaticSize          = Enum.AutomaticSize.XY;
+        BackgroundTransparency = 1;
+        BorderSizePixel        = 0;
+        LayoutOrder            = self._NotifyOrder;
+        ClipsDescendants       = false;
+    });
 
-	local Outer = self:CreateInstance("CanvasGroup", {
-		Name              = "Notification";
-		Parent            = Wrapper;
-		AnchorPoint       = Vector2.new(0, 0);
-		Position          = UDim2.new(0, -60, 0, 0);
-		Size              = UDim2.new(0, 0, 0, 0);
-		AutomaticSize     = Enum.AutomaticSize.XY;
-		BackgroundColor3  = Color3.fromHex("000000");
-		BorderSizePixel   = 0;
-		GroupTransparency = 1;
-	});
-	self:CreateInstance("UIPadding", {
-		Parent        = Outer;
-		PaddingBottom = UDim.new(0, 2);
-	});
+    -- Ana CanvasGroup (giriş/çıkış animasyonları için)
+    local Outer = self:CreateInstance("CanvasGroup", {
+        Name              = "Notification";
+        Parent            = Wrapper;
+        AnchorPoint       = Vector2.new(0, 0);
+        Position          = UDim2.new(0, -60, 0, 0); -- Soldan kayarak gelme
+        Size              = UDim2.new(0, 0, 0, 0);
+        AutomaticSize     = Enum.AutomaticSize.XY;
+        BackgroundColor3  = Color3.fromHex("000000");
+        BorderSizePixel   = 0;
+        GroupTransparency = 1;
+    });
+    self:CreateInstance("UIPadding", {
+        Parent        = Outer;
+        PaddingBottom = UDim.new(0, 2);
+    });
 
-	local Inline = self:CreateInstance("Frame", {
-		Name             = "Inline";
-		Parent           = Outer;
-		Position         = UDim2.new(0, 1, 0, 1);
-		Size             = UDim2.new(1, -2, 1, 0);
-		BackgroundColor3 = Color3.fromHex("393939");
-		BorderSizePixel  = 0;
-	});
-	self:CreateInstance("UIPadding", {
-		Parent        = Inline;
-		PaddingBottom = UDim.new(0, 2);
-	});
+    -- Inline (kenar boşlukları)
+    local Inline = self:CreateInstance("Frame", {
+        Name             = "Inline";
+        Parent           = Outer;
+        Position         = UDim2.new(0, 1, 0, 1);
+        Size             = UDim2.new(1, -2, 1, 0);
+        BackgroundColor3 = Color3.fromHex("393939");
+        BorderSizePixel  = 0;
+    });
+    self:CreateInstance("UIPadding", {
+        Parent        = Inline;
+        PaddingBottom = UDim.new(0, 2);
+    });
 
-	local Background = self:CreateInstance("Frame", {
-		Name             = "Background";
-		Parent           = Inline;
-		Position         = UDim2.new(0, 1, 0, 1);
-		Size             = UDim2.new(1, -2, 1, 0);
-		BackgroundColor3 = Color3.fromHex("FFFFFF");
-		BorderSizePixel  = 0;
-	});
-	self:CreateInstance("UIGradient", {
-		Parent   = Background;
-		Rotation = 90;
-		Color    = NewColorSequence({
-			NewColorSequenceKeypoint(0, Color3.fromHex("262626"));
-			NewColorSequenceKeypoint(1, Color3.fromHex("191919"));
-		});
-	});
+    -- Background (gradient arka plan)
+    local Background = self:CreateInstance("Frame", {
+        Name             = "Background";
+        Parent           = Inline;
+        Position         = UDim2.new(0, 1, 0, 1);
+        Size             = UDim2.new(1, -2, 1, 0);
+        BackgroundColor3 = Color3.fromHex("FFFFFF");
+        BorderSizePixel  = 0;
+    });
+    self:CreateInstance("UIGradient", {
+        Parent   = Background;
+        Rotation = 90;
+        Color    = NewColorSequence({
+            NewColorSequenceKeypoint(0, Color3.fromHex("262626"));
+            NewColorSequenceKeypoint(1, Color3.fromHex("191919"));
+        });
+    });
 
-	local Title = self:CreateInstance("TextLabel", {
-		Name                   = "Title";
-		Parent                 = Background;
-		Position               = UDim2.new(0, 4, 0, 4);
-		Size                   = UDim2.new(0, 0, 0, 0);
-		AutomaticSize          = Enum.AutomaticSize.XY;
-		BackgroundTransparency = 1;
-		BorderSizePixel        = 0;
-		Text                   = Text;
-		TextColor3             = Color3.fromHex("A0A0A0");
-		TextSize               = 12;
-		TextXAlignment         = Enum.TextXAlignment.Left;
-		TextYAlignment         = Enum.TextYAlignment.Top;
-		RichText               = true;
-	});
-	if ProggyCleanFont then Title.FontFace = ProggyCleanFont end;
-	self:CreateInstance("UIStroke", {
-		Parent          = Title;
-		Color           = Color3.fromHex("000000");
-		Thickness       = 1;
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual;
-		LineJoinMode    = Enum.LineJoinMode.Miter;
-	});
-	self:CreateInstance("UIPadding", {
-		Parent        = Title;
-		PaddingRight  = UDim.new(0, 7);
-		PaddingBottom = UDim.new(0, 3);
-	});
 
-	local Accent = self:CreateInstance("Frame", {
-		Name             = "Accent";
-		Parent           = Outer;
-		Position         = UDim2.new(0, 2, 1, -1);
-		Size             = UDim2.new(0, 0, 0, 1);
-		BackgroundColor3 = Library.Accent;
-		BorderSizePixel  = 0;
-		ZIndex           = 3;
-	});
-	Library:RegisterAccent(Accent);
+    local Title = self:CreateInstance("TextLabel", {
+        Name                   = "Title";
+        Parent                 = Background;
+        Position               = UDim2.new(0, 4, 0, 4);
+        Size                   = UDim2.new(0, 0, 0, 0);
+        AutomaticSize          = Enum.AutomaticSize.XY;
+        BackgroundTransparency = 1;
+        BorderSizePixel        = 0;
+        Text                   = Text;
+        TextColor3             = Color3.fromHex("A0A0A0");
+        TextSize               = 12;
+        TextXAlignment         = Enum.TextXAlignment.Left;
+        TextYAlignment         = Enum.TextYAlignment.Top;
+        RichText               = true;
+    });
+    if ProggyCleanFont then Title.FontFace = ProggyCleanFont end;
+    self:CreateInstance("UIStroke", {
+        Parent          = Title;
+        Color           = Color3.fromHex("000000");
+        Thickness       = 1;
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual;
+        LineJoinMode    = Enum.LineJoinMode.Miter;
+    });
+    self:CreateInstance("UIPadding", {
+        Parent        = Title;
+        PaddingRight  = UDim.new(0, 7);
+        PaddingBottom = UDim.new(0, 3);
+    });
 
-	local InInfo  = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
-	local OutInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In);
 
-	TweenService:Create(Outer, InInfo, {
-		Position          = UDim2.new(0, 0, 0, 0);
-		GroupTransparency = 0;
-	}):Play();
+    local Liner = self:CreateInstance("Frame", {
+        Name             = "Liner";
+        Parent           = Outer;
+        Position         = UDim2.new(0, 2, 0, 2);
+        Size             = UDim2.new(0, 2, 1, -4);
+        BackgroundColor3 = Color;
+        BorderSizePixel  = 0;
+        ZIndex           = 2;
+    });
 
-	task.spawn(function()
-		task.wait();
-		local Target = math.max(0, Outer.AbsoluteSize.X - 4);
-		TweenService:Create(Accent, TweenInfo.new(Time, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0, Target, 0, 1);
-		}):Play();
-	end);
 
-	task.delay(Time, function()
-		if not Wrapper.Parent then return end;
-		TweenService:Create(Outer, OutInfo, {
-			Position          = UDim2.new(0, -60, 0, 0);
-			GroupTransparency = 1;
-		}):Play();
-		task.delay(OutInfo.Time, function()
-			if Wrapper and Wrapper.Parent then Wrapper:Destroy() end;
-		end);
-	end);
+    local DurationLiner = self:CreateInstance("Frame", {
+        Name             = "DurationLiner";
+        Parent           = Outer;
+        Position         = UDim2.new(0, 2, 1, -1);
+        Size             = UDim2.new(1, -4, 0, 1); -- Başlangıçta tam genişlikte
+        BackgroundColor3 = Color;
+        BorderSizePixel  = 0;
+        ZIndex           = 3;
+    });
 
-	return Wrapper;
+
+    local InInfo = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+    local OutInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In);
+
+    TweenService:Create(Outer, InInfo, {
+        Position          = UDim2.new(0, 0, 0, 0);
+        GroupTransparency = 0;
+    }):Play();
+
+    task.spawn(function()
+        task.wait(0.1); -- Biraz bekle, notification tam yerleşsin
+        local TargetWidth = Outer.AbsoluteSize.X - 4;
+        if TargetWidth > 0 then
+            TweenService:Create(DurationLiner, TweenInfo.new(Time, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 0, 0, 1); -- Sona doğru sıfırlanır
+            }):Play();
+        end
+    end);
+
+
+    task.delay(Time, function()
+        if not Wrapper.Parent then return end;
+        TweenService:Create(Outer, OutInfo, {
+            Position          = UDim2.new(0, -60, 0, 0);
+            GroupTransparency = 1;
+        }):Play();
+        task.delay(OutInfo.Time, function()
+            if Wrapper and Wrapper.Parent then Wrapper:Destroy() end;
+        end);
+    end);
+
+    return Wrapper;
 end;
 
 
