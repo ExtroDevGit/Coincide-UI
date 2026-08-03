@@ -5884,6 +5884,320 @@ function Library:Notify(Text, Time)
 	return Wrapper;
 end;
 
+function Library:Playerlist(Opts)
+	Opts = typeof(Opts) == "table" and Opts or {};
+	local Title = tostring(Opts.Title or "Playerlist");
+	local Width = tonumber(Opts.Width) or 550;
+	local Height = tonumber(Opts.Height) or 400;
+
+	local Gui = self:CreateInstance("ScreenGui", {
+		Name = "PlayerlistGui";
+		Parent = (gethui and gethui()) or CoreGui;
+		IgnoreGuiInset = true;
+		ResetOnSpawn = false;
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+	});
+
+	local Outer = self:CreateInstance("Frame", {
+		Name = "Outer";
+		Parent = Gui;
+		AnchorPoint = Vector2.new(0, 0.5);
+		Position = UDim2.new(0, 450, 0.5, 0);
+		Size = UDim2.fromOffset(Width, Height);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel = 0;
+	});
+	self:CreateInstance("UIGradient", {
+		Parent   = Outer;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("212121"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("1A1A1A"));
+		});
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = Outer;
+		Color           = Color3.fromHex("000000");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		LineJoinMode    = Enum.LineJoinMode.Miter;
+	});
+
+	local InnerOutline = self:CreateInstance("Frame", {
+		Name = "InnerOutline";
+		Parent = Outer;
+		Position = UDim2.new(0, 1, 0, 1);
+		Size = UDim2.new(1, -2, 1, -2);
+		BackgroundTransparency = 1;
+		BorderSizePixel = 0;
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = InnerOutline;
+		Color           = Color3.fromHex("393939");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		LineJoinMode    = Enum.LineJoinMode.Miter;
+	});
+
+	local TopLine = self:CreateInstance("Frame", {
+		Name = "TopLine";
+		Parent = Outer;
+		Position = UDim2.new(0, 1, 0, 1);
+		Size = UDim2.new(1, -2, 0, 1);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel = 0;
+		ZIndex = 10;
+	});
+	local TopLineGradient = self:CreateInstance("UIGradient", {
+		Parent = TopLine;
+		Rotation = 0;
+	});
+	Library:RegisterAccentGradient(TopLineGradient);
+
+	local TitleText = Title;
+	local Title_Obj = self:CreateInstance("TextLabel", {
+		Name                   = "Title";
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 6, 0, 9);
+		Size                   = UDim2.new(0, 200, 0, 18);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		Text                   = TitleText;
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then Title_Obj.FontFace = ProggyCleanFont end;
+
+	local Content = self:CreateInstance("Frame", {
+		Name             = "Content";
+		Parent           = Outer;
+		Position         = UDim2.new(0, 5, 0, 34);
+		Size             = UDim2.new(1, -10, 1, -50);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIGradient", {
+		Parent   = Content;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("161616"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("101010"));
+		});
+	});
+
+	local function ContentEdge(Name, Anchor, Pos, Sz, Color)
+		self:CreateInstance("Frame", {
+			Name             = Name;
+			Parent           = Content;
+			AnchorPoint      = Anchor;
+			Position         = Pos;
+			Size             = Sz;
+			BackgroundColor3 = Color3.fromHex(Color);
+			BorderSizePixel  = 0;
+			ZIndex           = 10;
+		});
+	end;
+	ContentEdge("LeftBlack",   Vector2.new(0, 0), UDim2.new(0, 0, 0, 0),  UDim2.new(0, 1, 1, 0),   "000000");
+	ContentEdge("LeftGray",    Vector2.new(0, 0), UDim2.new(0, 1, 0, 1),  UDim2.new(0, 1, 1, -2),  "393939");
+	ContentEdge("RightBlack",  Vector2.new(1, 0), UDim2.new(1, 0, 0, 0),  UDim2.new(0, 1, 1, 0),   "000000");
+	ContentEdge("RightGray",   Vector2.new(1, 0), UDim2.new(1, -1, 0, 1), UDim2.new(0, 1, 1, -2),  "393939");
+	ContentEdge("BottomBlack", Vector2.new(0, 1), UDim2.new(0, 0, 1, 0),  UDim2.new(1, 0, 0, 1),   "000000");
+	ContentEdge("BottomGray",  Vector2.new(0, 1), UDim2.new(0, 1, 1, -1), UDim2.new(1, -2, 0, 1),  "393939");
+
+	-- SEARCH BOX
+	local SearchBox = self:CreateInstance("Frame", {
+		Name             = "SearchBox";
+		Parent           = Outer;
+		AnchorPoint      = Vector2.new(0, 1);
+		Position         = UDim2.new(0, 5, 1, -5);
+		Size             = UDim2.new(1, -10, 0, 21);
+		BackgroundColor3 = Color3.fromHex("000000");
+		BorderSizePixel  = 0;
+	});
+	local SearchBoxGray = self:CreateInstance("Frame", {
+		Parent           = SearchBox;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("393939");
+		BorderSizePixel  = 0;
+	});
+	local SearchBoxInside = self:CreateInstance("Frame", {
+		Parent           = SearchBoxGray;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIGradient", {
+		Parent   = SearchBoxInside;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("1B1B1B"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("121212"));
+		});
+	});
+	local SearchInput = self:CreateInstance("TextBox", {
+		Parent                 = SearchBoxInside;
+		Position               = UDim2.new(0, 4, 0, 0);
+		Size                   = UDim2.new(1, -8, 1, 0);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		ClearTextOnFocus       = false;
+		Text                   = "";
+		PlaceholderText        = "Type here...";
+		PlaceholderColor3      = Color3.fromHex("5E626B");
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+		ClipsDescendants       = true;
+	});
+	if ProggyCleanFont then SearchInput.FontFace = ProggyCleanFont end;
+
+	-- PLAYER LIST
+	local PlayerListScroll = self:CreateInstance("ScrollingFrame", {
+		Name                   = "PlayerList";
+		Parent                 = Content;
+		Size                   = UDim2.new(1, 0, 1, 0);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		CanvasSize             = UDim2.new(0, 0, 0, 0);
+		AutomaticCanvasSize    = Enum.AutomaticSize.Y;
+		ScrollBarThickness     = 2;
+		ScrollBarImageColor3   = Library.Accent;
+		ScrollingDirection     = Enum.ScrollingDirection.Y;
+		ClipsDescendants       = true;
+	});
+	Library:RegisterAccent(PlayerListScroll, "ScrollBarImageColor3");
+	self:CreateInstance("UIListLayout", {
+		Parent        = PlayerListScroll;
+		FillDirection = Enum.FillDirection.Vertical;
+		SortOrder     = Enum.SortOrder.LayoutOrder;
+		Padding       = UDim.new(0, 0);
+	});
+	self:CreateInstance("UIPadding", {
+		Parent        = PlayerListScroll;
+		PaddingLeft   = UDim.new(0, 4);
+		PaddingRight  = UDim.new(0, 4);
+		PaddingTop    = UDim.new(0, 4);
+		PaddingBottom = UDim.new(0, 4);
+	});
+
+	self:Draggable(Outer);
+
+	local LP = game:GetService("Players").LocalPlayer;
+	local Players = game:GetService("Players");
+
+	local function GetPlayerTeam(Player)
+		if Player == LP then
+			return "LocalPlayer";
+		end;
+		if Player.Team then
+			return Player.Team.Name;
+		end;
+		return "Neutral";
+	end;
+
+	local function RefreshPlayerList()
+		for _, Child in PlayerListScroll:GetChildren() do
+			if Child:IsA("Frame") then Child:Destroy() end;
+		end;
+
+		local SearchText = string.lower(SearchInput.Text);
+		local PlayerList = {};
+
+		-- LocalPlayer'ı listeye ekle
+		if LP then
+			table.insert(PlayerList, { Name = LP.Name, Player = LP, Team = GetPlayerTeam(LP), Index = 0 });
+		end;
+
+		-- Diğer oyuncuları ekle
+		for _, Player in Players:GetPlayers() do
+			if Player ~= LP then
+				table.insert(PlayerList, { 
+					Name = Player.Name, 
+					Player = Player, 
+					Team = GetPlayerTeam(Player),
+					Index = #PlayerList + 1
+				});
+			end;
+		end;
+
+		-- Oyuncuları adına göre filtrele
+		for _, PlayerData in PlayerList do
+			if SearchText == "" or string.find(string.lower(PlayerData.Name), SearchText, 1, true) then
+				local Row = self:CreateInstance("Frame", {
+					Name                   = "PlayerRow_" .. PlayerData.Name;
+					Parent                 = PlayerListScroll;
+					Size                   = UDim2.new(1, 0, 0, 18);
+					BackgroundTransparency = 1;
+					BorderSizePixel        = 0;
+					LayoutOrder            = PlayerData.Index;
+				});
+
+				local NameLbl = self:CreateInstance("TextLabel", {
+					Name                   = "Name";
+					Parent                 = Row;
+					AnchorPoint            = Vector2.new(0, 0.5);
+					Position               = UDim2.new(0, 0, 0.5, 0);
+					Size                   = UDim2.new(0, 200, 1, 0);
+					BackgroundTransparency = 1;
+					BorderSizePixel        = 0;
+					Text                   = PlayerData.Name;
+					TextColor3             = Color3.fromHex("FFFFFF");
+					TextSize               = 12;
+					TextXAlignment         = Enum.TextXAlignment.Left;
+					TextYAlignment         = Enum.TextYAlignment.Center;
+				});
+				if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
+
+				local TeamLbl = self:CreateInstance("TextLabel", {
+					Name                   = "Team";
+					Parent                 = Row;
+					AnchorPoint            = Vector2.new(1, 0.5);
+					Position               = UDim2.new(1, 0, 0.5, 0);
+					Size                   = UDim2.new(0, 150, 1, 0);
+					BackgroundTransparency = 1;
+					BorderSizePixel        = 0;
+					Text                   = PlayerData.Team;
+					TextColor3             = PlayerData.Team == "LocalPlayer" and Library.Accent or Color3.fromHex("A0A0A0");
+					TextSize               = 12;
+					TextXAlignment         = Enum.TextXAlignment.Right;
+					TextYAlignment         = Enum.TextYAlignment.Center;
+				});
+				if ProggyCleanFont then TeamLbl.FontFace = ProggyCleanFont end;
+
+				-- HOVER EFFECT
+				Row.MouseEnter:Connect(function()
+					Row.BackgroundColor3 = Color3.fromHex("1E1E1E");
+					Row.BackgroundTransparency = 0.3;
+				end);
+				Row.MouseLeave:Connect(function()
+					Row.BackgroundTransparency = 1;
+				end);
+			end;
+		end;
+	end;
+
+	-- İlk yükle
+	RefreshPlayerList();
+
+	-- Oyuncu katıldığında/ayrıldığında güncelle
+	Players.PlayerAdded:Connect(RefreshPlayerList);
+	Players.PlayerRemoving:Connect(RefreshPlayerList);
+
+	-- Arama kutusunda değişiklik
+	SearchInput:GetPropertyChangedSignal("Text"):Connect(RefreshPlayerList);
+
+	local Obj = { Gui = Gui, Outer = Outer, Content = Content };
+	function Obj:Refresh() RefreshPlayerList() end;
+	function Obj:SetVisible(State) Gui.Enabled = State end;
+	function Obj:Destroy() Gui:Destroy() end;
+	return Obj;
+end;
+
 function Library:Unload()
 	self:Log("Unload requested");
 	for _, Conn in self.Connections do
