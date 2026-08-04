@@ -6358,6 +6358,7 @@ function Library:_BuildPreview(Parent, Opts)
 	return Obj;
 end;
 
+
 function Library:PreviewWindow(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Title  = tostring(Opts.Title or "Preview");
