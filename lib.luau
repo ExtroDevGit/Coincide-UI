@@ -460,7 +460,6 @@ end;
 
 function Library:Tooltip(Inst, Text)
 	if not Inst or not Text or Text == "" then return end;
-
 	if not self._TooltipFrame then
 		local Gui = self:CreateInstance("ScreenGui", {
 			Name           = "Tooltip";
@@ -520,30 +519,62 @@ function Library:Tooltip(Inst, Text)
 			TextYAlignment         = Enum.TextYAlignment.Center;
 		});
 		if ProggyCleanFont then Lbl.FontFace = ProggyCleanFont end;
-
 		self._TooltipGui   = Gui;
 		self._TooltipFrame = Frame;
 		self._TooltipLabel = Lbl;
+
+		-- Güvenlik ağı: MouseLeave kaçırılırsa (instant teleport, hızlı sürükleme vb.)
+		-- gerçek mouse konumunu takip edip Inst'in dışına çıkıldığını tespit ediyoruz.
+		local UserInputService = game:GetService("UserInputService");
+		local RunService       = game:GetService("RunService");
+		self:Connection(RunService.Heartbeat, function()
+			local ActiveInst = self._TooltipActive;
+			if not ActiveInst then return end;
+			local ok, guiObj = pcall(function() return ActiveInst end);
+			if not ok or not guiObj or not guiObj.Parent then
+				self:_HideTooltip();
+				return;
+			end;
+			local MousePos = UserInputService:GetMouseLocation();
+			local AbsPos   = guiObj.AbsolutePosition;
+			local AbsSize  = guiObj.AbsoluteSize;
+			local Inset    = game:GetService("GuiService"):GetGuiInset();
+			local Adjusted = MousePos - Inset;
+			if Adjusted.X < AbsPos.X or Adjusted.X > AbsPos.X + AbsSize.X
+				or Adjusted.Y < AbsPos.Y or Adjusted.Y > AbsPos.Y + AbsSize.Y then
+				self:_HideTooltip();
+			end;
+		end);
 	end;
 
 	local Frame    = self._TooltipFrame;
 	local Lbl      = self._TooltipLabel;
-	local InInfo   = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
-	local OutInfo  = TweenInfo.new(0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.In);
-	local SwapInfo = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In);
+	local InInfo   = TweenInfo.new(0.22, Enum.EasingStyle.Sine, Enum.EasingDirection.Out);
+	local OutInfo  = TweenInfo.new(0.18, Enum.EasingStyle.Sine, Enum.EasingDirection.In);
+	local SwapInfo = TweenInfo.new(0.1, Enum.EasingStyle.Sine, Enum.EasingDirection.In);
+
+	-- Ortak "gizle" mantığı: MouseLeave ile heartbeat güvenlik ağı bunu paylaşır.
+	function self:_HideTooltip()
+		if not self._TooltipActive then return end;
+		self._TooltipActive = nil;
+		local Mine = (self._TooltipToken or 0) + 1;
+		self._TooltipToken = Mine;
+		Library:Tween(Frame, OutInfo, { GroupTransparency = 1 }):Play();
+		task.delay(OutInfo.Time, function()
+			if self._TooltipToken == Mine then Frame.Visible = false end;
+		end);
+	end;
 
 	self:Connection(Inst.MouseEnter, function()
 		self._TooltipActive = Inst;
 		self._TooltipToken  = (self._TooltipToken or 0) + 1;
 		local Mine = self._TooltipToken;
-
 		local function FadeIn()
 			Lbl.Text                = tostring(Text);
 			Frame.Visible           = true;
 			Frame.GroupTransparency = 1;
 			Library:Tween(Frame, InInfo, { GroupTransparency = 0 }):Play();
 		end;
-
 		if Frame.Visible and Frame.GroupTransparency < 1 then
 			Library:Tween(Frame, SwapInfo, { GroupTransparency = 1 }):Play();
 			task.delay(SwapInfo.Time, function()
@@ -553,19 +584,15 @@ function Library:Tooltip(Inst, Text)
 			FadeIn();
 		end;
 	end);
+
 	self:Connection(Inst.MouseMoved, function(X, Y)
 		if self._TooltipActive ~= Inst then return end;
 		Frame.Position = UDim2.fromOffset(X + 14, Y + 6);
 	end);
+
 	self:Connection(Inst.MouseLeave, function()
 		if self._TooltipActive ~= Inst then return end;
-		self._TooltipActive = nil;
-		local Mine = (self._TooltipToken or 0) + 1;
-		self._TooltipToken = Mine;
-		Library:Tween(Frame, OutInfo, { GroupTransparency = 1 }):Play();
-		task.delay(OutInfo.Time, function()
-			if self._TooltipToken == Mine then Frame.Visible = false end;
-		end);
+		self:_HideTooltip();
 	end);
 end;
 
