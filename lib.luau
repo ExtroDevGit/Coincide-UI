@@ -26,7 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -6477,45 +6477,6 @@ function Library:PreviewWindow(Opts)
 
 	local Obj = { Gui = Gui, Outer = Outer, Preview = Core, _Visible = true };
 
-	-- 50 FPS Güncelleme Sistemi (20ms interval)
-	local UpdateInterval = 1 / 50; -- 0.02 saniye
-	local LastUpdateTime = 0;
-	local UpdateConnection = nil;
-	local AutoUpdateEnabled = Opts.AutoUpdate ~= false; -- Varsayılan: true
-
-	-- Karakteri güncelle
-	local function UpdatePreview()
-		if Obj._Visible and Obj.Preview then
-			pcall(function()
-				Obj.Preview:Refresh();
-			end);
-		end;
-	end;
-
-	-- RenderStepped ile 50 FPS kontrol
-	local function StartAutoUpdate()
-		if UpdateConnection then return end;
-		UpdateConnection = game:GetService("RunService").RenderStepped:Connect(function(DeltaTime)
-			LastUpdateTime = LastUpdateTime + DeltaTime;
-			if LastUpdateTime >= UpdateInterval then
-				LastUpdateTime = 0;
-				UpdatePreview();
-			end;
-		end);
-	end;
-
-	local function StopAutoUpdate()
-		if UpdateConnection then
-			UpdateConnection:Disconnect();
-			UpdateConnection = nil;
-		end;
-	end;
-
-	-- Başlat
-	if AutoUpdateEnabled then
-		StartAutoUpdate();
-	end;
-
 	function Obj:SetVisible(State)
 		if self._Visible == State then return end;
 		self._Visible = State;
@@ -6573,46 +6534,13 @@ function Library:PreviewWindow(Opts)
 		WinOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
 	end;
 
-	-- 50 FPS Kontrol Metodları
-	function Obj:EnableAutoUpdate()
-		if not AutoUpdateEnabled then
-			AutoUpdateEnabled = true;
-			StartAutoUpdate();
-		end;
-	end;
-
-	function Obj:DisableAutoUpdate()
-		if AutoUpdateEnabled then
-			AutoUpdateEnabled = false;
-			StopAutoUpdate();
-		end;
-	end;
-
-	function Obj:IsAutoUpdateEnabled()
-		return AutoUpdateEnabled;
-	end;
-
-	function Obj:ManualUpdate()
-		UpdatePreview();
-	end;
-
-	function Obj:SetUpdateInterval(FPS)
-		UpdateInterval = 1 / FPS;
-		LastUpdateTime = 0;
-	end;
-
 	function Obj:Get(...) return Core:Get(...) end;
 	function Obj:Set(...) return Core:Set(...) end;
 	function Obj:Update(...) return Core:Update(...) end;
 	function Obj:SetText(...) return Core:SetText(...) end;
 	function Obj:ViewModel(...) return Core:ViewModel(...) end;
 	function Obj:Refresh(...) return Core:Refresh(...) end;
-
-	function Obj:Destroy()
-		StopAutoUpdate();
-		Gui:Destroy();
-	end;
-
+	function Obj:Destroy() Gui:Destroy() end;
 	Library._PreviewWindow = Obj;
 	return Obj;
 end;
