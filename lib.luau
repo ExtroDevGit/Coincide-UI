@@ -72,32 +72,101 @@ end
 print(Library:GetVersion())
 
 do
+
 local function check()
-	local path = "Hydrogen";
-
-	local logourl = "https://www.dropbox.com/scl/fi/r3qlj26fdg2bniukw6ut9/logo2.png?rlkey=5kq8p4mpdm4e5laqd7havyfsn&st=od93q1vk&dl=1";
-
+	local path = "Hydrogen"
+	local logourl = "https://www.dropbox.com/scl/fi/r3qlj26fdg2bniukw6ut9/logo2.png?rlkey=5kq8p4mpdm4e5laqd7havyfsn&st=od93q1vk&dl=1"
+	
 	if not isfolder("Hydrogen") then
-		makefolder("Hydrogen");
-	end;
-
+		if not makefolder("Hydrogen") then
+			getgenv().failreason = 1
+			return false
+		end
+	end
+	
 	if not isfile("Hydrogen/logo2.png") then
-		local data = game:HttpGet(logourl);
-		writefile("Hydrogen/logo2.png", data);
-		print("downloaded logo");
-	end;
-
-	if not hookmetamethod or not hookfunction or not setreadonly or not getrawmetatable
-	or not setrawmetatable or not debug or not getscriptbytecode then
-		return false;
-	end;
-
+		local success, data = pcall(function()
+			return game:HttpGet(logourl)
+		end)
+		if not success or not data then
+			getgenv().failreason = 2
+			return false
+		end
+		if not writefile("Hydrogen/logo2.png", data) then
+			getgenv().failreason = 3
+			return false
+		end
+		print("downloaded logo")
+	end
+	
+	if not hookmetamethod then
+		getgenv().failreason = 4
+		return false
+	end
+	
+	if not hookfunction then
+		getgenv().failreason = 5
+		return false
+	end
+	
+	if not setreadonly then
+		getgenv().failreason = 6
+		return false
+	end
+	
+	if not getrawmetatable then
+		getgenv().failreason = 7
+		return false
+	end
+	
+	if not setrawmetatable then
+		getgenv().failreason = 8
+		return false
+	end
+	
+	if not debug then
+		getgenv().failreason = 9
+		return false
+	end
+	
+	if not getscriptbytecode then
+		getgenv().failreason = 10
+		return false
+	end
+	
 	if not game then
-		return false;
-	end;
-
-	return true;
-end;
+		getgenv().failreason = 11
+		return false
+	end
+	
+	if not game.HttpGet then
+		getgenv().failreason = 12
+		return false
+	end
+	
+	if not game.GetObjects then
+		getgenv().failreason = 13
+		return false
+	end
+	
+	if not loadstring then
+		getgenv().failreason = 14
+		return false
+	end
+	
+	if not workspace then
+		getgenv().failreason = 15
+		return false
+	end
+	
+	if not game:GetService("Players") then
+		getgenv().failreason = 16
+		return false
+	end
+	
+	getgenv().failreason = 0
+	return true
+end
 
 function CreateLoader(Title, WindowSize)
     local Camera = Workspace.CurrentCamera
