@@ -269,7 +269,7 @@ MiddleIcon.Transparency = 1;
 end
 
 
-CreateLoader("Hydrogen", Vector2.new(300, 305))
+CreateLoader("Hydrogen", Vector2.new(300, 300))
 end
 
 function Library:RegisterAccentGradient(Gradient)
