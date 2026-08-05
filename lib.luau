@@ -69,6 +69,209 @@ end
 
 print(Library:GetVersion())
 
+do
+local function check()
+	local path = "Hydrogen";
+
+	local logourl = "https://www.dropbox.com/scl/fi/r3qlj26fdg2bniukw6ut9/logo2.png?rlkey=5kq8p4mpdm4e5laqd7havyfsn&st=od93q1vk&dl=1";
+
+	if not isfolder("Hydrogen") then
+		makefolder("Hydrogen");
+	end;
+
+	if not isfile("Hydrogen/logo2.png") then
+		local data = game:HttpGet(logourl);
+		writefile("Hydrogen/logo2.png", data);
+		print("downloaded logo");
+	end;
+
+	if not hookmetamethod or not hookfunction or not setreadonly or not getrawmetatable
+	or not setrawmetatable or not debug or not getscriptbytecode then
+		return false;
+	end;
+
+	if not game then
+		return false;
+	end;
+
+	return true;
+end;
+
+function CreateLoader(Title, WindowSize)
+    local Camera = Workspace.CurrentCamera
+
+
+    local Drawings = {}
+    
+
+    local MiddleX = (Camera.ViewportSize.X / 2) - (WindowSize.X / 2)
+    local MiddleY = (Camera.ViewportSize.Y / 2) - (WindowSize.Y / 2)
+
+    local WindowOutline = Drawing.new("Square")
+    WindowOutline.Size = WindowSize
+    WindowOutline.Thickness = 0
+    WindowOutline.Color = Color3.fromHex("#000005")
+    WindowOutline.Visible = true
+    WindowOutline.Filled = true
+    WindowOutline.Position = Vector2.new(MiddleX, MiddleY)
+    table.insert(Drawings, WindowOutline)
+    
+
+    local WindowOutlineBorder = Drawing.new("Square")
+    WindowOutlineBorder.Size = Vector2.new(WindowOutline.Size.X - 2, WindowOutline.Size.Y - 2)
+    WindowOutlineBorder.Position = Vector2.new(WindowOutline.Position.X + 1, WindowOutline.Position.Y + 1)
+    WindowOutlineBorder.Thickness = 0
+    WindowOutlineBorder.Color = Color3.fromHex("#7885f5")
+    WindowOutlineBorder.Visible = true
+    WindowOutlineBorder.Filled = true
+    table.insert(Drawings, WindowOutlineBorder)
+    
+
+    local WindowFrame = Drawing.new("Square")
+    WindowFrame.Size = Vector2.new(WindowOutlineBorder.Size.X - 2, WindowOutlineBorder.Size.Y - 2)
+    WindowFrame.Position = Vector2.new(WindowOutlineBorder.Position.X + 1, WindowOutlineBorder.Position.Y + 1)
+    WindowFrame.Thickness = 0
+    WindowFrame.Transparency = 1
+    WindowFrame.Color = Color3.fromHex("#191919")
+    WindowFrame.Visible = true
+    WindowFrame.Filled = true
+    table.insert(Drawings, WindowFrame)
+    
+
+    local WindowTitle = Drawing.new("Text")
+    WindowTitle.Font = Drawing.Fonts.Plex
+    WindowTitle.Size = 13
+    WindowTitle.Color = Color3.fromHex("#e8e8e8")
+    WindowTitle.Text = Title
+    WindowTitle.Position = Vector2.new(WindowFrame.Position.X + (WindowFrame.Size.X / 2), WindowOutlineBorder.Position.Y + 8)
+    WindowTitle.Visible = true
+    WindowTitle.Center = true
+    WindowTitle.Outline = false
+    table.insert(Drawings, WindowTitle)
+    
+
+    local WindowText = Drawing.new("Text")
+    WindowText.Font = Drawing.Fonts.Plex
+    WindowText.Size = 13
+    WindowText.Color = Color3.fromHex("#e8e8e8")
+    WindowText.Visible = true
+    WindowText.Center = true
+    WindowText.Outline = false
+    table.insert(Drawings, WindowText)
+    
+
+    local SliderInline = Drawing.new("Square")
+    SliderInline.Size = Vector2.new(205, 15)
+    SliderInline.Color = Color3.fromHex("#323232")
+    SliderInline.Transparency = 0.75
+    SliderInline.Thickness = 0
+    SliderInline.Visible = true
+    SliderInline.Filled = true
+    table.insert(Drawings, SliderInline)
+    
+
+    local SliderOutline = Drawing.new("Square")
+    SliderOutline.Size = Vector2.new(SliderInline.Size.X - 2, SliderInline.Size.Y - 2)
+    SliderOutline.Color = Color3.fromHex("#000005")
+    SliderOutline.Transparency = 0.5
+    SliderOutline.Thickness = 0
+    SliderOutline.Visible = true
+    SliderOutline.Filled = true
+    table.insert(Drawings, SliderOutline)
+
+    local SliderFrame = Drawing.new("Square")
+    SliderFrame.Color = Color3.fromHex("#7885f5")
+    SliderFrame.Transparency = 0.75
+    SliderFrame.Thickness = 0
+    SliderFrame.Visible = true
+    SliderFrame.Filled = true
+    table.insert(Drawings, SliderFrame)
+    
+
+local MiddleIcon = Drawing.new("Image");
+MiddleIcon.Size = Vector2.new(185, 185);
+MiddleIcon.Rounding = 5;
+MiddleIcon.Transparency = 1;
+MiddleIcon.Visible = true;
+LogoData = readfile("Hydrogen/logo2.png");
+MiddleIcon.Data = LogoData;
+table.insert(Drawings, MiddleIcon);
+
+SliderInline.Position = Vector2.new(
+	WindowOutline.Position.X + (WindowOutline.Size.X / 2) - (SliderOutline.Size.X / 2), 
+	(WindowOutline.Position.Y + WindowOutline.Size.Y) - 30
+);
+SliderOutline.Position = Vector2.new(SliderInline.Position.X + 1, SliderInline.Position.Y + 1);
+SliderFrame.Position = Vector2.new(SliderInline.Position.X + 1, SliderInline.Position.Y + 1);
+WindowText.Position = Vector2.new(WindowFrame.Position.X + (WindowFrame.Size.X / 2), SliderInline.Position.Y - 16);
+MiddleIcon.Position = Vector2.new(
+	WindowOutline.Position.X + (WindowOutline.Size.X / 2) - (MiddleIcon.Size.X / 2), 
+	WindowOutline.Position.Y + (WindowOutline.Size.Y / 2) - (MiddleIcon.Size.Y / 2) - 15
+);
+MiddleIcon.Transparency = 1;
+
+
+
+    local Max = 2
+    local function SetText(Val, Txt)
+        SliderFrame.Size = Vector2.new(
+            ((SliderInline.Size.X - 2) / (Max / math.clamp(Val, 0, Max))), 
+            SliderInline.Size.Y - 2
+        )
+        WindowText.Text = Txt
+    end
+    
+
+    SetText(0.3, "UI Initialization [ Downloading ]")
+    wait(0.2)
+
+    local function DownloadImage(Path, Url)
+        if isfile(Path) then
+            return readfile(Path)
+        else
+            local Data = game:HttpGet(Url)
+            writefile(Path, Data)
+            return Data
+        end
+    end
+    
+
+    SetText(0.5, "Checking Assets")
+	local c = check()
+	if c == false then
+		SetText(1, "Asset Check Function Returned False.")
+		getgenv().finishedloader = false
+		getgenv().loadererror = true
+		wait(3.5)
+		SetText(1.1, "Hydrogen will exit now.")
+		wait(2.5)
+   		task.wait(1)
+    	for _, Drawing in ipairs(Drawings) do
+        Drawing:Remove()
+    	end
+	end
+    task.wait(0.5)
+    SetText(1, "Checking Executor")
+    task.wait(0.5)
+    SetText(1.2, "Checking Game")
+    task.wait(0.3)
+	SetText(1.45, "Checking Script")
+    task.wait(0.2)
+	SetText(1.55, "[ Authenticating ]")
+    task.wait(0.15)
+    SetText(2, "Finished")
+	getgenv().finishedloader = true
+    
+    task.wait(1.2)
+    for _, Drawing in ipairs(Drawings) do
+        Drawing:Remove()
+    end
+end
+
+
+CreateLoader("Hydrogen", Vector2.new(300, 300))
+end
+
 function Library:RegisterAccentGradient(Gradient)
 	table.insert(self.AccentGradients, Gradient);
 	Gradient.Color = NewColorSequence({
