@@ -71,6 +71,27 @@ end
 
 print(Library:GetVersion())
 
+local function int()
+	local logourl = "https://www.dropbox.com/scl/fi/r3qlj26fdg2bniukw6ut9/logo2.png?rlkey=5kq8p4mpdm4e5laqd7havyfsn&st=od93q1vk&dl=1";
+
+	if not isfolder("Hydrogen") then
+		makefolder("Hydrogen");
+	end;
+
+	if not isfile("Hydrogen/logo2.png") then
+		local success, data = pcall(function()
+			return game:HttpGet(logourl);
+		end);
+
+		if success and data then
+			writefile("Hydrogen/logo2.png", data);
+			print("downloaded logo");
+		end;
+	end;
+end;
+
+int();
+
 do
 
 local function check()
