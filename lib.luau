@@ -5074,7 +5074,7 @@ end;
 			SecMenu:Textbox({ Name = "Suffix", Flag = "MenuSuffix", Placeholder = "menu suffix" });
 			SecMenu:Keybind({
 				Name     = "Menu Keybind";
-				Default  = Enum.KeyCode.Insert;
+				Default  = Enum.KeyCode.RightShift;
 				Mode     = "Always";
 				Callback = function() Window:Toggle() end;
 			});
@@ -7300,6 +7300,7 @@ local function MakeIcon(Label, Order, Callback)
     table.insert(Icons, IconRef);
     return IconRef;
 end;
+
 
 
 function Library:Unload()
