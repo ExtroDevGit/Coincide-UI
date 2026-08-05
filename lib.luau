@@ -4918,9 +4918,12 @@ end;
 	Window.Visible = true;
 	Window._FadeToken = 0;
 	Window._FadeOriginals = nil;
-	local Mouse = game:GetService("Players").LocalPlayer:GetMouse();
-	Window._OriginalMouseLocked = Mouse.Locked;
-	Window._OriginalMouseVisible = Mouse.Visible;
+local LocalPlayer = game:GetService("Players").LocalPlayer
+if LocalPlayer then
+	local Mouse = LocalPlayer:GetMouse()
+	Window._OriginalMouseLocked = Mouse.Locked
+	Window._OriginalMouseVisible = Mouse.Visible
+end
 	local FadeProps = {
 		Frame          = { "BackgroundTransparency" };
 		TextLabel      = { "BackgroundTransparency", "TextTransparency", "TextStrokeTransparency" };
