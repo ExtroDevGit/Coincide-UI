@@ -16,6 +16,8 @@ local NewColorSequenceKeypoint = ColorSequenceKeypoint.new;
 local NewNumberSequence = NumberSequence.new;
 local NewNumberSequenceKeypoint = NumberSequenceKeypoint.new;
 
+local Logo = readfile("Hydrogen/logo2.png") or 0
+
 local Library = {
 	Flags = {};
 	Toggles = {};
@@ -5471,15 +5473,26 @@ function Library:Watermark(Opts)
 	});
 	self:CreateInstance("UIPadding", {
 		Parent       = Inside;
-		PaddingLeft  = UDim.new(0, 10);
+		PaddingLeft  = UDim.new(0, 8);
 		PaddingRight = UDim.new(0, 10);
 	});
+
+	local Logo = self:CreateInstance("ImageLabel", {
+		Name = "Logo";
+		Parent = Inside;
+		Size = UDim2.fromOffset(16, 16);
+		AnchorPoint = Vector2.new(0, 0.5);
+		Position = UDim2.new(0, 0, 0.5, 0);
+		BackgroundTransparency = 1;
+	});
+	local logo = readfile("Hydrogen/logo2.png");
+	Logo.Image = getcustomasset(logo);
 
 	local Lbl = self:CreateInstance("TextLabel", {
 		Name                   = "Label";
 		Parent                 = Inside;
 		AnchorPoint            = Vector2.new(0, 0.5);
-		Position               = UDim2.new(0, 0, 0.5, 0);
+		Position               = UDim2.new(0, 22, 0.5, 0);
 		Size                   = UDim2.new(0, 0, 1, 0);
 		AutomaticSize          = Enum.AutomaticSize.X;
 		BackgroundTransparency = 1;
@@ -5494,8 +5507,13 @@ function Library:Watermark(Opts)
 	self:Draggable(Frame);
 
 	local Obj = { Gui = Gui, Frame = Frame, Label = Lbl };
-	function Obj:SetText(NewText) Lbl.Text = tostring(NewText) end;
-	function Obj:Destroy() Gui:Destroy() end;
+	function Obj:SetText(NewText)
+		Lbl.Text = tostring(NewText);
+	end;
+	function Obj:Destroy()
+		Gui:Destroy();
+	end;
+
 	Library._Watermark = Obj;
 	return Obj;
 end;
