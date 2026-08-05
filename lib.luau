@@ -5020,7 +5020,7 @@ end;
 				Multi   = true;
 				Flag    = "WatermarkOpts";
 				Options = { "Title", "Fps", "Ping", "Game Name", "User ID", "LocalPlayer Name", "Date" };
-				Default = { "Title", "Fps", "Ping" };
+				Default = { "Title", "Fps", "Ping","Game Name","Date" };
 			});
 			SecHud:Slider({ Name = "Refresh Rate", Flag = "WatermarkRate", Min = 0, Max = 2, Step = 0.05, Decimals = 2, Default = 0.1 });
 			SecHud:Toggle({
