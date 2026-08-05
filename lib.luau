@@ -26,7 +26,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -42,7 +42,7 @@ local Palette = {
 		TitleTop = Color3.fromHex("F3F4F8");
 		TitleBottom = Color3.fromHex("557294");
 		TabActive = Color3.fromHex("557294");
-		Accent = Color3.fromHex("df2081");
+		Accent = Color3.fromHex("99bcff");
 		TabInactive = Color3.fromHex("BFC4CC");
 	};
 };
@@ -110,7 +110,7 @@ function CreateLoader(Title, WindowSize)
     local WindowOutline = Drawing.new("Square")
     WindowOutline.Size = WindowSize
     WindowOutline.Thickness = 0
-    WindowOutline.Color = Library.Accent
+    WindowOutline.Color = Color3.fromHex("#000005")
     WindowOutline.Visible = true
     WindowOutline.Filled = true
     WindowOutline.Position = Vector2.new(MiddleX, MiddleY)
@@ -121,7 +121,7 @@ function CreateLoader(Title, WindowSize)
     WindowOutlineBorder.Size = Vector2.new(WindowOutline.Size.X - 2, WindowOutline.Size.Y - 2)
     WindowOutlineBorder.Position = Vector2.new(WindowOutline.Position.X + 1, WindowOutline.Position.Y + 1)
     WindowOutlineBorder.Thickness = 0
-    WindowOutlineBorder.Color = Library.Accent
+    WindowOutlineBorder.Color = Color3.fromHex("#7885f5")
     WindowOutlineBorder.Visible = true
     WindowOutlineBorder.Filled = true
     table.insert(Drawings, WindowOutlineBorder)
@@ -132,7 +132,7 @@ function CreateLoader(Title, WindowSize)
     WindowFrame.Position = Vector2.new(WindowOutlineBorder.Position.X + 1, WindowOutlineBorder.Position.Y + 1)
     WindowFrame.Thickness = 0
     WindowFrame.Transparency = 1
-    WindowFrame.Color = Library.Accent
+    WindowFrame.Color = Color3.fromHex("#191919")
     WindowFrame.Visible = true
     WindowFrame.Filled = true
     table.insert(Drawings, WindowFrame)
@@ -141,7 +141,7 @@ function CreateLoader(Title, WindowSize)
     local WindowTitle = Drawing.new("Text")
     WindowTitle.Font = Drawing.Fonts.Plex
     WindowTitle.Size = 13
-    WindowTitle.Color = Library.Accent
+    WindowTitle.Color = Color3.fromHex("#e8e8e8")
     WindowTitle.Text = Title
     WindowTitle.Position = Vector2.new(WindowFrame.Position.X + (WindowFrame.Size.X / 2), WindowOutlineBorder.Position.Y + 8)
     WindowTitle.Visible = true
@@ -153,7 +153,7 @@ function CreateLoader(Title, WindowSize)
     local WindowText = Drawing.new("Text")
     WindowText.Font = Drawing.Fonts.Plex
     WindowText.Size = 13
-    WindowText.Color = Library.Accent
+    WindowText.Color = Color3.fromHex("#e8e8e8")
     WindowText.Visible = true
     WindowText.Center = true
     WindowText.Outline = false
@@ -162,7 +162,7 @@ function CreateLoader(Title, WindowSize)
 
     local SliderInline = Drawing.new("Square")
     SliderInline.Size = Vector2.new(205, 15)
-    SliderInline.Color = Library.Accent
+    SliderInline.Color = Color3.fromHex("#323232")
     SliderInline.Transparency = 0.75
     SliderInline.Thickness = 0
     SliderInline.Visible = true
@@ -172,7 +172,7 @@ function CreateLoader(Title, WindowSize)
 
     local SliderOutline = Drawing.new("Square")
     SliderOutline.Size = Vector2.new(SliderInline.Size.X - 2, SliderInline.Size.Y - 2)
-    SliderOutline.Color = Library.Accent
+    SliderOutline.Color = Color3.fromHex("#000005")
     SliderOutline.Transparency = 0.5
     SliderOutline.Thickness = 0
     SliderOutline.Visible = true
@@ -180,7 +180,7 @@ function CreateLoader(Title, WindowSize)
     table.insert(Drawings, SliderOutline)
 
     local SliderFrame = Drawing.new("Square")
-    SliderFrame.Color = Library.Accent
+    SliderFrame.Color = Color3.fromHex("#7885f5")
     SliderFrame.Transparency = 0.75
     SliderFrame.Thickness = 0
     SliderFrame.Visible = true
