@@ -4918,6 +4918,9 @@ end;
 	Window.Visible = true;
 	Window._FadeToken = 0;
 	Window._FadeOriginals = nil;
+	local Mouse = game:GetService("Players").LocalPlayer:GetMouse();
+	Window._OriginalMouseLocked = Mouse.Locked;
+	Window._OriginalMouseVisible = Mouse.Visible;
 	local FadeProps = {
 		Frame          = { "BackgroundTransparency" };
 		TextLabel      = { "BackgroundTransparency", "TextTransparency", "TextStrokeTransparency" };
@@ -4953,39 +4956,67 @@ end;
 		end;
 		return Map;
 	end;
-	function Window:SetVisible(State)
-		if self.Visible == State then return end;
-		self.Visible = State and true or false;
-		self._FadeToken = self._FadeToken + 1;
-		local Mine = self._FadeToken;
-		if not self._FadeOriginals then
-			self._FadeOriginals = CaptureOriginals();
-		end;
-		local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
-		if self.Visible then
-			Gui.Enabled = true;
-			for Inst, PMap in self._FadeOriginals do
-				if Inst.Parent then
-					local Goal = {};
-					for P, V in PMap do Goal[P] = V end;
-					Library:Tween(Inst, Info, Goal):Play();
-				end;
-			end;
-		else
-			for Inst, PMap in self._FadeOriginals do
-				if Inst.Parent then
-					local Goal = {};
-					for P in PMap do Goal[P] = 1 end;
-					Library:Tween(Inst, Info, Goal):Play();
-				end;
-			end;
-			task.delay(Info.Time, function()
-				if self._FadeToken == Mine and not self.Visible then
-					Gui.Enabled = false;
-				end;
-			end);
-		end;
+	
+function Window:SetVisible(State)
+	if self.Visible == State then return end;
+	self.Visible = State and true or false;
+	self._FadeToken = self._FadeToken + 1;
+	local Mine = self._FadeToken;
+	if not self._FadeOriginals then
+		self._FadeOriginals = CaptureOriginals();
 	end;
+	local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
+	
+	-- Mouse yönetimi
+	local Mouse = game:GetService("Players").LocalPlayer:GetMouse();
+	
+	if self.Visible then
+		-- Menü açılıyor - Mouse'u unlock ve visible yap
+		Gui.Enabled = true;
+		
+		-- Mouse state'i kaydet (eğer daha önce kaydedilmemişse)
+		if not self._OriginalMouseLocked then
+			self._OriginalMouseLocked = Mouse.Locked;
+		end;
+		if not self._OriginalMouseVisible then
+			self._OriginalMouseVisible = Mouse.Visible;
+		end;
+		
+		-- Mouse'u unlock et ve visible yap
+		Mouse.Locked = false;
+		Mouse.Visible = true;
+		
+		for Inst, PMap in self._FadeOriginals do
+			if Inst.Parent then
+				local Goal = {};
+				for P, V in PMap do Goal[P] = V end;
+				Library:Tween(Inst, Info, Goal):Play();
+			end;
+		end;
+	else
+		-- Menü kapanıyor - Mouse'u eski state'e döndür
+		for Inst, PMap in self._FadeOriginals do
+			if Inst.Parent then
+				local Goal = {};
+				for P in PMap do Goal[P] = 1 end;
+				Library:Tween(Inst, Info, Goal):Play();
+			end;
+		end;
+		task.delay(Info.Time, function()
+			if self._FadeToken == Mine and not self.Visible then
+				Gui.Enabled = false;
+				
+				-- Mouse'u eski state'e döndür
+				if self._OriginalMouseLocked ~= nil then
+					Mouse.Locked = self._OriginalMouseLocked;
+				end;
+				if self._OriginalMouseVisible ~= nil then
+					Mouse.Visible = self._OriginalMouseVisible;
+				end;
+			end;
+		end);
+	end;
+end;
 	function Window:Toggle()
 		self:SetVisible(not self.Visible);
 	end;
