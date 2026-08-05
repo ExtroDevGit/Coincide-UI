@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -5485,8 +5485,8 @@ function Library:Watermark(Opts)
 		Position = UDim2.new(0, 0, 0.5, 0);
 		BackgroundTransparency = 1;
 	});
-	local logo = readfile("Hydrogen/logo2.png");
-	Logo.Image = getcustomasset(logo);
+
+	Logo.Image = getcustomasset("Hydrogen/logo2.png");
 
 	local Lbl = self:CreateInstance("TextLabel", {
 		Name                   = "Label";
