@@ -891,6 +891,18 @@ function Library:Window(Opts)
 	});
 	if ProggyCleanFont then Title.FontFace = ProggyCleanFont end;
 
+local TitleLogo = self:CreateInstance("ImageLabel", {
+	Name = "TitleLogo";
+	Parent = Outer;
+	AnchorPoint = Vector2.new(0, 0.5);
+	Position = UDim2.new(0, 5, 0, 20);
+	Size = UDim2.fromOffset(26,26);
+	BackgroundTransparency = 1;
+});
+TitleLogo.Image = getcustomasset("Hydrogen/logo2.png");
+
+Title.Position = UDim2.new(0, 5 + TitleLogo.AbsoluteSize.X + 4, 0, 9);
+
 	local Content = self:CreateInstance("Frame", {
 		Name             = "Content";
 		Parent           = Outer;
@@ -5477,14 +5489,14 @@ function Library:Watermark(Opts)
 		PaddingRight = UDim.new(0, 10);
 	});
 
-	local Logo = self:CreateInstance("ImageLabel", {
-		Name = "Logo";
-		Parent = Inside;
-		Size = UDim2.fromOffset(16, 16);
-		AnchorPoint = Vector2.new(0, 0.5);
-		Position = UDim2.new(0, 0, 0.5, 0);
-		BackgroundTransparency = 1;
-	});
+local Logo = self:CreateInstance("ImageLabel", {
+	Name = "Logo";
+	Parent = Inside;
+	Size = UDim2.fromOffset(24, 24);
+	AnchorPoint = Vector2.new(0, 0.3);
+	Position = UDim2.new(0, -7, 0.32, 0);
+	BackgroundTransparency = 1;
+});
 
 	Logo.Image = getcustomasset("Hydrogen/logo2.png");
 
