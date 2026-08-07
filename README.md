@@ -12,28 +12,40 @@ local Window = Library:Window({
     }
 );
 
-local PlayerList = Library:Playerlist({
-    Title = "Players",
-    Width = 200,
-    Height = 300
-});
-PlayerList:PositionNextTo(Window);
-PlayerList:SyncWithWindow(Window);
-
 local Preview = Library:PreviewWindow({
     Title = "Preview",
     Width = 240,
-    Height = 320
+    Height = 277
 });
 Preview:PositionNextTo(Window);
 Preview:SyncWithWindow(Window);
+
+local PlayerList = Library:Playerlist({
+    Title = "Players",
+    Width = 240,
+    Height = 276
+});
+PlayerList:PositionBelow(Preview);
+PlayerList:SyncWithWindow(Window);
+
+local Settings = Library:SettingsWindow({
+    Title = "Settings",
+    Width = 240,
+    Height = 555
+});
+Settings:PositionNextTo(Window);
+Settings:SyncWithWindow(Window);
+
+local KeybindList = Library:KeybindList({
+    Title = "Keybinds"
+    }
+);
 
 local TabLegit    = Window:Tab({ Name = "legit" });
 local TabRage     = Window:Tab({ Name = "rage" });
 local TabPlayers  = Window:Tab({ Name = "players" });
 local TabVisuals  = Window:Tab({ Name = "visuals" });
 local TabMisc     = Window:Tab({ Name = "misc" });
-local TabSettings = Window:Tab({ Name = "settings" });
 
 local SecA = TabLegit:Section({
     Name = "section",
@@ -83,12 +95,6 @@ SecA:Toggle({
 SecA:Toggle({
     Name = "Toggle3",
     Default = false
-    }
-);
-
-
-local KeybindList = Library:KeybindList({
-    Title = "Keybinds"
     }
 );
 
@@ -406,7 +412,7 @@ SecEsp:Slider({
     }
 );
 
-TabSettings:ApplySettings();
+Settings:ApplySettings();
 
 Library:Notify("Loaded!", 2);
 ```
