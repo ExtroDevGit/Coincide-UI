@@ -1131,6 +1131,10 @@ local function BuildSection(Host, SecOpts)
 		local Obj = { Container = Row, Box = Box, Fill = Fill };
 		function Obj:Get() return State end;
 		function Obj:Set(V) SetState(V) end;
+		Library.Options[Flag] = {
+			Save = function() return State end;
+			Load = function(Data) SetState(Data == true) end;
+		};
 		function Obj:OnChange(Fn)
 			if typeof(Fn) ~= "function" then return end;
 			table.insert(Listeners, Fn);
@@ -1294,6 +1298,29 @@ local function BuildSection(Host, SecOpts)
 			Lbl.Size = UDim2.new(1, -20 - self._RightOffset, 1, 0);
 			self.Keybind        = KBtn;
 			self.KeybindDisplay = KLbl;
+			Library.Options[Flag .. "_Key"] = {
+				Save = function()
+					local Out = { _t = "Key" };
+					if typeof(Key) == "EnumItem" then
+						Out.k = tostring(Key.EnumType) .. "." .. Key.Name;
+					end;
+					return Out;
+				end;
+				Load = function(Data)
+					if typeof(Data) ~= "table" or Data._t ~= "Key" then return end;
+					local NewKey = nil;
+					if typeof(Data.k) == "string" then
+						local EType, EName = string.match(Data.k, "^(%w+)%.(%w+)$");
+						if EType and EName then
+							pcall(function() NewKey = Enum[EType][EName] end);
+						end;
+					end;
+					if Listening then CancelListen() end;
+					Key = NewKey;
+					Refresh();
+					Library:NotifyKeybind();
+				end;
+			};
 			return self;
 		end;
 
@@ -2139,6 +2166,21 @@ local function BuildSection(Host, SecOpts)
 				end;
 			end);
 
+			Library.Options[Flag] = {
+				Save = function()
+					return { _t = "Color", v = Color3.fromHSV(H, Sa, Va):ToHex(), a = A };
+				end;
+				Load = function(Data)
+					if typeof(Data) == "table" and typeof(Data.v) == "string" then
+						local Ok, C2 = pcall(Color3.fromHex, Data.v);
+						if not Ok then return end;
+						H, Sa, Va = Color3.toHSV(C2);
+						if Data.a ~= nil then A = math.clamp(tonumber(Data.a) or A, 0, 1) end;
+						ApplyState();
+					end;
+				end;
+			};
+
 			return self;
 		end;
 
@@ -2380,6 +2422,10 @@ Opts.Dependency:OnChange(function(S) Container.Visible = S end);
 	local Obj = { Container = Container, Track = Track, Fill = Fill };
 	function Obj:Get() return Value end;
 	function Obj:Set(V) SetVal(tonumber(V) or Value) end;
+	Library.Options[Flag] = {
+		Save = function() return Value end;
+		Load = function(Data) SetVal(tonumber(Data) or Value) end;
+	};
 	return Obj;
 end;
 	function SecRef:Button(Opts)
@@ -3502,6 +3548,18 @@ end;
 			if NewAlpha then A = math.clamp(NewAlpha, 0, 1) end;
 			ApplyState();
 		end;
+		Library.Options[Flag] = {
+			Save = function()
+				local C2, A2 = CpObj:Get();
+				return { _t = "Color", v = C2:ToHex(), a = A2 };
+			end;
+			Load = function(Data)
+				if typeof(Data) == "table" and typeof(Data.v) == "string" then
+					local Ok, C2 = pcall(Color3.fromHex, Data.v);
+					if Ok then CpObj:Set(C2, tonumber(Data.a)) end;
+				end;
+			end;
+		};
 		return CpObj;
 	end;
 
@@ -3855,6 +3913,22 @@ end;
 			BuildOptions();
 			ValLbl.Text = DisplayText();
 		end;
+		Library.Options[Flag] = {
+			Save = function() return Value end;
+			Load = function(Data)
+				if Multi then
+					local Arr = {};
+					if typeof(Data) == "table" then
+						for K2, On in Data do
+							if On then table.insert(Arr, tostring(K2)) end;
+						end;
+					end;
+					Obj:Set(Arr);
+				elseif Data ~= nil then
+					SetVal(tostring(Data));
+				end;
+			end;
+		};
 		return Obj;
 	end;
 
@@ -3964,6 +4038,10 @@ end;
 		local Obj = { Container = Container, Box = Box, Input = Input };
 		function Obj:Get() return Input.Text end;
 		function Obj:Set(V) Commit(V, false) end;
+		Library.Options[Flag] = {
+			Save = function() return Input.Text end;
+			Load = function(Data) Commit(tostring(Data)) end;
+		};
 		return Obj;
 	end;
 
@@ -4313,6 +4391,31 @@ end;
 			Key = K;
 			Refresh();
 		end;
+		Library.Options[Flag] = {
+			Save = function()
+				local Out = { _t = "Key", m = Mode };
+				if typeof(Key) == "EnumItem" then
+					Out.k = tostring(Key.EnumType) .. "." .. Key.Name;
+				end;
+				return Out;
+			end;
+			Load = function(Data)
+				if typeof(Data) ~= "table" or Data._t ~= "Key" then return end;
+				if Data.m then
+					Mode = string.lower(tostring(Data.m));
+					RefreshModeBtns();
+				end;
+				local NewKey = nil;
+				if typeof(Data.k) == "string" then
+					local EType, EName = string.match(Data.k, "^(%w+)%.(%w+)$");
+					if EType and EName then
+						pcall(function() NewKey = Enum[EType][EName] end);
+					end;
+				end;
+				Obj:SetKey(NewKey);
+				Library:NotifyKeybind();
+			end;
+		};
 		return Obj;
 	end;
 
@@ -4468,6 +4571,24 @@ end;
 			Options = typeof(Opts2) == "table" and Opts2 or {};
 			BuildOptions();
 		end;
+		Library.Options[Flag] = {
+			Save = function() return Value end;
+			Load = function(Data)
+				if Multi then
+					if typeof(Data) == "table" then
+						Value = {};
+						for K2, On in Data do
+							if On then Value[tostring(K2)] = true end;
+						end;
+						Library.Flags[Flag] = Value;
+						RefreshColors();
+						Callback(Value);
+					end;
+				elseif Data ~= nil then
+					SetVal(tostring(Data));
+				end;
+			end;
+		};
 		return Obj;
 	end;
 
@@ -6256,13 +6377,7 @@ function Library:SettingsWindow(Opts)
 			Callback = function()
 				local Nm = Library.Flags.ConfigName;
 				if not Nm or Nm == "" then Library:Notify("Enter a config name first", 3); return end;
-				local Save = {};
-				for K, V in Library.Flags do
-					if typeof(V) == "Color3" then Save[K] = { _t = "Color3", v = V:ToHex() };
-					elseif typeof(V) == "table" then Save[K] = V;
-					else Save[K] = V end;
-				end;
-				writefile(ConfigDir .. "/" .. Nm .. ".json", HttpService:JSONEncode(Save));
+				Library:SaveConfig(Nm);
 				ConfigList:SetOptions(ListConfigs());
 				Library:Notify("Saved config: " .. Nm, 3);
 			end;
@@ -6270,18 +6385,12 @@ function Library:SettingsWindow(Opts)
 			Name = "Load";
 			Callback = function()
 				local Nm = ConfigList:Get();
-				local Path = ConfigDir .. "/" .. Nm .. ".json";
-				if not (isfile and isfile(Path)) then Library:Notify("Config not found", 3); return end;
-				local Ok, Data = pcall(HttpService.JSONDecode, HttpService, readfile(Path));
-				if not Ok then Library:Notify("Failed to decode config", 3); return end;
-				for K, V in Data do
-					if typeof(V) == "table" and V._t == "Color3" then
-						Library.Flags[K] = Color3.fromHex(V.v);
-					else
-						Library.Flags[K] = V;
-					end;
+				local Ok, Err = Library:LoadConfig(Nm);
+				if Ok then
+					Library:Notify("Loaded: " .. Nm, 3);
+				else
+					Library:Notify(Err, 3);
 				end;
-				Library:Notify("Loaded: " .. Nm, 3);
 			end;
 		});
 		SecCfg:Button({
@@ -6465,6 +6574,15 @@ function Library:SettingsWindow(Opts)
 				Library:Notify("Refreshed themes", 2);
 			end;
 		});
+
+		task.delay(0.5, function()
+			if not (isfile and isfile(AutoLoadFile) and readfile) then return end;
+			local Nm = tostring(readfile(AutoLoadFile) or ""):gsub("%s+$", "");
+			if Nm == "" then return end;
+			if Library:LoadConfig(Nm) then
+				Library:Notify("Auto-loaded config: " .. Nm, 3);
+			end;
+		end);
 
 		return self;
 	end;
@@ -7658,7 +7776,50 @@ local function MakeIcon(Label, Order, Callback)
     return IconRef;
 end;
 
+Library.ConfigSkipFlags = { ConfigName = true, ThemeName = true, _Configs = true, _Themes = true };
 
+function Library:SerializeConfig()
+	local Save = {};
+	for K, Entry in self.Options do
+		if not self.ConfigSkipFlags[K] then
+			local Ok, V = pcall(Entry.Save);
+			if Ok and V ~= nil then Save[K] = V end;
+		end;
+	end;
+	return Save;
+end;
+
+function Library:ApplyConfig(Data)
+	if typeof(Data) ~= "table" then return end;
+	for K, V in Data do
+		if not self.ConfigSkipFlags[K] then
+			local Entry = self.Options[K];
+			if Entry then
+				pcall(Entry.Load, V);
+			elseif typeof(V) == "table" and V._t == "Color3" then
+				self.Flags[K] = Color3.fromHex(V.v);
+			else
+				self.Flags[K] = V;
+			end;
+		end;
+	end;
+end;
+
+function Library:SaveConfig(Name)
+	Name = tostring(Name or "");
+	if Name == "" then return false, "No config name" end;
+	writefile(self.Directory .. "/Configs/" .. Name .. ".json", HttpService:JSONEncode(self:SerializeConfig()));
+	return true;
+end;
+
+function Library:LoadConfig(Name)
+	local Path = self.Directory .. "/Configs/" .. tostring(Name) .. ".json";
+	if not (isfile and isfile(Path)) then return false, "Config not found" end;
+	local Ok, Data = pcall(HttpService.JSONDecode, HttpService, readfile(Path));
+	if not Ok or typeof(Data) ~= "table" then return false, "Failed to decode config" end;
+	self:ApplyConfig(Data);
+	return true;
+end;
 
 function Library:Unload()
 	self:Log("Unload requested");
