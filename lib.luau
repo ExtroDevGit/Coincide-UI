@@ -7961,22 +7961,11 @@ function Library:VisorChecker(Opts)
 	ContentEdge(Vector2.new(0,1), UDim2.new(0,0,1,0),   UDim2.new(1,0,0,1),   "000000");
 	ContentEdge(Vector2.new(0,1), UDim2.new(0,1,1,-1),  UDim2.new(1,-2,0,1),  "393939");
 
-	-- Sol renkli status çizgisi (accent'in yerini status rengi alıyor)
-	local StatusLiner = self:CreateInstance("Frame", {
-		Name             = "StatusLiner";
-		Parent           = Content;
-		Position         = UDim2.new(0, 2, 0, 2);
-		Size             = UDim2.new(0, 2, 1, -4);
-		BackgroundColor3 = Color3.fromRGB(255, 0, 0);
-		BorderSizePixel  = 0;
-		ZIndex           = 2;
-	});
-
 	local StatusRow = self:CreateInstance("Frame", {
 		Name                   = "StatusRow";
 		Parent                 = Content;
-		Position               = UDim2.new(0, 10, 0, 0);
-		Size                   = UDim2.new(1, -14, 1, 0);
+		Position               = UDim2.new(0, 8, 0, 0);
+		Size                   = UDim2.new(1, -12, 1, 0);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 	});
@@ -8032,7 +8021,6 @@ function Library:VisorChecker(Opts)
 		StatusPart.Text = State;
 
 		Library:Tween(StatusPart, FlashInfo, { TextColor3 = Target }):Play();
-		Library:Tween(StatusLiner, FlashInfo, { BackgroundColor3 = Target }):Play();
 	end;
 
 	UpdateStatus();
@@ -8047,9 +8035,9 @@ function Library:VisorChecker(Opts)
 	local function CaptureFade()
 		local Map = {};
 		local Types = {
-			Frame          = { "BackgroundTransparency" };
-			TextLabel      = { "BackgroundTransparency", "TextTransparency" };
-			UIStroke       = { "Transparency" };
+			Frame     = { "BackgroundTransparency" };
+			TextLabel = { "BackgroundTransparency", "TextTransparency" };
+			UIStroke  = { "Transparency" };
 		};
 		local function Cap(Inst)
 			local Props = Types[Inst.ClassName];
