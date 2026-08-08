@@ -7842,187 +7842,254 @@ function Library:Unload()
 	self:Log("Unload complete");
 end;
 
---!nolint
---!nocheck
+function Library:VisorChecker(Opts)
+	Opts = typeof(Opts) == "table" and Opts or {};
+	local Title = tostring(Opts.Title or "Visor Status");
+	local Width = tonumber(Opts.Width) or 120;
+	local Height = tonumber(Opts.Height) or 60;
 
--- VisorChecker UI Bileşeni
--- Bu fonksiyon, mevcut Library yapısına entegre edilebilir veya bağımsız çalıştırılabilir.
+	local Gui = self:CreateInstance("ScreenGui", {
+		Name           = "VisorCheckerGui";
+		Parent         = (gethui and gethui()) or CoreGui;
+		IgnoreGuiInset = true;
+		ResetOnSpawn   = false;
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+	});
 
-local function Library:CreateVisorChecker(Library, Parent)
-    -- Varsayılan değer
-    if getgenv().visorstatus == nil then
-        getgenv().visorstatus = "Down"
-    end
+	local Outer = self:CreateInstance("Frame", {
+		Name             = "Outer";
+		Parent           = Gui;
+		AnchorPoint      = Vector2.new(0, 0);
+		Position         = UDim2.fromOffset(10, 10);
+		Size             = UDim2.fromOffset(Width, Height);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIGradient", {
+		Parent   = Outer;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("212121"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("1A1A1A"));
+		});
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = Outer;
+		Color           = Color3.fromHex("000000");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		LineJoinMode    = Enum.LineJoinMode.Miter;
+	});
 
-    -- Ana GUI
-    local Gui = Library:CreateInstance("ScreenGui", {
-        Name = "VisorCheckerGui";
-        Parent = (gethui and gethui()) or game:GetService("CoreGui");
-        IgnoreGuiInset = true;
-        ResetOnSpawn = false;
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
-    });
+	local InnerOutline = self:CreateInstance("Frame", {
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 1, 0, 1);
+		Size                   = UDim2.new(1, -2, 1, -2);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = InnerOutline;
+		Color           = Color3.fromHex("393939");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		LineJoinMode    = Enum.LineJoinMode.Miter;
+	});
 
-    -- Outer Frame (dış çerçeve)
-    local Outer = Library:CreateInstance("Frame", {
-        Name = "Outer";
-        Parent = Gui;
-        AnchorPoint = Vector2.new(0.5, 0.5);
-        Position = UDim2.new(0.5, 0, 0.5, 100); -- Ana pencerenin altında konumlandır
-        Size = UDim2.fromOffset(140, 36); -- Küçük dikdörtgen
-        BackgroundColor3 = Color3.fromHex("FFFFFF");
-        BorderSizePixel = 0;
-        ClipsDescendants = true;
-    });
+	local TopLine = self:CreateInstance("Frame", {
+		Parent           = Outer;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 0, 1);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+		ZIndex           = 10;
+	});
+	self:RegisterAccentGradient(self:CreateInstance("UIGradient", {
+		Parent = TopLine; Rotation = 0;
+	}));
 
-    -- Outer gradient (Hydrogen temasına uygun)
-    Library:CreateInstance("UIGradient", {
-        Parent = Outer;
-        Rotation = 90;
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromHex("212121"));
-            ColorSequenceKeypoint.new(1, Color3.fromHex("1A1A1A"));
-        });
-    });
+	local Content = self:CreateInstance("Frame", {
+		Parent           = Outer;
+		Position         = UDim2.new(0, 5, 0, 4);
+		Size             = UDim2.new(1, -10, 1, -9);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIGradient", {
+		Parent   = Content;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("161616"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("101010"));
+		});
+	});
 
-    -- Outer stroke (siyah çerçeve)
-    Library:CreateInstance("UIStroke", {
-        Parent = Outer;
-        Color = Color3.fromHex("000000");
-        Thickness = 1;
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
-        LineJoinMode = Enum.LineJoinMode.Miter;
-    });
+	local function ContentEdge(Anchor, Pos, Sz, Color)
+		self:CreateInstance("Frame", {
+			Parent           = Content;
+			AnchorPoint      = Anchor;
+			Position         = Pos;
+			Size             = Sz;
+			BackgroundColor3 = Color3.fromHex(Color);
+			BorderSizePixel  = 0;
+			ZIndex           = 10;
+		});
+	end;
+	ContentEdge(Vector2.new(0,0), UDim2.new(0,0,0,0),   UDim2.new(0,1,1,0),   "000000");
+	ContentEdge(Vector2.new(0,0), UDim2.new(0,1,0,1),   UDim2.new(0,1,1,-2),  "393939");
+	ContentEdge(Vector2.new(1,0), UDim2.new(1,0,0,0),   UDim2.new(0,1,1,0),   "000000");
+	ContentEdge(Vector2.new(1,0), UDim2.new(1,-1,0,1),  UDim2.new(0,1,1,-2),  "393939");
+	ContentEdge(Vector2.new(0,1), UDim2.new(0,0,1,0),   UDim2.new(1,0,0,1),   "000000");
+	ContentEdge(Vector2.new(0,1), UDim2.new(0,1,1,-1),  UDim2.new(1,-2,0,1),  "393939");
 
-    -- Inner Outline (iç çerçeve)
-    local InnerOutline = Library:CreateInstance("Frame", {
-        Name = "InnerOutline";
-        Parent = Outer;
-        Position = UDim2.new(0, 1, 0, 1);
-        Size = UDim2.new(1, -2, 1, -2);
-        BackgroundTransparency = 1;
-        BorderSizePixel = 0;
-    });
+	local StatusLabel = self:CreateInstance("TextLabel", {
+		Name                   = "VisorStatus";
+		Parent                 = Content;
+		Position               = UDim2.new(0, 2, 0, 2);
+		Size                   = UDim2.new(1, -4, 1, -4);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		Text                   = "Visor: Down";
+		TextColor3             = Color3.fromRGB(255, 0, 0);
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Center;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then StatusLabel.FontFace = ProggyCleanFont end;
 
-    Library:CreateInstance("UIStroke", {
-        Parent = InnerOutline;
-        Color = Color3.fromHex("393939");
-        Thickness = 1;
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
-        LineJoinMode = Enum.LineJoinMode.Miter;
-    });
+	self:Draggable(Outer);
 
-    -- Üst çizgi (akcent gradient)
-    local TopLine = Library:CreateInstance("Frame", {
-        Name = "TopLine";
-        Parent = Outer;
-        Position = UDim2.new(0, 1, 0, 1);
-        Size = UDim2.new(1, -2, 0, 1);
-        BackgroundColor3 = Color3.fromHex("FFFFFF");
-        BorderSizePixel = 0;
-        ZIndex = 10;
-    });
+	-- Güncellemeleri takip et
+	local function UpdateStatus()
+		local Status = tostring(getgenv().visorstatus or "Down"):lower();
+		local DisplayText = "Visor: " .. (Status:sub(1,1):upper() .. Status:sub(2));
+		
+		local Color;
+		if Status == "up" then
+			Color = Color3.fromRGB(0, 255, 0);  -- Yeşil
+		elseif Status == "down" then
+			Color = Color3.fromRGB(255, 0, 0); -- Kırmızı
+		else
+			Color = Color3.fromRGB(255, 255, 255); -- Beyaz (varsayılan)
+		end;
+		
+		StatusLabel.Text = DisplayText;
+		StatusLabel.TextColor3 = Color;
+	end;
 
-    local TopLineGradient = Library:CreateInstance("UIGradient", {
-        Parent = TopLine;
-        Rotation = 0;
-    });
-    Library:RegisterAccentGradient(TopLineGradient);
+	-- İlk güncelleme
+	UpdateStatus();
 
-    -- İçerik (text label)
-    local Content = Library:CreateInstance("Frame", {
-        Name = "Content";
-        Parent = Outer;
-        Position = UDim2.new(0, 4, 0, 4);
-        Size = UDim2.new(1, -8, 1, -8);
-        BackgroundTransparency = 1;
-        BorderSizePixel = 0;
-    });
+	-- Periyodik güncelleme
+	self:Connection(RunService.Heartbeat, function()
+		UpdateStatus();
+	end);
 
-    -- Visor Label
-    local VisorLabel = Library:CreateInstance("TextLabel", {
-        Name = "VisorLabel";
-        Parent = Content;
-        Size = UDim2.new(1, 0, 1, 0);
-        BackgroundTransparency = 1;
-        Text = "Visor: Down";
-        TextColor3 = Color3.fromHex("FF4444"); -- Kırmızı (Down)
-        TextSize = 14;
-        TextXAlignment = Enum.TextXAlignment.Center;
-        TextYAlignment = Enum.TextYAlignment.Center;
-        Font = Enum.Font.GothamBold; -- Varsayılan font
-        FontFace = ProggyCleanFont; -- Library fontu
-    });
+	local FadeOriginals = nil;
+	local FadeToken = 0;
+	local ShownAt = 0;
 
-    -- Fontu uygula (ProggyClean)
-    if ProggyCleanFont then
-        VisorLabel.FontFace = ProggyCleanFont;
-    end
+	local function CaptureFade()
+		local Map = {};
+		local Types = {
+			Frame = {"BackgroundTransparency"};
+			TextLabel = {"BackgroundTransparency","TextTransparency"};
+			UIStroke = {"Transparency"};
+		};
+		local function Cap(Inst)
+			local Props = Types[Inst.ClassName];
+			if not Props then return end;
+			local PMap = {};
+			for _, P in Props do
+				local Ok, V = pcall(function() return Inst[P] end);
+				if Ok then PMap[P] = V end;
+			end;
+			Map[Inst] = PMap;
+		end;
+		Cap(Outer);
+		for _, D in Outer:GetDescendants() do Cap(D) end;
+		return Map;
+	end;
 
-    -- Durumu güncelleyen fonksiyon
-    local function UpdateVisorStatus()
-        local status = getgenv().visorstatus or "Down"
-        local text = "Visor: " .. status
-        VisorLabel.Text = text
+	local Obj = { Gui = Gui, Outer = Outer, Label = StatusLabel, _Visible = true };
 
-        if status == "Up" then
-            VisorLabel.TextColor3 = Color3.fromHex("44FF44") -- Yeşil
-        else
-            VisorLabel.TextColor3 = Color3.fromHex("FF4444") -- Kırmızı
-        end
-    end
+	function Obj:SetVisible(State)
+		if self._Visible == State then return end;
+		self._Visible = State;
+		FadeToken += 1;
+		local Mine = FadeToken;
+		local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
+		if not State and FadeOriginals and os.clock() - ShownAt < Info.Time then
+			for Inst, PMap in FadeOriginals do
+				if Inst and Inst.Parent then
+					for P, V in PMap do Inst[P] = V end;
+				end;
+			end;
+		end;
+		if not State or not FadeOriginals then
+			FadeOriginals = CaptureFade();
+		end;
+		if State then
+			ShownAt = os.clock();
+			Gui.Enabled = true;
+			for Inst, PMap in FadeOriginals do
+				if Inst and Inst.Parent then
+					local Goal = {};
+					for P, V in PMap do Goal[P] = V end;
+					Library:Tween(Inst, Info, Goal):Play();
+				end;
+			end;
+		else
+			for Inst, PMap in FadeOriginals do
+				if Inst and Inst.Parent then
+					local Goal = {};
+					for P in PMap do Goal[P] = 1 end;
+					Library:Tween(Inst, Info, Goal):Play();
+				end;
+			end;
+			task.delay(Info.Time + 0.05, function()
+				if FadeToken == Mine and not self._Visible then Gui.Enabled = false end;
+			end);
+		end;
+	end;
 
-    -- İlk güncelleme
-    UpdateVisorStatus()
+	function Obj:Toggle()
+		self:SetVisible(not self._Visible);
+	end;
 
-    -- getgenv().visorstatus değiştiğinde otomatik güncelleme
-    -- (metatable ile izleme veya heartbeat ile kontrol)
-    local function WatchVisorStatus()
-        local lastStatus = getgenv().visorstatus
-        game:GetService("RunService").Heartbeat:Connect(function()
-            local current = getgenv().visorstatus
-            if current ~= lastStatus then
-                lastStatus = current
-                UpdateVisorStatus()
-            end
-        end)
-    end
+	function Obj:SyncWithWindow(Window)
+		local OrigSetVisible = Window.SetVisible;
+		Window.SetVisible = function(Win, State)
+			OrigSetVisible(Win, State);
+			self:SetVisible(State);
+		end;
+		local OrigToggle = Window.Toggle;
+		Window.Toggle = function(Win)
+			OrigToggle(Win);
+			self:SetVisible(Win.Visible);
+		end;
+	end;
 
-    -- İzlemeyi başlat
-    task.spawn(WatchVisorStatus)
+	function Obj:PositionNextTo(Window)
+		local WinOuter = Window.Outer;
+		if not WinOuter then return end;
+		local function UpdatePos()
+			local WinPos  = WinOuter.AbsolutePosition;
+			local WinSize = WinOuter.AbsoluteSize;
+			Outer.AnchorPoint = Vector2.new(0, 0);
+			Outer.Position = UDim2.fromOffset(WinPos.X + WinSize.X + 2, WinPos.Y + GuiInset);
+		end;
+		task.defer(UpdatePos);
+		WinOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
+		WinOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
+	end;
 
-    -- Sürükleme özelliği (Library'nin draggable fonksiyonu ile)
-    Library:Draggable(Outer)
+	function Obj:Destroy()
+		Gui:Destroy();
+	end;
 
-    -- Dışa aktarılacak fonksiyonlar
-    local VisorChecker = {
-        Gui = Gui;
-        Outer = Outer;
-        Label = VisorLabel;
-        Update = UpdateVisorStatus;
-        SetPosition = function(x, y)
-            Outer.Position = UDim2.fromOffset(x, y)
-        end;
-        SetAnchor = function(anchor)
-            Outer.AnchorPoint = anchor
-        end;
-        SetVisible = function(visible)
-            Gui.Enabled = visible
-        end;
-        Destroy = function()
-            Gui:Destroy()
-        end;
-    }
-
-    return VisorChecker
-end
-
--- Kullanım örneği:
--- Library yüklendikten sonra:
--- local visor = CreateVisorChecker(Library)
--- 
--- veya manuel olarak:
--- getgenv().visorstatus = "Up"  -- yeşil olur
--- getgenv().visorstatus = "Down" -- kırmızı olur
+	Library._VisorChecker = Obj;
+	return Obj;
+end;
 
 return Library;
