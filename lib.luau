@@ -7842,4 +7842,349 @@ function Library:Unload()
 	self:Log("Unload complete");
 end;
 
+function Library:TargetUI(Opts)
+	Opts = typeof(Opts) == "table" and Opts or {};
+	local Width = tonumber(Opts.Width) or 280;
+	local Height = tonumber(Opts.Height) or 120;
+	local UpdateInterval = tonumber(Opts.UpdateInterval) or 0.1;
+
+	local Gui = self:CreateInstance("ScreenGui", {
+		Name           = "TargetUI";
+		Parent         = (gethui and gethui()) or CoreGui;
+		IgnoreGuiInset = true;
+		ResetOnSpawn   = false;
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+	});
+
+	local Outer = self:CreateInstance("Frame", {
+		Name             = "TargetOuter";
+		Parent           = Gui;
+		AnchorPoint      = Vector2.new(0.5, 0);
+		Position         = UDim2.new(0.5, 0, 0, 20);
+		Size             = UDim2.fromOffset(Width, Height);
+		BackgroundColor3 = Color3.fromHex("000000");
+		BorderSizePixel  = 0;
+	});
+
+	-- Outer outline
+	self:CreateInstance("UIStroke", {
+		Parent          = Outer;
+		Color           = Color3.fromHex("393939");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+	});
+
+	-- Background gradient
+	self:CreateInstance("UIGradient", {
+		Parent   = Outer;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("1F1F1F"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("141414"));
+		});
+	});
+
+	-- Inner outline
+	local InnerOutline = self:CreateInstance("Frame", {
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 1, 0, 1);
+		Size                   = UDim2.new(1, -2, 1, -2);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = InnerOutline;
+		Color           = Color3.fromHex("252527");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+	});
+
+	-- Top line (accent)
+	local TopLine = self:CreateInstance("Frame", {
+		Parent           = Outer;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 0, 2);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+		ZIndex           = 5;
+	});
+	local TopGradient = self:CreateInstance("UIGradient", {
+		Parent   = TopLine;
+		Rotation = 0;
+	});
+	Library:RegisterAccentGradient(TopGradient);
+
+	-- Main content container
+	local Content = self:CreateInstance("Frame", {
+		Name                   = "Content";
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 4, 0, 5);
+		Size                   = UDim2.new(1, -8, 0, Height - 45);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+
+	-- Avatar frame (sol taraf)
+	local AvatarFrame = self:CreateInstance("Frame", {
+		Name             = "AvatarFrame";
+		Parent           = Content;
+		AnchorPoint      = Vector2.new(0, 0);
+		Position         = UDim2.new(0, 0, 0, 0);
+		Size             = UDim2.fromOffset(80, 80);
+		BackgroundColor3 = Color3.fromHex("000000");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = AvatarFrame;
+		Color           = Color3.fromHex("393939");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+	});
+
+	local AvatarImage = self:CreateInstance("ImageLabel", {
+		Name                   = "Avatar";
+		Parent                 = AvatarFrame;
+		Position               = UDim2.new(0, 1, 0, 1);
+		Size                   = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3       = Color3.fromHex("1A1A1A");
+		BackgroundTransparency = 0;
+		BorderSizePixel        = 0;
+		Image                  = "";
+		ScaleType              = Enum.ScaleType.Crop;
+	});
+
+	-- Info frame (sağ taraf)
+	local InfoFrame = self:CreateInstance("Frame", {
+		Name                   = "InfoFrame";
+		Parent                 = Content;
+		AnchorPoint            = Vector2.new(0, 0);
+		Position               = UDim2.new(0, 90, 0, 0);
+		Size                   = UDim2.new(1, -90, 1, 0);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+
+	-- Player name
+	local NameLabel = self:CreateInstance("TextLabel", {
+		Name                   = "NameLabel";
+		Parent                 = InfoFrame;
+		Position               = UDim2.new(0, 4, 0, 2);
+		Size                   = UDim2.new(1, -8, 0, 18);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		Text                   = "—";
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 14;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+		TextScaled             = false;
+		ClipsDescendants       = true;
+	});
+	if Library.ProggyCleanFont then NameLabel.FontFace = Library.ProggyCleanFont end;
+
+	-- Account age
+	local AccountAgeLabel = self:CreateInstance("TextLabel", {
+		Name                   = "AccountAgeLabel";
+		Parent                 = InfoFrame;
+		Position               = UDim2.new(0, 4, 0, 22);
+		Size                   = UDim2.new(1, -8, 0, 14);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		Text                   = "Age: —";
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 11;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if Library.ProggyCleanFont then AccountAgeLabel.FontFace = Library.ProggyCleanFont end;
+
+	-- User ID
+	local UserIdLabel = self:CreateInstance("TextLabel", {
+		Name                   = "UserIdLabel";
+		Parent                 = InfoFrame;
+		Position               = UDim2.new(0, 4, 0, 36);
+		Size                   = UDim2.new(1, -8, 0, 14);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		Text                   = "ID: —";
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 11;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if Library.ProggyCleanFont then UserIdLabel.FontFace = Library.ProggyCleanFont end;
+
+	-- Health bar frame (alt kısım)
+	local HealthBarBg = self:CreateInstance("Frame", {
+		Name             = "HealthBarBg";
+		Parent           = Outer;
+		AnchorPoint      = Vector2.new(0, 1);
+		Position         = UDim2.new(0, 4, 1, -4);
+		Size             = UDim2.new(1, -8, 0, 20);
+		BackgroundColor3 = Color3.fromHex("000000");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = HealthBarBg;
+		Color           = Color3.fromHex("393939");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+	});
+
+	local HealthBarInner = self:CreateInstance("Frame", {
+		Parent           = HealthBarBg;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 1, -2);
+		BackgroundColor3 = Color3.fromHex("1A1A1A");
+		BorderSizePixel  = 0;
+	});
+
+	local HealthBarFill = self:CreateInstance("Frame", {
+		Name             = "HealthFill";
+		Parent           = HealthBarInner;
+		Position         = UDim2.new(0, 0, 0, 0);
+		Size             = UDim2.new(1, 0, 1, 0);
+		BackgroundColor3 = Color3.fromHex("00C800");
+		BorderSizePixel  = 0;
+	});
+
+	local HealthBarText = self:CreateInstance("TextLabel", {
+		Name                   = "HealthText";
+		Parent                 = HealthBarInner;
+		Size                   = UDim2.new(1, 0, 1, 0);
+		BackgroundTransparency = 1;
+		Text                   = "100/100";
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Center;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if Library.ProggyCleanFont then HealthBarText.FontFace = Library.ProggyCleanFont end;
+
+	-- State variables
+	local CurrentTarget = nil;
+	local LastUpdateTime = 0;
+
+	-- Get thumbnail function
+	local function GetPlayerThumbnail(Player, Size)
+		if not Player then return "" end;
+		return "https://www.roblox.com/headshot?userid=" .. tostring(Player.UserId) .. "&width=" .. tostring(Size) .. "&height=" .. tostring(Size) .. "&format=png";
+	end;
+
+	-- Update UI function
+	local function UpdateUI(TargetCharacter)
+		local Players = game:GetService("Players");
+		local CurrentTime = tick();
+
+		if CurrentTime - LastUpdateTime < UpdateInterval then return end;
+		LastUpdateTime = CurrentTime;
+
+		-- Find player from character
+		local TargetPlayer = nil;
+		if TargetCharacter and TargetCharacter.Parent then
+			for _, Player in Players:GetPlayers() do
+				if Player.Character == TargetCharacter then
+					TargetPlayer = Player;
+					break;
+				end;
+			end;
+		end;
+
+		CurrentTarget = TargetPlayer;
+
+		if not TargetPlayer or not TargetCharacter then
+			-- No target
+			Outer.Visible = false;
+			return;
+		end;
+
+		Outer.Visible = true;
+
+		-- Update avatar
+		AvatarImage.Image = GetPlayerThumbnail(TargetPlayer, 80);
+
+		-- Update name
+		NameLabel.Text = TargetPlayer.Name;
+
+		-- Update account age
+		local AccountAge = tick() - TargetPlayer.AccountAge;
+		local Days = math.floor(AccountAge / 86400);
+		AccountAgeLabel.Text = "Age: " .. tostring(Days) .. "d";
+
+		-- Update User ID
+		UserIdLabel.Text = "ID: " .. tostring(TargetPlayer.UserId);
+
+		-- Update health bar
+		local Humanoid = TargetCharacter:FindFirstChild("Humanoid");
+		if Humanoid then
+			local Health = Humanoid.Health;
+			local MaxHealth = Humanoid.MaxHealth;
+			local HealthPercent = math.clamp(Health / MaxHealth, 0, 1);
+
+			-- Animate health bar
+			Library:Tween(HealthBarFill, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Size = UDim2.new(HealthPercent, 0, 1, 0);
+			}):Play();
+
+			-- Update text
+			HealthBarText.Text = math.floor(Health) .. "/" .. math.floor(MaxHealth);
+
+			-- Color based on health
+			local HealthColor = Color3.fromHex("00C800");
+			if HealthPercent < 0.3 then
+				HealthColor = Color3.fromHex("FF0000");
+			elseif HealthPercent < 0.6 then
+				HealthColor = Color3.fromHex("FFA500");
+			end;
+
+			Library:Tween(HealthBarFill, TweenInfo.new(0.2), {
+				BackgroundColor3 = HealthColor;
+			}):Play();
+		end;
+	end;
+
+	-- Main update loop
+	local UpdateConnection;
+	UpdateConnection = Library:Connection(RunService.Heartbeat, function()
+		local TargetChar = getgenv().targetch;
+		if TargetChar then
+			UpdateUI(TargetChar);
+		else
+			Outer.Visible = false;
+		end;
+	end);
+
+	-- Draggable
+	Library:Draggable(Outer);
+
+	-- Object return
+	local Obj = {
+		Gui = Gui;
+		Outer = Outer;
+		AvatarImage = AvatarImage;
+		NameLabel = NameLabel;
+		AccountAgeLabel = AccountAgeLabel;
+		UserIdLabel = UserIdLabel;
+		HealthBarFill = HealthBarFill;
+		HealthBarText = HealthBarText;
+		_Connection = UpdateConnection;
+	};
+
+	function Obj:Update()
+		UpdateUI(getgenv().targetch);
+	end;
+
+	function Obj:SetVisible(State)
+		Outer.Visible = State;
+	end;
+
+	function Obj:Destroy()
+		if UpdateConnection then UpdateConnection:Disconnect() end;
+		Gui:Destroy();
+	end;
+
+	return Obj;
+end;
+
+
 return Library;
