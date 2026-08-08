@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -7844,9 +7844,9 @@ end;
 
 function Library:VisorChecker(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
-	local Title = tostring(Opts.Title or "Visor Status");
-	local Width = tonumber(Opts.Width) or 120;
-	local Height = tonumber(Opts.Height) or 60;
+	local Title  = tostring(Opts.Title or "Visor Checker");
+	local Width  = tonumber(Opts.Width) or 170;
+	local Height = tonumber(Opts.Height) or 58;
 
 	local Gui = self:CreateInstance("ScreenGui", {
 		Name           = "VisorCheckerGui";
@@ -7865,6 +7865,8 @@ function Library:VisorChecker(Opts)
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
 	});
+	Library:AddGlowingV2(Outer, Library.Accent, 0.4);
+
 	self:CreateInstance("UIGradient", {
 		Parent   = Outer;
 		Rotation = 90;
@@ -7882,6 +7884,7 @@ function Library:VisorChecker(Opts)
 	});
 
 	local InnerOutline = self:CreateInstance("Frame", {
+		Name                   = "InnerOutline";
 		Parent                 = Outer;
 		Position               = UDim2.new(0, 1, 0, 1);
 		Size                   = UDim2.new(1, -2, 1, -2);
@@ -7897,6 +7900,7 @@ function Library:VisorChecker(Opts)
 	});
 
 	local TopLine = self:CreateInstance("Frame", {
+		Name             = "TopLine";
 		Parent           = Outer;
 		Position         = UDim2.new(0, 1, 0, 1);
 		Size             = UDim2.new(1, -2, 0, 1);
@@ -7904,14 +7908,29 @@ function Library:VisorChecker(Opts)
 		BorderSizePixel  = 0;
 		ZIndex           = 10;
 	});
-	self:RegisterAccentGradient(self:CreateInstance("UIGradient", {
+	Library:RegisterAccentGradient(self:CreateInstance("UIGradient", {
 		Parent = TopLine; Rotation = 0;
 	}));
 
+	local TitleLbl = self:CreateInstance("TextLabel", {
+		Name                   = "Title";
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 6, 0, 6);
+		Size                   = UDim2.new(1, -12, 0, 12);
+		BackgroundTransparency = 1;
+		Text                   = Title;
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then TitleLbl.FontFace = ProggyCleanFont end;
+
 	local Content = self:CreateInstance("Frame", {
+		Name             = "Content";
 		Parent           = Outer;
-		Position         = UDim2.new(0, 5, 0, 4);
-		Size             = UDim2.new(1, -10, 1, -9);
+		Position         = UDim2.new(0, 5, 0, 21);
+		Size             = UDim2.new(1, -10, 1, -26);
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
 	});
@@ -7942,45 +7961,81 @@ function Library:VisorChecker(Opts)
 	ContentEdge(Vector2.new(0,1), UDim2.new(0,0,1,0),   UDim2.new(1,0,0,1),   "000000");
 	ContentEdge(Vector2.new(0,1), UDim2.new(0,1,1,-1),  UDim2.new(1,-2,0,1),  "393939");
 
-	local StatusLabel = self:CreateInstance("TextLabel", {
-		Name                   = "VisorStatus";
+	-- Sol renkli status çizgisi (accent'in yerini status rengi alıyor)
+	local StatusLiner = self:CreateInstance("Frame", {
+		Name             = "StatusLiner";
+		Parent           = Content;
+		Position         = UDim2.new(0, 2, 0, 2);
+		Size             = UDim2.new(0, 2, 1, -4);
+		BackgroundColor3 = Color3.fromRGB(255, 0, 0);
+		BorderSizePixel  = 0;
+		ZIndex           = 2;
+	});
+
+	local StatusRow = self:CreateInstance("Frame", {
+		Name                   = "StatusRow";
 		Parent                 = Content;
-		Position               = UDim2.new(0, 2, 0, 2);
-		Size                   = UDim2.new(1, -4, 1, -4);
+		Position               = UDim2.new(0, 10, 0, 0);
+		Size                   = UDim2.new(1, -14, 1, 0);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
-		Text                   = "Visor: Down";
-		TextColor3             = Color3.fromRGB(255, 0, 0);
+	});
+
+	local LabelPart = self:CreateInstance("TextLabel", {
+		Name                   = "LabelPart";
+		Parent                 = StatusRow;
+		AnchorPoint            = Vector2.new(0, 0.5);
+		Position               = UDim2.new(0, 0, 0.5, 0);
+		Size                   = UDim2.new(0, 34, 1, 0);
+		BackgroundTransparency = 1;
+		Text                   = "Visor:";
+		TextColor3             = Color3.fromHex("BFC4CC");
 		TextSize               = 12;
-		TextXAlignment         = Enum.TextXAlignment.Center;
+		TextXAlignment         = Enum.TextXAlignment.Left;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
-	if ProggyCleanFont then StatusLabel.FontFace = ProggyCleanFont end;
+	if ProggyCleanFont then LabelPart.FontFace = ProggyCleanFont end;
+
+	local StatusPart = self:CreateInstance("TextLabel", {
+		Name                   = "StatusPart";
+		Parent                 = StatusRow;
+		AnchorPoint            = Vector2.new(0, 0.5);
+		Position               = UDim2.new(0, 34, 0.5, 0);
+		Size                   = UDim2.new(1, -34, 1, 0);
+		BackgroundTransparency = 1;
+		Text                   = "Down";
+		TextColor3             = Color3.fromRGB(255, 65, 65);
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then StatusPart.FontFace = ProggyCleanFont end;
 
 	self:Draggable(Outer);
 
-	-- Güncellemeleri takip et
+	local UpColor   = Color3.fromRGB(70, 230, 90);
+	local DownColor = Color3.fromRGB(255, 65, 65);
+	local CurrentState = nil;
+
+	local FlashInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+
 	local function UpdateStatus()
-		local Status = tostring(getgenv().visorstatus or "Down"):lower();
-		local DisplayText = "Visor: " .. (Status:sub(1,1):upper() .. Status:sub(2));
-		
-		local Color;
-		if Status == "up" then
-			Color = Color3.fromRGB(0, 255, 0);  -- Yeşil
-		elseif Status == "down" then
-			Color = Color3.fromRGB(255, 0, 0); -- Kırmızı
-		else
-			Color = Color3.fromRGB(255, 255, 255); -- Beyaz (varsayılan)
-		end;
-		
-		StatusLabel.Text = DisplayText;
-		StatusLabel.TextColor3 = Color;
+		local Raw = tostring(getgenv().visorstatus or "Down");
+		local Lower = string.lower(Raw);
+		local IsUp = Lower == "up";
+		local State = IsUp and "Up" or "Down";
+
+		if State == CurrentState then return end;
+		CurrentState = State;
+
+		local Target = IsUp and UpColor or DownColor;
+		StatusPart.Text = State;
+
+		Library:Tween(StatusPart, FlashInfo, { TextColor3 = Target }):Play();
+		Library:Tween(StatusLiner, FlashInfo, { BackgroundColor3 = Target }):Play();
 	end;
 
-	-- İlk güncelleme
 	UpdateStatus();
-
-	-- Periyodik güncelleme
 	self:Connection(RunService.Heartbeat, function()
 		UpdateStatus();
 	end);
@@ -7992,9 +8047,9 @@ function Library:VisorChecker(Opts)
 	local function CaptureFade()
 		local Map = {};
 		local Types = {
-			Frame = {"BackgroundTransparency"};
-			TextLabel = {"BackgroundTransparency","TextTransparency"};
-			UIStroke = {"Transparency"};
+			Frame          = { "BackgroundTransparency" };
+			TextLabel      = { "BackgroundTransparency", "TextTransparency" };
+			UIStroke       = { "Transparency" };
 		};
 		local function Cap(Inst)
 			local Props = Types[Inst.ClassName];
@@ -8011,7 +8066,7 @@ function Library:VisorChecker(Opts)
 		return Map;
 	end;
 
-	local Obj = { Gui = Gui, Outer = Outer, Label = StatusLabel, _Visible = true };
+	local Obj = { Gui = Gui, Outer = Outer, Label = StatusPart, _Visible = true };
 
 	function Obj:SetVisible(State)
 		if self._Visible == State then return end;
@@ -8082,6 +8137,20 @@ function Library:VisorChecker(Opts)
 		task.defer(UpdatePos);
 		WinOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
 		WinOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
+	end;
+
+	function Obj:PositionBelow(OtherObj)
+		local OtherOuter = OtherObj.Outer;
+		if not OtherOuter then return end;
+		local function UpdatePos()
+			local P = OtherOuter.AbsolutePosition;
+			local S = OtherOuter.AbsoluteSize;
+			Outer.AnchorPoint = Vector2.new(0, 0);
+			Outer.Position = UDim2.fromOffset(P.X, P.Y + S.Y + 2 + GuiInset);
+		end;
+		task.defer(UpdatePos);
+		OtherOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
+		OtherOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
 	end;
 
 	function Obj:Destroy()
