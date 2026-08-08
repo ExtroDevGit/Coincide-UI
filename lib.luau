@@ -7842,4 +7842,187 @@ function Library:Unload()
 	self:Log("Unload complete");
 end;
 
+--!nolint
+--!nocheck
+
+-- VisorChecker UI Bileşeni
+-- Bu fonksiyon, mevcut Library yapısına entegre edilebilir veya bağımsız çalıştırılabilir.
+
+local function Library:CreateVisorChecker(Library, Parent)
+    -- Varsayılan değer
+    if getgenv().visorstatus == nil then
+        getgenv().visorstatus = "Down"
+    end
+
+    -- Ana GUI
+    local Gui = Library:CreateInstance("ScreenGui", {
+        Name = "VisorCheckerGui";
+        Parent = (gethui and gethui()) or game:GetService("CoreGui");
+        IgnoreGuiInset = true;
+        ResetOnSpawn = false;
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+    });
+
+    -- Outer Frame (dış çerçeve)
+    local Outer = Library:CreateInstance("Frame", {
+        Name = "Outer";
+        Parent = Gui;
+        AnchorPoint = Vector2.new(0.5, 0.5);
+        Position = UDim2.new(0.5, 0, 0.5, 100); -- Ana pencerenin altında konumlandır
+        Size = UDim2.fromOffset(140, 36); -- Küçük dikdörtgen
+        BackgroundColor3 = Color3.fromHex("FFFFFF");
+        BorderSizePixel = 0;
+        ClipsDescendants = true;
+    });
+
+    -- Outer gradient (Hydrogen temasına uygun)
+    Library:CreateInstance("UIGradient", {
+        Parent = Outer;
+        Rotation = 90;
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromHex("212121"));
+            ColorSequenceKeypoint.new(1, Color3.fromHex("1A1A1A"));
+        });
+    });
+
+    -- Outer stroke (siyah çerçeve)
+    Library:CreateInstance("UIStroke", {
+        Parent = Outer;
+        Color = Color3.fromHex("000000");
+        Thickness = 1;
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+        LineJoinMode = Enum.LineJoinMode.Miter;
+    });
+
+    -- Inner Outline (iç çerçeve)
+    local InnerOutline = Library:CreateInstance("Frame", {
+        Name = "InnerOutline";
+        Parent = Outer;
+        Position = UDim2.new(0, 1, 0, 1);
+        Size = UDim2.new(1, -2, 1, -2);
+        BackgroundTransparency = 1;
+        BorderSizePixel = 0;
+    });
+
+    Library:CreateInstance("UIStroke", {
+        Parent = InnerOutline;
+        Color = Color3.fromHex("393939");
+        Thickness = 1;
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+        LineJoinMode = Enum.LineJoinMode.Miter;
+    });
+
+    -- Üst çizgi (akcent gradient)
+    local TopLine = Library:CreateInstance("Frame", {
+        Name = "TopLine";
+        Parent = Outer;
+        Position = UDim2.new(0, 1, 0, 1);
+        Size = UDim2.new(1, -2, 0, 1);
+        BackgroundColor3 = Color3.fromHex("FFFFFF");
+        BorderSizePixel = 0;
+        ZIndex = 10;
+    });
+
+    local TopLineGradient = Library:CreateInstance("UIGradient", {
+        Parent = TopLine;
+        Rotation = 0;
+    });
+    Library:RegisterAccentGradient(TopLineGradient);
+
+    -- İçerik (text label)
+    local Content = Library:CreateInstance("Frame", {
+        Name = "Content";
+        Parent = Outer;
+        Position = UDim2.new(0, 4, 0, 4);
+        Size = UDim2.new(1, -8, 1, -8);
+        BackgroundTransparency = 1;
+        BorderSizePixel = 0;
+    });
+
+    -- Visor Label
+    local VisorLabel = Library:CreateInstance("TextLabel", {
+        Name = "VisorLabel";
+        Parent = Content;
+        Size = UDim2.new(1, 0, 1, 0);
+        BackgroundTransparency = 1;
+        Text = "Visor: Down";
+        TextColor3 = Color3.fromHex("FF4444"); -- Kırmızı (Down)
+        TextSize = 14;
+        TextXAlignment = Enum.TextXAlignment.Center;
+        TextYAlignment = Enum.TextYAlignment.Center;
+        Font = Enum.Font.GothamBold; -- Varsayılan font
+        FontFace = ProggyCleanFont; -- Library fontu
+    });
+
+    -- Fontu uygula (ProggyClean)
+    if ProggyCleanFont then
+        VisorLabel.FontFace = ProggyCleanFont;
+    end
+
+    -- Durumu güncelleyen fonksiyon
+    local function UpdateVisorStatus()
+        local status = getgenv().visorstatus or "Down"
+        local text = "Visor: " .. status
+        VisorLabel.Text = text
+
+        if status == "Up" then
+            VisorLabel.TextColor3 = Color3.fromHex("44FF44") -- Yeşil
+        else
+            VisorLabel.TextColor3 = Color3.fromHex("FF4444") -- Kırmızı
+        end
+    end
+
+    -- İlk güncelleme
+    UpdateVisorStatus()
+
+    -- getgenv().visorstatus değiştiğinde otomatik güncelleme
+    -- (metatable ile izleme veya heartbeat ile kontrol)
+    local function WatchVisorStatus()
+        local lastStatus = getgenv().visorstatus
+        game:GetService("RunService").Heartbeat:Connect(function()
+            local current = getgenv().visorstatus
+            if current ~= lastStatus then
+                lastStatus = current
+                UpdateVisorStatus()
+            end
+        end)
+    end
+
+    -- İzlemeyi başlat
+    task.spawn(WatchVisorStatus)
+
+    -- Sürükleme özelliği (Library'nin draggable fonksiyonu ile)
+    Library:Draggable(Outer)
+
+    -- Dışa aktarılacak fonksiyonlar
+    local VisorChecker = {
+        Gui = Gui;
+        Outer = Outer;
+        Label = VisorLabel;
+        Update = UpdateVisorStatus;
+        SetPosition = function(x, y)
+            Outer.Position = UDim2.fromOffset(x, y)
+        end;
+        SetAnchor = function(anchor)
+            Outer.AnchorPoint = anchor
+        end;
+        SetVisible = function(visible)
+            Gui.Enabled = visible
+        end;
+        Destroy = function()
+            Gui:Destroy()
+        end;
+    }
+
+    return VisorChecker
+end
+
+-- Kullanım örneği:
+-- Library yüklendikten sonra:
+-- local visor = CreateVisorChecker(Library)
+-- 
+-- veya manuel olarak:
+-- getgenv().visorstatus = "Up"  -- yeşil olur
+-- getgenv().visorstatus = "Down" -- kırmızı olur
+
 return Library;
