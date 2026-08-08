@@ -4616,15 +4616,15 @@ function Library:Window(Opts)
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
 	});
 
-	local Outer = self:CreateInstance("Frame", {
-		Name = "Outer";
-		Parent = Gui;
-		AnchorPoint = Vector2.new(0.5, 0.5);
-		Position = UDim2.new(0.5, 0, 0.5, 0);
-		Size = UDim2.fromOffset(Width, Height);
-		BackgroundColor3 = Color3.fromHex("FFFFFF");
-		BorderSizePixel = 0;
-	});
+local Outer = self:CreateInstance("Frame", {
+	Name             = "Outer";
+	Parent           = Gui;
+	AnchorPoint      = Vector2.new(0, 0.5);
+	Position         = UDim2.new(0, 10, 0.5, 0);
+	Size             = UDim2.fromOffset(Width, Height);
+	BackgroundColor3 = Color3.fromHex("FFFFFF");
+	BorderSizePixel  = 0;
+});
 	self:CreateInstance("UIGradient", {
 		Parent   = Outer;
 		Rotation = 90;
