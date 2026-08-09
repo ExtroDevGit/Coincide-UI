@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.2c";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -8295,8 +8295,9 @@ function Library:TargetUI(Opts)
 		Size                   = UDim2.new(1, 0, 1, 0);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
-		Image                  = "rbxasset://textures/ui/GuiImagePlaceholder.png";
-		ScaleType              = Enum.ScaleType.Crop;
+		Image                  = "";
+		ScaleType              = Enum.ScaleType.Stretch;
+		BackgroundColor3       = Color3.fromHex("101010");
 	});
 
 	--// Sağ taraf bilgi bloğu
@@ -8325,21 +8326,6 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
 
-	--// KDR (isim altı, solda)
-	local KdrLbl = self:CreateInstance("TextLabel", {
-		Name                   = "KdrLbl";
-		Parent                 = InfoBlock;
-		Position               = UDim2.new(0, 0, 0, 16);
-		Size                   = UDim2.new(0.6, 0, 0, 13);
-		BackgroundTransparency = 1;
-		Text                   = "KDR: ";
-		TextColor3             = Color3.fromHex("8C8F99");
-		TextSize               = 12;
-		TextXAlignment         = Enum.TextXAlignment.Left;
-		TextYAlignment         = Enum.TextYAlignment.Center;
-	});
-	if ProggyCleanFont then KdrLbl.FontFace = ProggyCleanFont end;
-
 	--// Visible yazısı (sağda, isimle aynı satırda)
 	local VisibleLbl = self:CreateInstance("TextLabel", {
 		Name                   = "VisibleLbl";
@@ -8356,13 +8342,43 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then VisibleLbl.FontFace = ProggyCleanFont end;
 
+	--// KDR (isim altı, solda)
+	local KdrLbl = self:CreateInstance("TextLabel", {
+		Name                   = "KdrLbl";
+		Parent                 = InfoBlock;
+		Position               = UDim2.new(0, 0, 0, 16);
+		Size                   = UDim2.new(1, 0, 0, 13);
+		BackgroundTransparency = 1;
+		Text                   = "KDR: ";
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then KdrLbl.FontFace = ProggyCleanFont end;
+
+	--// Health değer yazısı (KDR'nin altında, solda)
+	local HealthText = self:CreateInstance("TextLabel", {
+		Name                   = "HealthText";
+		Parent                 = InfoBlock;
+		Position               = UDim2.new(0, 0, 0, 32);
+		Size                   = UDim2.new(1, 0, 0, 13);
+		BackgroundTransparency = 1;
+		Text                   = "100 / 100";
+		TextColor3             = Color3.fromHex("BFC4CC");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then HealthText.FontFace = ProggyCleanFont end;
+
 	--// Health bar (en altta)
 	local HealthTrack = self:CreateInstance("Frame", {
 		Name             = "HealthTrack";
 		Parent           = InfoBlock;
 		AnchorPoint      = Vector2.new(0, 1);
 		Position         = UDim2.new(0, 0, 1, 0);
-		Size             = UDim2.new(1, -70, 0, 10);
+		Size             = UDim2.new(1, 0, 0, 10);
 		BackgroundColor3 = Color3.fromHex("000000");
 		BorderSizePixel  = 0;
 	});
@@ -8389,22 +8405,6 @@ function Library:TargetUI(Opts)
 		BorderSizePixel  = 0;
 	});
 
-	--// Health değer yazısı (barın sağında)
-	local HealthText = self:CreateInstance("TextLabel", {
-		Name                   = "HealthText";
-		Parent                 = InfoBlock;
-		AnchorPoint            = Vector2.new(1, 1);
-		Position               = UDim2.new(1, 0, 1, 0);
-		Size                   = UDim2.new(0, 65, 0, 13);
-		BackgroundTransparency = 1;
-		Text                   = "100 / 100";
-		TextColor3             = Color3.fromHex("BFC4CC");
-		TextSize               = 12;
-		TextXAlignment         = Enum.TextXAlignment.Right;
-		TextYAlignment         = Enum.TextYAlignment.Center;
-	});
-	if ProggyCleanFont then HealthText.FontFace = ProggyCleanFont end;
-
 	--// Internal state
 	local UpColor      = Color3.fromRGB(70, 230, 90);
 	local MidColor     = Color3.fromRGB(255, 179, 0);
@@ -8416,7 +8416,7 @@ function Library:TargetUI(Opts)
 	local CurrentUserId = nil;
 
 	local function SetAvatar(UserId)
-		if not UserId or UserId == CurrentUserId then return end;
+		if not UserId or UserId == 0 or UserId == CurrentUserId then return end;
 		CurrentUserId = UserId;
 
 		if ThumbCache[UserId] then
@@ -8424,6 +8424,8 @@ function Library:TargetUI(Opts)
 			return;
 		end;
 
+		AvatarImage.Image = ""; -- Clear while loading
+		
 		task.spawn(function()
 			local Ok, Content = pcall(function()
 				return Players:GetUserThumbnailAsync(UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100);
@@ -8500,7 +8502,7 @@ function Library:TargetUI(Opts)
 
 	function Obj:Clear()
 		self:Hide();
-		AvatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png";
+		AvatarImage.Image = "";
 		NameLbl.Text = "Player";
 		KdrLbl.Text = "KDR: ";
 		HealthFill.Size = UDim2.new(1, -2, 1, -2);
