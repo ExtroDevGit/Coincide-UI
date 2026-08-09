@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -8264,12 +8264,13 @@ function Library:TargetUI(Opts)
 	ContentEdge(Vector2.new(0,1), UDim2.new(0,1,1,-1),  UDim2.new(1,-2,0,1),  "393939");
 
 	--// Avatar (sol)
+	local AvatarSize = Height - 18;
 	local AvatarBox = self:CreateInstance("Frame", {
 		Name             = "AvatarBox";
 		Parent           = Content;
 		AnchorPoint      = Vector2.new(0, 0.5);
 		Position         = UDim2.new(0, 4, 0.5, 0);
-		Size             = UDim2.fromOffset(Height - 18, Height - 18);
+		Size             = UDim2.fromOffset(AvatarSize, AvatarSize);
 		BackgroundColor3 = Color3.fromHex("000000");
 		BorderSizePixel  = 0;
 	});
@@ -8303,8 +8304,8 @@ function Library:TargetUI(Opts)
 		Name                   = "InfoBlock";
 		Parent                 = Content;
 		AnchorPoint            = Vector2.new(0, 0.5);
-		Position               = UDim2.new(0, AvatarBox.Size.X.Offset + 12, 0.5, 0);
-		Size                   = UDim2.new(1, -(AvatarBox.Size.X.Offset + 16), 1, -6);
+		Position               = UDim2.new(0, AvatarSize + 12, 0.5, 0);
+		Size                   = UDim2.new(1, -(AvatarSize + 16), 1, -6);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 	});
@@ -8386,7 +8387,7 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then HealthText.FontFace = ProggyCleanFont end;
 
-	--// Visible check (alt satır)
+	--// Visible check (alt satır) — manuel kare nokta, UICorner kullanmıyoruz
 	local VisibleDot = self:CreateInstance("Frame", {
 		Name             = "VisibleDot";
 		Parent           = InfoBlock;
@@ -8394,10 +8395,6 @@ function Library:TargetUI(Opts)
 		Size             = UDim2.fromOffset(6, 6);
 		BackgroundColor3 = Color3.fromRGB(255, 65, 65);
 		BorderSizePixel  = 0;
-	});
-	self:CreateInstance("UICorner", {
-		Parent = VisibleDot;
-		CornerRadius = UDim.new(1, 0);
 	});
 
 	local VisibleLbl = self:CreateInstance("TextLabel", {
