@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.2c";
 };
 
 local Palette = {
@@ -8158,8 +8158,8 @@ end;
 
 function Library:TargetUI(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
-	local Width  = tonumber(Opts.Width)  or 240;
-	local Height = tonumber(Opts.Height) or 64;
+	local Width  = tonumber(Opts.Width)  or 280;
+	local Height = tonumber(Opts.Height) or 70;
 
 	local Players = game:GetService("Players");
 
@@ -8269,7 +8269,7 @@ function Library:TargetUI(Opts)
 		Name             = "AvatarBox";
 		Parent           = Content;
 		AnchorPoint      = Vector2.new(0, 0.5);
-		Position         = UDim2.new(0, 4, 0.5, 0);
+		Position         = UDim2.new(0, 5, 0.5, 0);
 		Size             = UDim2.fromOffset(AvatarSize, AvatarSize);
 		BackgroundColor3 = Color3.fromHex("000000");
 		BorderSizePixel  = 0;
@@ -8295,7 +8295,7 @@ function Library:TargetUI(Opts)
 		Size                   = UDim2.new(1, 0, 1, 0);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
-		Image                  = "";
+		Image                  = "rbxasset://textures/ui/GuiImagePlaceholder.png";
 		ScaleType              = Enum.ScaleType.Crop;
 	});
 
@@ -8304,48 +8304,65 @@ function Library:TargetUI(Opts)
 		Name                   = "InfoBlock";
 		Parent                 = Content;
 		AnchorPoint            = Vector2.new(0, 0.5);
-		Position               = UDim2.new(0, AvatarSize + 12, 0.5, 0);
-		Size                   = UDim2.new(1, -(AvatarSize + 16), 1, -6);
+		Position               = UDim2.new(0, AvatarSize + 14, 0.5, 0);
+		Size                   = UDim2.new(1, -(AvatarSize + 20), 1, -6);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 	});
 
+	--// İsim (sol üst)
 	local NameLbl = self:CreateInstance("TextLabel", {
 		Name                   = "NameLbl";
 		Parent                 = InfoBlock;
 		Position               = UDim2.new(0, 0, 0, 0);
-		Size                   = UDim2.new(1, 0, 0, 13);
+		Size                   = UDim2.new(0.6, 0, 0, 14);
 		BackgroundTransparency = 1;
 		Text                   = "Player";
 		TextColor3             = Color3.fromHex("FFFFFF");
-		TextSize               = 12;
+		TextSize               = 13;
 		TextXAlignment         = Enum.TextXAlignment.Left;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
 	if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
 
-	--// KDR (sağ üst, isimle aynı satır)
+	--// KDR (isim altı, solda)
 	local KdrLbl = self:CreateInstance("TextLabel", {
 		Name                   = "KdrLbl";
 		Parent                 = InfoBlock;
-		AnchorPoint            = Vector2.new(1, 0.5);
-		Position               = UDim2.new(1, 0, 0, 6);
-		Size                   = UDim2.new(0, 60, 0, 13);
+		Position               = UDim2.new(0, 0, 0, 16);
+		Size                   = UDim2.new(0.6, 0, 0, 13);
 		BackgroundTransparency = 1;
-		Text                   = "";
+		Text                   = "KDR: ";
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then KdrLbl.FontFace = ProggyCleanFont end;
+
+	--// Visible yazısı (sağda, isimle aynı satırda)
+	local VisibleLbl = self:CreateInstance("TextLabel", {
+		Name                   = "VisibleLbl";
+		Parent                 = InfoBlock;
+		AnchorPoint            = Vector2.new(1, 0);
+		Position               = UDim2.new(1, 0, 0, 0);
+		Size                   = UDim2.new(0.35, 0, 0, 14);
+		BackgroundTransparency = 1;
+		Text                   = "Not Visible";
 		TextColor3             = Color3.fromHex("8C8F99");
 		TextSize               = 12;
 		TextXAlignment         = Enum.TextXAlignment.Right;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
-	if ProggyCleanFont then KdrLbl.FontFace = ProggyCleanFont end;
+	if ProggyCleanFont then VisibleLbl.FontFace = ProggyCleanFont end;
 
-	--// Health bar
+	--// Health bar (en altta)
 	local HealthTrack = self:CreateInstance("Frame", {
 		Name             = "HealthTrack";
 		Parent           = InfoBlock;
-		Position         = UDim2.new(0, 0, 0, 20);
-		Size             = UDim2.new(1, -64, 0, 10);
+		AnchorPoint      = Vector2.new(0, 1);
+		Position         = UDim2.new(0, 0, 1, 0);
+		Size             = UDim2.new(1, -70, 0, 10);
 		BackgroundColor3 = Color3.fromHex("000000");
 		BorderSizePixel  = 0;
 	});
@@ -8372,12 +8389,13 @@ function Library:TargetUI(Opts)
 		BorderSizePixel  = 0;
 	});
 
+	--// Health değer yazısı (barın sağında)
 	local HealthText = self:CreateInstance("TextLabel", {
 		Name                   = "HealthText";
 		Parent                 = InfoBlock;
-		AnchorPoint            = Vector2.new(1, 0);
-		Position               = UDim2.new(1, 0, 0, 18);
-		Size                   = UDim2.new(0, 60, 0, 13);
+		AnchorPoint            = Vector2.new(1, 1);
+		Position               = UDim2.new(1, 0, 1, 0);
+		Size                   = UDim2.new(0, 65, 0, 13);
 		BackgroundTransparency = 1;
 		Text                   = "100 / 100";
 		TextColor3             = Color3.fromHex("BFC4CC");
@@ -8386,30 +8404,6 @@ function Library:TargetUI(Opts)
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
 	if ProggyCleanFont then HealthText.FontFace = ProggyCleanFont end;
-
-	--// Visible check (alt satır) — manuel kare nokta, UICorner kullanmıyoruz
-	local VisibleDot = self:CreateInstance("Frame", {
-		Name             = "VisibleDot";
-		Parent           = InfoBlock;
-		Position         = UDim2.new(0, 0, 0, 34);
-		Size             = UDim2.fromOffset(6, 6);
-		BackgroundColor3 = Color3.fromRGB(255, 65, 65);
-		BorderSizePixel  = 0;
-	});
-
-	local VisibleLbl = self:CreateInstance("TextLabel", {
-		Name                   = "VisibleLbl";
-		Parent                 = InfoBlock;
-		Position               = UDim2.new(0, 12, 0, 30);
-		Size                   = UDim2.new(1, -12, 0, 13);
-		BackgroundTransparency = 1;
-		Text                   = "Not Visible";
-		TextColor3             = Color3.fromHex("8C8F99");
-		TextSize               = 12;
-		TextXAlignment         = Enum.TextXAlignment.Left;
-		TextYAlignment         = Enum.TextYAlignment.Center;
-	});
-	if ProggyCleanFont then VisibleLbl.FontFace = ProggyCleanFont end;
 
 	--// Internal state
 	local UpColor      = Color3.fromRGB(70, 230, 90);
@@ -8469,15 +8463,12 @@ function Library:TargetUI(Opts)
 	end;
 
 	local function SetKDR(Text)
-		KdrLbl.Text = tostring(Text or "");
+		KdrLbl.Text = "KDR: " .. tostring(Text or "");
 	end;
 
 	local function SetVisible(IsVisible)
 		local Target = IsVisible and VisibleColor or HiddenColor;
 		VisibleLbl.Text = IsVisible and "Visible" or "Not Visible";
-		Library:Tween(VisibleDot, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			BackgroundColor3 = Target;
-		}):Play();
 		Library:Tween(VisibleLbl, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			TextColor3 = Target;
 		}):Play();
@@ -8509,9 +8500,9 @@ function Library:TargetUI(Opts)
 
 	function Obj:Clear()
 		self:Hide();
-		AvatarImage.Image = "";
+		AvatarImage.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png";
 		NameLbl.Text = "Player";
-		KdrLbl.Text = "";
+		KdrLbl.Text = "KDR: ";
 		HealthFill.Size = UDim2.new(1, -2, 1, -2);
 		HealthFill.BackgroundColor3 = UpColor;
 		HealthText.Text = "100 / 100";
