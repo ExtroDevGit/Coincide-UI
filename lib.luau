@@ -8406,9 +8406,9 @@ function Library:TargetUI(Opts)
 	});
 
 	--// Internal state
-	local UpColor      = Color3.fromRGB(70, 230, 90);
-	local MidColor     = Color3.fromRGB(255, 179, 0);
-	local LowColor     = Color3.fromRGB(255, 65, 65);
+	local UpColor      = Library.Accent
+	local MidColor     = Library.Accent
+	local LowColor     = Library.Accent
 	local VisibleColor = Color3.fromRGB(70, 230, 90);
 	local HiddenColor  = Color3.fromRGB(255, 65, 65);
 
