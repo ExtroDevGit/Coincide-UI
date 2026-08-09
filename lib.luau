@@ -749,9 +749,11 @@ do
 	if Asset then
 		ProggyCleanFont = Font.new(Asset, Enum.FontWeight.Regular, Enum.FontStyle.Normal);
 	else
-		print("font no work");
+		print("font no work lmfao");
 	end;
 end;
+
+getgenv().proggyfont = ProggyCleanFont
 
 function Library:Tooltip(Inst, Text)
 	if not Inst or not Text or Text == "" then return end;
