@@ -154,7 +154,7 @@ local function check()
 		getgenv().failreason = 10
 		return false
 	end
-	
+
 	if not game then
 		getgenv().failreason = 11
 		return false
@@ -182,6 +182,11 @@ local function check()
 	
 	if not game:GetService("Players") then
 		getgenv().failreason = 16
+		return false
+	end
+
+	if not firetouchinterest then
+		getgenv().failreason = 17
 		return false
 	end
 	
