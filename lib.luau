@@ -6707,6 +6707,8 @@ function Library:_BuildPreview(Parent, Opts)
 		OutlineColor   = { Color = Color3.fromRGB(0, 0, 0), Alpha = 0.5 };
 		FillColorMid   = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
 		Skeleton       = false;
+		Chams          = false;
+		ChamsColor     = { Color = Color3.fromRGB(59, 144, 204), Alpha = 0.4 };
 	};
 
 	local Container = Library:CreateInstance("Frame", {
@@ -6751,6 +6753,20 @@ function Library:_BuildPreview(Parent, Opts)
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 	});
+
+	local ChamsFrame = Library:CreateInstance("Frame", {
+		Name                   = "ChamsFrame";
+		Parent                 = Area;
+		AnchorPoint            = Vector2.new(0.5, 0.5);
+		Position               = UDim2.new(0.5, 0, 0.5, 0);
+		Size                   = UDim2.new(0, Height, 0, Height);
+		BackgroundColor3       = Color3.fromRGB(59, 144, 204);
+		BackgroundTransparency = 0.6;
+		BorderSizePixel        = 0;
+		Visible                = false;
+		ZIndex                 = 1;
+	});
+	Library:CreateInstance("UICorner", { Parent = ChamsFrame; CornerRadius = UDim.new(0.05, 0) });
 
 	local Esp = Library:CreateInstance("Frame", {
 		Name                   = "Esp";
@@ -7040,6 +7056,10 @@ function Library:_BuildPreview(Parent, Opts)
 			NewColorSequenceKeypoint(1,   Settings.HealthLow.Color);
 		});
 
+		ChamsFrame.Visible                = Settings.Chams;
+		ChamsFrame.BackgroundColor3       = Settings.ChamsColor.Color;
+		ChamsFrame.BackgroundTransparency = 1 - Settings.ChamsColor.Alpha;
+
 		FillGradient.Rotation = Settings.FillRotation;
 		BoxGradient.Rotation  = Settings.BoxRotation;
 		GlowGradient.Rotation = Settings.GlowRotation;
@@ -7258,6 +7278,10 @@ function Library:_BuildPreview(Parent, Opts)
 		Settings.Flags = flags.Enabled == true;
 		local skel = cfg.Skeleton or {};
 		Settings.Skeleton = skel.Enabled == true;
+		local chams = cfg.Chams or {};
+		Settings.Chams = chams.Enabled == true;
+		local mc = chams.MeshChams or {};
+		Settings.ChamsColor = { Color = mc.FillColor or Color3.fromRGB(59, 144, 204), Alpha = 1 - (mc.FillTransparency or 0.6) };
 		Render();
 	end;
 	function Obj:ViewModel(M) ViewModel(M) end;
