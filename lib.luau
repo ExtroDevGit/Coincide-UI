@@ -6694,6 +6694,12 @@ function Library:_BuildPreview(Parent, Opts)
 		AutoRotate     = true;
 		RotationSpeed  = 0.01;
 		ZoomMultiplier = 2;
+		BoxType        = "Normal";
+		BoxThickness   = 1;
+		OutlineEnabled = false;
+		OutlineColor   = { Color = Color3.fromRGB(0, 0, 0), Alpha = 0.5 };
+		FillColorMid   = { Color = Color3.fromRGB(255, 255, 255), Alpha = 0.5 };
+		Skeleton       = false;
 	};
 
 	local Container = Library:CreateInstance("Frame", {
@@ -6774,6 +6780,32 @@ function Library:_BuildPreview(Parent, Opts)
 		Enabled      = false;
 	});
 	local BoxGradient = Library:CreateInstance("UIGradient", { Parent = BoxAccent; Rotation = 90 });
+
+	local BoxCircleCorner = Library:CreateInstance("UICorner", {
+		Parent       = Esp;
+		CornerRadius = UDim.new(0, 0);
+	});
+
+	local CornerFrames = {};
+	for i = 1, 8 do
+		local cf = Library:CreateInstance("Frame", {
+			Parent           = Esp;
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+			BorderSizePixel  = 0;
+			Visible          = false;
+			ZIndex           = 3;
+		});
+		Library:CreateInstance("UIStroke", {
+			Parent       = cf;
+			Thickness    = 1;
+			Color        = Color3.fromRGB(0, 0, 0);
+			Transparency = 0.5;
+			LineJoinMode = Enum.LineJoinMode.Miter;
+			Enabled      = false;
+		});
+		CornerFrames[i] = cf;
+	end;
+
 	local Glow = Library:CreateInstance("ImageLabel", {
 		Name                   = "Glow";
 		Parent                 = Esp;
@@ -6920,9 +6952,45 @@ function Library:_BuildPreview(Parent, Opts)
 		end;
 	end;
 
+	local function UpdateCorners()
+		local t          = Settings.BoxThickness;
+		local col        = Settings.BoxColorHigh.Color;
+		local vis        = Settings.Box and (Settings.BoxType == "Corner");
+		local outEnabled = Settings.OutlineEnabled;
+		local outColor   = Settings.OutlineColor.Color;
+		local cornerData = {
+			{ UDim2.new(0,    0,  0,    0), UDim2.new(0.25, 0, 0,    t) },
+			{ UDim2.new(0,    0,  0,    0), UDim2.new(0,    t, 0.25, 0) },
+			{ UDim2.new(0.75, 0,  0,    0), UDim2.new(0.25, 0, 0,    t) },
+			{ UDim2.new(1,   -t,  0,    0), UDim2.new(0,    t, 0.25, 0) },
+			{ UDim2.new(0,    0,  1,   -t), UDim2.new(0.25, 0, 0,    t) },
+			{ UDim2.new(0,    0,  0.75, 0), UDim2.new(0,    t, 0.25, 0) },
+			{ UDim2.new(0.75, 0,  1,   -t), UDim2.new(0.25, 0, 0,    t) },
+			{ UDim2.new(1,   -t,  0.75, 0), UDim2.new(0,    t, 0.25, 0) },
+		};
+		for i, cf in CornerFrames do
+			cf.Position         = cornerData[i][1];
+			cf.Size             = cornerData[i][2];
+			cf.BackgroundColor3 = col;
+			cf.Visible          = vis;
+			local stroke = cf:FindFirstChildOfClass("UIStroke");
+			if stroke then
+				stroke.Color   = outColor;
+				stroke.Enabled = outEnabled;
+			end;
+		end;
+		BoxCircleCorner.CornerRadius = (Settings.BoxType == "Circle")
+			and UDim.new(0.5, 0) or UDim.new(0, 0);
+	end;
+
 	local function Render()
-		BoxOutline.Enabled         = Settings.Box;
-		BoxAccent.Enabled          = Settings.Box;
+		local isCorner = Settings.BoxType == "Corner";
+		local isCircle = Settings.BoxType == "Circle";
+		local isNormal = not isCorner and not isCircle;
+
+		BoxOutline.Enabled         = Settings.Box and isNormal and Settings.OutlineEnabled;
+		BoxAccent.Enabled          = Settings.Box and (isNormal or isCircle);
+		BoxAccent.Thickness        = Settings.BoxThickness;
 		Esp.BackgroundTransparency = Settings.Fill and 0 or 1;
 		Glow.Visible               = Settings.Glow;
 		Healthbar.Visible          = Settings.Healthbar;
@@ -6938,12 +7006,14 @@ function Library:_BuildPreview(Parent, Opts)
 		FlagsLbl.TextColor3  = Settings.FlagsColor.Color;
 
 		FillGradient.Color = NewColorSequence({
-			NewColorSequenceKeypoint(0, Settings.FillColorHigh.Color);
-			NewColorSequenceKeypoint(1, Settings.FillColorLow.Color);
+			NewColorSequenceKeypoint(0,   Settings.FillColorHigh.Color);
+			NewColorSequenceKeypoint(0.5, Settings.FillColorMid.Color);
+			NewColorSequenceKeypoint(1,   Settings.FillColorLow.Color);
 		});
 		FillGradient.Transparency = NewNumberSequence({
-			NewNumberSequenceKeypoint(0, 1 - Settings.FillColorHigh.Alpha);
-			NewNumberSequenceKeypoint(1, 1 - Settings.FillColorLow.Alpha);
+			NewNumberSequenceKeypoint(0,   1 - Settings.FillColorHigh.Alpha);
+			NewNumberSequenceKeypoint(0.5, 1 - Settings.FillColorMid.Alpha);
+			NewNumberSequenceKeypoint(1,   1 - Settings.FillColorLow.Alpha);
 		});
 		BoxGradient.Color = NewColorSequence({
 			NewColorSequenceKeypoint(0, Settings.BoxColorHigh.Color);
@@ -6967,6 +7037,7 @@ function Library:_BuildPreview(Parent, Opts)
 		BoxGradient.Rotation  = Settings.BoxRotation;
 		GlowGradient.Rotation = Settings.GlowRotation;
 
+		UpdateCorners();
 		if not Settings.Enabled then Esp.Visible = false end;
 	end;
 	Render();
@@ -7135,11 +7206,65 @@ function Library:_BuildPreview(Parent, Opts)
 		local L = Map[tostring(Which)];
 		if L then L.Text = tostring(Text) end;
 	end;
+	function Obj:SyncFromESP(cfg)
+		if type(cfg) ~= "table" then return end;
+		Settings.Enabled      = cfg.Enabled == true;
+		Settings.Box          = cfg.Boxes == true;
+		local bc              = cfg.BoxColor or Color3.fromRGB(255, 255, 255);
+		Settings.BoxColorHigh = { Color = bc, Alpha = 1 };
+		Settings.BoxColorLow  = { Color = bc, Alpha = 1 };
+		Settings.BoxType      = tostring(cfg.BoxType or "Normal");
+		Settings.BoxThickness = tonumber(cfg.BoxThickness) or 1;
+		local ol              = cfg.Outlines or {};
+		Settings.OutlineEnabled = ol.Style ~= "None";
+		Settings.OutlineColor   = { Color = ol.Color or Color3.fromRGB(0, 0, 0), Alpha = 1 };
+		local bf = cfg.BoxFill or {};
+		Settings.Fill = bf.Enabled == true;
+		local bfg    = bf.Gradient or {};
+		local fa     = 1 - (tonumber(bf.Transparency) or 0.9);
+		if bfg.Enabled then
+			Settings.FillColorHigh = { Color = bfg.Color1 or Color3.fromRGB(255, 255, 255), Alpha = fa };
+			Settings.FillColorMid  = { Color = bfg.Color2 or Color3.fromRGB(255, 255, 255), Alpha = fa };
+			Settings.FillColorLow  = { Color = bfg.Color3 or Color3.fromRGB(255, 255, 255), Alpha = fa };
+		else
+			local fc = bf.Color or Color3.fromRGB(255, 255, 255);
+			Settings.FillColorHigh = { Color = fc, Alpha = fa };
+			Settings.FillColorMid  = { Color = fc, Alpha = fa };
+			Settings.FillColorLow  = { Color = fc, Alpha = fa };
+		end;
+		local hb  = cfg.HealthBar or {};
+		Settings.Healthbar     = hb.Enabled == true;
+		Settings.HealthbarText = hb.ShowText == true;
+		local hbg = hb.Gradient or {};
+		Settings.HealthHigh = { Color = hbg.Color1 or Color3.fromRGB(0, 255, 0),   Alpha = 1 };
+		Settings.HealthMid  = { Color = hbg.Color2 or Color3.fromRGB(255, 255, 0), Alpha = 1 };
+		Settings.HealthLow  = { Color = hbg.Color3 or Color3.fromRGB(255, 0, 0),   Alpha = 1 };
+		Settings.Name        = cfg.Names == true;
+		Settings.NameColor   = { Color = cfg.TextColor or Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		local dist = cfg.Distance or {};
+		Settings.Distance      = dist.Enabled == true;
+		Settings.DistanceColor = { Color = dist.Color or Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		local wep = cfg.Weapon or {};
+		Settings.Weapon      = wep.Enabled == true;
+		Settings.WeaponColor = { Color = wep.Color or Color3.fromRGB(255, 255, 255), Alpha = 1 };
+		local flags = cfg.Flags or {};
+		Settings.Flags = flags.Enabled == true;
+		local skel = cfg.Skeleton or {};
+		Settings.Skeleton = skel.Enabled == true;
+		Render();
+	end;
 	function Obj:ViewModel(M) ViewModel(M) end;
 	function Obj:Refresh() if OriginalModel then ViewModel(OriginalModel) end end;
 	return Obj;
 end;
 
+function Library:SetESP(ESPModule)
+	self._ESPModule = ESPModule;
+end;
+
+function Library:GetESP()
+	return self._ESPModule;
+end;
 
 function Library:PreviewWindow(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
