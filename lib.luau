@@ -7466,6 +7466,7 @@ function Library:PreviewWindow(Opts)
 	function Obj:SetText(...) return Core:SetText(...) end;
 	function Obj:ViewModel(...) return Core:ViewModel(...) end;
 	function Obj:Refresh(...) return Core:Refresh(...) end;
+	function Obj:SyncFromESP(...) return Core:SyncFromESP(...) end;
 	function Obj:Destroy() Gui:Destroy() end;
 	Library._PreviewWindow = Obj;
 	return Obj;
