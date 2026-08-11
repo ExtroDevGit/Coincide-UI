@@ -8296,8 +8296,8 @@ function Library:TargetUI(Opts)
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 		Image                  = "";
-		ScaleType              = Enum.ScaleType.Stretch;
-		BackgroundColor3       = Color3.fromHex("101010");
+		ScaleType              = Enum.ScaleType.Crop;
+		ZIndex                 = 2;
 	});
 
 	--// Sağ taraf bilgi bloğu
@@ -8405,18 +8405,25 @@ function Library:TargetUI(Opts)
 		BorderSizePixel  = 0;
 	});
 
-	--// Internal state
-	local UpColor      = Library.Accent
-	local MidColor     = Library.Accent
-	local LowColor     = Library.Accent
+	--// Internal state — artık Library.Accent'i canlı takip ediyor
 	local VisibleColor = Color3.fromRGB(70, 230, 90);
 	local HiddenColor  = Color3.fromRGB(255, 65, 65);
 
 	local ThumbCache = {};
 	local CurrentUserId = nil;
 
+	local LastHealthPct = 1;
+	local HealthTweenToken = 0;
+	local HealthCounterToken = 0;
+
 	local function SetAvatar(UserId)
-		if not UserId or UserId == 0 or UserId == CurrentUserId then return end;
+		if not UserId or UserId == 0 then
+			CurrentUserId = nil;
+			AvatarImage.Image = "";
+			return;
+		end;
+
+		if UserId == CurrentUserId then return; end;
 		CurrentUserId = UserId;
 
 		if ThumbCache[UserId] then
@@ -8424,15 +8431,17 @@ function Library:TargetUI(Opts)
 			return;
 		end;
 
-		AvatarImage.Image = ""; -- Clear while loading
-		
 		task.spawn(function()
 			local Ok, Content = pcall(function()
-				return Players:GetUserThumbnailAsync(UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100);
+				return Players:GetUserThumbnailAsync(UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size180x180);
 			end);
-			if Ok and Content and CurrentUserId == UserId then
+
+			if Ok and Content and Content ~= "" and CurrentUserId == UserId then
 				ThumbCache[UserId] = Content;
 				AvatarImage.Image = Content;
+			elseif not Ok then
+				-- Sessiz başarısızlık yerine bir sonraki denemede tekrar çekebilmesi için cache'lemiyoruz
+				warn("[TargetUI] Failed to load thumbnail for UserId " .. tostring(UserId) .. ": " .. tostring(Content));
 			end;
 		end);
 	end;
@@ -8449,19 +8458,52 @@ function Library:TargetUI(Opts)
 		local Pct = math.clamp(Current / Max, 0, 1);
 		local Color;
 		if Pct > 0.6 then
-			Color = UpColor;
+			Color = Library.Accent;
 		elseif Pct > 0.3 then
-			Color = MidColor;
+			Color = Library.Accent;
 		else
-			Color = LowColor;
+			Color = Library.Accent;
 		end;
 
-		Library:Tween(HealthFill, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+		local BarInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+		Library:Tween(HealthFill, BarInfo, {
 			Size = UDim2.new(Pct, -2, 1, -2);
 			BackgroundColor3 = Color;
 		}):Play();
 
-		HealthText.Text = string.format("%d / %d", math.floor(Current + 0.5), math.floor(Max + 0.5));
+		-- Sayının kendisi de yumuşak geçişle azalsın/artsın
+		HealthCounterToken = HealthCounterToken + 1;
+		local Mine = HealthCounterToken;
+
+		local StartCurrent = tonumber(string.match(HealthText.Text, "^(%-?%d+%.?%d*)")) or Current;
+		local StartMax = tonumber(string.match(HealthText.Text, "/%s*(%-?%d+%.?%d*)")) or Max;
+
+		local Duration = 0.25;
+		local StartTime = os.clock();
+
+		task.spawn(function()
+			while true do
+				if HealthCounterToken ~= Mine then return; end;
+
+				local Elapsed = os.clock() - StartTime;
+				local Alpha = math.clamp(Elapsed / Duration, 0, 1);
+				local Eased = 1 - (1 - Alpha) ^ 3; -- ease-out cubic
+
+				local DisplayCurrent = StartCurrent + (Current - StartCurrent) * Eased;
+				local DisplayMax = StartMax + (Max - StartMax) * Eased;
+
+				HealthText.Text = string.format("%d / %d", math.floor(DisplayCurrent + 0.5), math.floor(DisplayMax + 0.5));
+
+				if Alpha >= 1 then break; end;
+				task.wait();
+			end;
+
+			if HealthCounterToken == Mine then
+				HealthText.Text = string.format("%d / %d", math.floor(Current + 0.5), math.floor(Max + 0.5));
+			end;
+		end);
+
+		LastHealthPct = Pct;
 	end;
 
 	local function SetKDR(Text)
@@ -8477,6 +8519,13 @@ function Library:TargetUI(Opts)
 	end;
 
 	self:Draggable(Outer);
+
+	-- Library.Accent değiştiğinde health bar'ın rengini de canlı güncelle
+	Library:OnAccent(function(NewAccent)
+		Library:Tween(HealthFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			BackgroundColor3 = NewAccent;
+		}):Play();
+	end);
 
 	local Obj = { Gui = Gui, Outer = Outer, Content = Content };
 
@@ -8505,8 +8554,9 @@ function Library:TargetUI(Opts)
 		AvatarImage.Image = "";
 		NameLbl.Text = "Player";
 		KdrLbl.Text = "KDR: ";
+		HealthCounterToken = HealthCounterToken + 1;
 		HealthFill.Size = UDim2.new(1, -2, 1, -2);
-		HealthFill.BackgroundColor3 = UpColor;
+		HealthFill.BackgroundColor3 = Library.Accent;
 		HealthText.Text = "100 / 100";
 		SetVisible(false);
 	end;
