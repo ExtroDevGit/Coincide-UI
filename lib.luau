@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -8466,7 +8466,7 @@ function Library:TargetUI(Opts)
 		Name                   = "NameContainer";
 		Parent                 = InfoBlock;
 		Position               = UDim2.new(0, 0, 0, 0);
-		Size                   = UDim2.new(0.6, 0, 0, 14);
+		Size                   = UDim2.new(1, 0, 0, 14);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 	});
@@ -8485,26 +8485,31 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
 
-	--// MOD badge (initially hidden)
+	--// MOD badge - bracketler beyaz, MOD yazısı accent renk, transparent background
 	local ModBadge = self:CreateInstance("TextLabel", {
 		Name                   = "ModBadge";
 		Parent                 = NameContainer;
 		AnchorPoint            = Vector2.new(0, 0.5);
 		Position               = UDim2.new(1, 4, 0.5, 0);
-		Size                   = UDim2.new(0, 0, 0, 12);
+		Size                   = UDim2.new(0, 0, 0, 14);
 		BackgroundTransparency = 1;
-		Text                   = "[MOD]";
-		TextColor3             = Library.Accent;
-		TextSize               = 11;
+		Text                   = "";
+		TextColor3             = Color3.fromHex("FFFFFF"); -- Brackets white
+		TextSize               = 13;
 		TextXAlignment         = Enum.TextXAlignment.Left;
 		TextYAlignment         = Enum.TextYAlignment.Center;
 		Visible                = false;
+		RichText               = true; -- RichText for coloring
 	});
 	if ProggyCleanFont then ModBadge.FontFace = ProggyCleanFont end;
 
 	-- Update badge color when accent changes
 	Library:OnAccent(function(NewAccent)
-		ModBadge.TextColor3 = NewAccent;
+		-- Update the MOD text color in the rich text
+		if ModBadge.Visible then
+			ModBadge.Text = string.format('[<font color="#%02x%02x%02x">MOD</font>]', 
+				NewAccent.R * 255, NewAccent.G * 255, NewAccent.B * 255);
+		end
 	end);
 
 	--// Visible yazısı (sağda, isimle aynı satırda)
@@ -8697,15 +8702,21 @@ function Library:TargetUI(Opts)
 		}):Play();
 	end;
 
-	--// New function to set MOD status
+	--// New function to set MOD status - brackets white, MOD text accent colored
 	local function SetMod(IsMod)
 		if IsMod then
 			ModBadge.Visible = true;
+			local Accent = Library.Accent;
+			-- Use RichText: brackets white, MOD text accent color
+			ModBadge.Text = string.format('[<font color="#%02x%02x%02x">MOD</font>]', 
+				Accent.R * 255, Accent.G * 255, Accent.B * 255);
+			
 			-- Calculate width based on text
 			local TextBounds = ModBadge.TextBounds;
-			ModBadge.Size = UDim2.new(0, TextBounds.X + 4, 0, 14);
-			-- Adjust NameLbl to make room for badge
-			NameLbl.Size = UDim2.new(1, -(TextBounds.X + 4), 1, 0);
+			local BadgeWidth = TextBounds.X + 4;
+			ModBadge.Size = UDim2.new(0, BadgeWidth, 0, 14);
+			-- Adjust NameLbl to make room for badge (remove width from name)
+			NameLbl.Size = UDim2.new(1, -BadgeWidth, 1, 0);
 		else
 			ModBadge.Visible = false;
 			NameLbl.Size = UDim2.new(1, 0, 1, 0);
@@ -8720,7 +8731,10 @@ function Library:TargetUI(Opts)
 			BackgroundColor3 = NewAccent;
 		}):Play();
 		-- Also update MOD badge color
-		ModBadge.TextColor3 = NewAccent;
+		if ModBadge.Visible then
+			ModBadge.Text = string.format('[<font color="#%02x%02x%02x">MOD</font>]', 
+				NewAccent.R * 255, NewAccent.G * 255, NewAccent.B * 255);
+		end
 	end);
 
 	local Obj = { Gui = Gui, Outer = Outer, Content = Content };
@@ -8734,7 +8748,7 @@ function Library:TargetUI(Opts)
 		end;
 		if Data.KDR ~= nil then SetKDR(Data.KDR); end;
 		if Data.Visible ~= nil then SetVisible(Data.Visible); end;
-		if Data.ismod ~= nil then SetMod(Data.ismod); end; -- Added ismod support
+		if Data.ismod ~= nil then SetMod(Data.ismod); end;
 	end;
 
 	function Obj:Show()
@@ -8756,7 +8770,7 @@ function Library:TargetUI(Opts)
 		HealthFill.BackgroundColor3 = Library.Accent;
 		HealthText.Text = "100 / 100";
 		SetVisible(false);
-		SetMod(false); -- Reset MOD status
+		SetMod(false);
 	end;
 
 	function Obj:Destroy()
