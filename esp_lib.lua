@@ -166,7 +166,7 @@ local ESPConfig = {
     -- esp checks
     Enabled = false,
     Keybind = {
-        Enabled = true,
+        Enabled = false,
         Key = Enum.KeyCode.B,
     },
     Players = true,
