@@ -8461,12 +8461,21 @@ function Library:TargetUI(Opts)
 		BorderSizePixel        = 0;
 	});
 
-	--// İsim (sol üst)
-	local NameLbl = self:CreateInstance("TextLabel", {
-		Name                   = "NameLbl";
+	--// İsim (sol üst) - Now with MOD support
+	local NameContainer = self:CreateInstance("Frame", {
+		Name                   = "NameContainer";
 		Parent                 = InfoBlock;
 		Position               = UDim2.new(0, 0, 0, 0);
 		Size                   = UDim2.new(0.6, 0, 0, 14);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+
+	local NameLbl = self:CreateInstance("TextLabel", {
+		Name                   = "NameLbl";
+		Parent                 = NameContainer;
+		Position               = UDim2.new(0, 0, 0, 0);
+		Size                   = UDim2.new(1, 0, 1, 0);
 		BackgroundTransparency = 1;
 		Text                   = "Player";
 		TextColor3             = Color3.fromHex("FFFFFF");
@@ -8475,6 +8484,28 @@ function Library:TargetUI(Opts)
 		TextYAlignment         = Enum.TextYAlignment.Center;
 	});
 	if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
+
+	--// MOD badge (initially hidden)
+	local ModBadge = self:CreateInstance("TextLabel", {
+		Name                   = "ModBadge";
+		Parent                 = NameContainer;
+		AnchorPoint            = Vector2.new(0, 0.5);
+		Position               = UDim2.new(1, 4, 0.5, 0);
+		Size                   = UDim2.new(0, 0, 0, 12);
+		BackgroundTransparency = 1;
+		Text                   = "[MOD]";
+		TextColor3             = Library.Accent;
+		TextSize               = 11;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+		Visible                = false;
+	});
+	if ProggyCleanFont then ModBadge.FontFace = ProggyCleanFont end;
+
+	-- Update badge color when accent changes
+	Library:OnAccent(function(NewAccent)
+		ModBadge.TextColor3 = NewAccent;
+	end);
 
 	--// Visible yazısı (sağda, isimle aynı satırda)
 	local VisibleLbl = self:CreateInstance("TextLabel", {
@@ -8590,7 +8621,6 @@ function Library:TargetUI(Opts)
 				ThumbCache[UserId] = Content;
 				AvatarImage.Image = Content;
 			elseif not Ok then
-				-- Sessiz başarısızlık yerine bir sonraki denemede tekrar çekebilmesi için cache'lemiyoruz
 				warn("[TargetUI] Failed to load thumbnail for UserId " .. tostring(UserId) .. ": " .. tostring(Content));
 			end;
 		end);
@@ -8621,7 +8651,6 @@ function Library:TargetUI(Opts)
 			BackgroundColor3 = Color;
 		}):Play();
 
-		-- Sayının kendisi de yumuşak geçişle azalsın/artsın
 		HealthCounterToken = HealthCounterToken + 1;
 		local Mine = HealthCounterToken;
 
@@ -8637,7 +8666,7 @@ function Library:TargetUI(Opts)
 
 				local Elapsed = os.clock() - StartTime;
 				local Alpha = math.clamp(Elapsed / Duration, 0, 1);
-				local Eased = 1 - (1 - Alpha) ^ 3; -- ease-out cubic
+				local Eased = 1 - (1 - Alpha) ^ 3;
 
 				local DisplayCurrent = StartCurrent + (Current - StartCurrent) * Eased;
 				local DisplayMax = StartMax + (Max - StartMax) * Eased;
@@ -8668,6 +8697,21 @@ function Library:TargetUI(Opts)
 		}):Play();
 	end;
 
+	--// New function to set MOD status
+	local function SetMod(IsMod)
+		if IsMod then
+			ModBadge.Visible = true;
+			-- Calculate width based on text
+			local TextBounds = ModBadge.TextBounds;
+			ModBadge.Size = UDim2.new(0, TextBounds.X + 4, 0, 14);
+			-- Adjust NameLbl to make room for badge
+			NameLbl.Size = UDim2.new(1, -(TextBounds.X + 4), 1, 0);
+		else
+			ModBadge.Visible = false;
+			NameLbl.Size = UDim2.new(1, 0, 1, 0);
+		end
+	end;
+
 	self:Draggable(Outer);
 
 	-- Library.Accent değiştiğinde health bar'ın rengini de canlı güncelle
@@ -8675,6 +8719,8 @@ function Library:TargetUI(Opts)
 		Library:Tween(HealthFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			BackgroundColor3 = NewAccent;
 		}):Play();
+		-- Also update MOD badge color
+		ModBadge.TextColor3 = NewAccent;
 	end);
 
 	local Obj = { Gui = Gui, Outer = Outer, Content = Content };
@@ -8688,6 +8734,7 @@ function Library:TargetUI(Opts)
 		end;
 		if Data.KDR ~= nil then SetKDR(Data.KDR); end;
 		if Data.Visible ~= nil then SetVisible(Data.Visible); end;
+		if Data.ismod ~= nil then SetMod(Data.ismod); end; -- Added ismod support
 	end;
 
 	function Obj:Show()
@@ -8709,6 +8756,7 @@ function Library:TargetUI(Opts)
 		HealthFill.BackgroundColor3 = Library.Accent;
 		HealthText.Text = "100 / 100";
 		SetVisible(false);
+		SetMod(false); -- Reset MOD status
 	end;
 
 	function Obj:Destroy()
