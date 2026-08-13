@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -8769,8 +8769,9 @@ end;
 
 function Library:InvViewer(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
-	local Width  = tonumber(Opts.Width)  or 210;
-	local Height = tonumber(Opts.Height) or 360;
+	local Width     = tonumber(Opts.Width)     or 210;
+	local MaxHeight = tonumber(Opts.MaxHeight) or 500;
+	local MaxItems  = tonumber(Opts.MaxItems)  or 35;
 
 	local Gui = self:CreateInstance("ScreenGui", {
 		Name           = "InvViewerGui";
@@ -8785,7 +8786,8 @@ function Library:InvViewer(Opts)
 		Parent           = Gui;
 		AnchorPoint      = Vector2.new(1, 0);
 		Position         = UDim2.new(1, -14, 0, 14);
-		Size             = UDim2.fromOffset(Width, Height);
+		Size             = UDim2.fromOffset(Width, 100);
+		AutomaticSize    = Enum.AutomaticSize.Y;
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
 		Visible          = false;
@@ -8885,9 +8887,14 @@ function Library:InvViewer(Opts)
 		Name             = "Content";
 		Parent           = Outer;
 		Position         = UDim2.new(0, 5, 0, 36);
-		Size             = UDim2.new(1, -10, 1, -41);
+		Size             = UDim2.new(1, -10, 0, 100);
+		AutomaticSize    = Enum.AutomaticSize.Y;
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIPadding", {
+		Parent        = Outer;
+		PaddingBottom = UDim.new(0, 5);
 	});
 	self:CreateInstance("UIGradient", {
 		Parent   = Content;
@@ -8920,7 +8927,8 @@ function Library:InvViewer(Opts)
 		Name                   = "Scroller";
 		Parent                 = Content;
 		Position               = UDim2.new(0, 2, 0, 2);
-		Size                   = UDim2.new(1, -4, 1, -4);
+		Size                   = UDim2.new(1, -4, 0, 96);
+		AutomaticSize          = Enum.AutomaticSize.Y;
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
 		CanvasSize             = UDim2.new(0, 0, 0, 0);
@@ -8947,13 +8955,11 @@ function Library:InvViewer(Opts)
 
 	self:Draggable(Outer);
 
-	local FlashInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
 	local FlashOutInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
 
-	local CategoryFrames  = {};
-	local CategoryState   = {};
+	local CategoryState = {};
 
-	local function FlashRow(Row, Bg)
+	local function FlashRow(Bg)
 		Bg.BackgroundTransparency = 0.55;
 		Library:Tween(Bg, FlashOutInfo, { BackgroundTransparency = 1 }):Play();
 	end;
@@ -9043,8 +9049,10 @@ function Library:InvViewer(Opts)
 			HeaderLbl   = HeaderLbl;
 			ItemsHolder = ItemsHolder;
 			Rows        = {};
+			HiddenLbl   = nil;
 			Name        = CatName;
 			Items       = {};
+			HiddenCount = 0;
 		};
 	end;
 
@@ -9066,21 +9074,11 @@ function Library:InvViewer(Opts)
 			BorderSizePixel        = 0;
 		});
 		Library:RegisterAccent(FlashBg);
-		local Bullet = self:CreateInstance("Frame", {
-			Name             = "Bullet";
-			Parent           = Row;
-			AnchorPoint      = Vector2.new(0, 0.5);
-			Position         = UDim2.new(0, 8, 0.5, 0);
-			Size             = UDim2.fromOffset(3, 3);
-			BackgroundColor3 = Color3.fromHex("8C8F99");
-			BorderSizePixel  = 0;
-			Rotation         = 45;
-		});
 		local Lbl = self:CreateInstance("TextLabel", {
 			Name                   = "Label";
 			Parent                 = Row;
-			Position               = UDim2.new(0, 16, 0, 0);
-			Size                   = UDim2.new(1, -18, 1, 0);
+			Position               = UDim2.new(0, 8, 0, 0);
+			Size                   = UDim2.new(1, -10, 1, 0);
 			BackgroundTransparency = 1;
 			Text                   = ItemName;
 			TextColor3             = Color3.fromHex("C4C8D1");
@@ -9090,7 +9088,7 @@ function Library:InvViewer(Opts)
 			TextTruncate           = Enum.TextTruncate.AtEnd;
 		});
 		if ProggyCleanFont then Lbl.FontFace = ProggyCleanFont end;
-		return { Row = Row, Lbl = Lbl, Flash = FlashBg, Bullet = Bullet, Text = ItemName };
+		return { Row = Row, Lbl = Lbl, Flash = FlashBg, Text = ItemName };
 	end;
 
 	local function BuildEmptyRow(Parent)
@@ -9103,8 +9101,8 @@ function Library:InvViewer(Opts)
 		});
 		local Lbl = self:CreateInstance("TextLabel", {
 			Parent                 = Row;
-			Position               = UDim2.new(0, 16, 0, 0);
-			Size                   = UDim2.new(1, -18, 1, 0);
+			Position               = UDim2.new(0, 8, 0, 0);
+			Size                   = UDim2.new(1, -10, 1, 0);
 			BackgroundTransparency = 1;
 			Text                   = "Empty";
 			TextColor3             = Color3.fromHex("4A4D55");
@@ -9116,25 +9114,58 @@ function Library:InvViewer(Opts)
 		return Row;
 	end;
 
-	local function DiffCategory(State, ItemList)
+	local function BuildHiddenRow(Parent, HiddenCount, TotalCount)
+		local Pct = TotalCount > 0 and math.floor((HiddenCount / TotalCount) * 100 + 0.5) or 0;
+		local Row = self:CreateInstance("Frame", {
+			Name                   = "HiddenItem";
+			Parent                 = Parent;
+			Size                   = UDim2.new(1, 0, 0, 15);
+			BackgroundTransparency = 1;
+			BorderSizePixel        = 0;
+		});
+		local Lbl = self:CreateInstance("TextLabel", {
+			Parent                 = Row;
+			Position               = UDim2.new(0, 8, 0, 0);
+			Size                   = UDim2.new(1, -10, 1, 0);
+			BackgroundTransparency = 1;
+			Text                   = "Hidden other " .. Pct .. "% items";
+			TextColor3             = Color3.fromHex("6B6F78");
+			TextSize               = 11;
+			TextXAlignment         = Enum.TextXAlignment.Left;
+			TextYAlignment         = Enum.TextYAlignment.Center;
+		});
+		if ProggyCleanFont then Lbl.FontFace = ProggyCleanFont end;
+		return Row;
+	end;
+
+	local function DiffCategory(State, ItemList, MaxItems)
 		local CatName = tostring(ItemList[1] or State.Name);
 		if CatName ~= State.Name then
 			State.Name = CatName;
 			State.HeaderLbl.Text = CatName;
 		end;
 
-		local NewItems = {};
+		local AllItems = {};
 		for I = 2, #ItemList do
 			local V = tostring(ItemList[I]);
-			if V ~= "" then table.insert(NewItems, V) end;
+			if V ~= "" then table.insert(AllItems, V) end;
+		end;
+
+		local TotalCount  = #AllItems;
+		local ShownItems  = AllItems;
+		local HiddenCount = 0;
+		if TotalCount > MaxItems then
+			ShownItems  = table.create(MaxItems);
+			for I = 1, MaxItems do ShownItems[I] = AllItems[I] end;
+			HiddenCount = TotalCount - MaxItems;
 		end;
 
 		local OldItems = State.Items;
-		local SameCount = #OldItems == #NewItems;
-		local Identical = SameCount;
-		if SameCount then
-			for I = 1, #NewItems do
-				if OldItems[I] ~= NewItems[I] then
+		local SameCount = #OldItems == #ShownItems;
+		local Identical = SameCount and (State.HiddenCount == HiddenCount);
+		if Identical then
+			for I = 1, #ShownItems do
+				if OldItems[I] ~= ShownItems[I] then
 					Identical = false;
 					break;
 				end;
@@ -9147,20 +9178,25 @@ function Library:InvViewer(Opts)
 		end;
 		table.clear(State.Rows);
 		for _, C in State.ItemsHolder:GetChildren() do
-			if C.Name == "EmptyItem" then C:Destroy() end;
+			if C.Name == "EmptyItem" or C.Name == "HiddenItem" then C:Destroy() end;
 		end;
 
-		if #NewItems == 0 then
+		if #ShownItems == 0 then
 			BuildEmptyRow(State.ItemsHolder);
 		else
-			for I, ItemName in NewItems do
+			for I, ItemName in ShownItems do
 				local RowRef = BuildRow(State.ItemsHolder, ItemName, I);
 				table.insert(State.Rows, RowRef);
-				FlashRow(RowRef.Row, RowRef.Flash);
+				FlashRow(RowRef.Flash);
+			end;
+			if HiddenCount > 0 then
+				local HRow = BuildHiddenRow(State.ItemsHolder, HiddenCount, TotalCount);
+				HRow.LayoutOrder = #ShownItems + 1;
 			end;
 		end;
 
-		State.Items = NewItems;
+		State.Items       = ShownItems;
+		State.HiddenCount = HiddenCount;
 	end;
 
 	local function Refresh(Name, CategorysAndItems)
@@ -9184,7 +9220,7 @@ function Library:InvViewer(Opts)
 					State = BuildCategory(Idx, CatName);
 					CategoryState[Idx] = State;
 				end;
-				DiffCategory(State, ItemList);
+				DiffCategory(State, ItemList, MaxItems);
 			end;
 		end;
 
