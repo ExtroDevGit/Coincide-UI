@@ -5687,7 +5687,6 @@ function Library:Notify(Text, Time, Color)
 end;
 
 
-
 function Library:Playerlist(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Title = tostring(Opts.Title or "Playerlist");
@@ -5896,8 +5895,20 @@ function Library:Playerlist(Opts)
 		return State or "Neutral";
 	end;
 
+	local function IsModerator(Player)
+		local moderators = getgenv().moderators;
+		if not moderators or type(moderators) ~= "table" then return false end;
+		for _, modName in pairs(moderators) do
+			if type(modName) == "string" and modName:lower() == Player.Name:lower() then
+				return true;
+			end;
+		end;
+		return false;
+	end;
+
 	local function BuildRow(Player, Idx)
 		local State = PlayerStates[Player] or "Neutral";
+		local IsMod = IsModerator(Player);
 
 		local Row = self:CreateInstance("Frame", {
 			Name             = "Row_" .. Player.Name;
@@ -5933,7 +5944,7 @@ function Library:Playerlist(Opts)
 			Parent                 = Row;
 			AnchorPoint            = Vector2.new(0, 0.5);
 			Position               = UDim2.new(0, 4, 0.5, 0);
-			Size                   = UDim2.new(0.55, 0, 1, 0);
+			Size                   = UDim2.new(0.45, 0, 1, 0);
 			BackgroundTransparency = 1;
 			Text                   = Player.Name;
 			TextColor3             = Color3.fromHex("FFFFFF");
@@ -5945,6 +5956,30 @@ function Library:Playerlist(Opts)
 		});
 		if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
 
+		-- 2. Row: Mod tag (orta kısım)
+		local ModLbl = self:CreateInstance("TextLabel", {
+			Name                   = "ModLbl";
+			Parent                 = Row;
+			AnchorPoint            = Vector2.new(0, 0.5);
+			Position               = UDim2.new(0.45, 4, 0.5, 0);
+			Size                   = UDim2.new(0.10, 0, 1, 0);
+			BackgroundTransparency = 1;
+			Text                   = "";
+			TextColor3             = Color3.fromHex("FFFFFF");
+			TextSize               = 12;
+			TextXAlignment         = Enum.TextXAlignment.Left;
+			TextYAlignment         = Enum.TextYAlignment.Center;
+			ZIndex                 = 5;
+		});
+		if ProggyCleanFont then ModLbl.FontFace = ProggyCleanFont end;
+
+		-- Mod etiketi için rich text
+		if IsMod then
+			ModLbl.RichText = true;
+			ModLbl.Text = '[<font color="#' .. Library.Accent:ToHex() .. '">M</font>]';
+		end;
+
+		-- 3. Row: State (sağ kısım)
 		local StateLbl = self:CreateInstance("TextLabel", {
 			Name                   = "StateLbl";
 			Parent                 = Row;
