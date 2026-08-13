@@ -8767,4 +8767,443 @@ function Library:TargetUI(Opts)
 	return Obj;
 end;
 
+function Library:InvViewer(Opts)
+	Opts = typeof(Opts) == "table" and Opts or {};
+	local Title  = tostring(Opts.Title or "Inventory");
+	local Width  = tonumber(Opts.Width)  or 200;
+	local Height = tonumber(Opts.Height) or 340;
+
+	local Gui = self:CreateInstance("ScreenGui", {
+		Name           = "InvViewerGui";
+		Parent         = (gethui and gethui()) or CoreGui;
+		IgnoreGuiInset = true;
+		ResetOnSpawn   = false;
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
+	});
+
+	local Outer = self:CreateInstance("Frame", {
+		Name             = "Outer";
+		Parent           = Gui;
+		AnchorPoint      = Vector2.new(1, 0);
+		Position         = UDim2.fromOffset(0, 0);
+		Size             = UDim2.fromOffset(Width, Height);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+		Visible          = true;
+	});
+	Library:AddGlowingV2(Outer, Library.Accent, 0.4);
+
+	self:CreateInstance("UIGradient", {
+		Parent   = Outer;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("212121"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("1A1A1A"));
+		});
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = Outer;
+		Color           = Color3.fromHex("000000");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		LineJoinMode    = Enum.LineJoinMode.Miter;
+	});
+
+	local InnerOutline = self:CreateInstance("Frame", {
+		Name                   = "InnerOutline";
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 1, 0, 1);
+		Size                   = UDim2.new(1, -2, 1, -2);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+	self:CreateInstance("UIStroke", {
+		Parent          = InnerOutline;
+		Color           = Color3.fromHex("393939");
+		Thickness       = 1;
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+		LineJoinMode    = Enum.LineJoinMode.Miter;
+	});
+
+	local TopLine = self:CreateInstance("Frame", {
+		Name             = "TopLine";
+		Parent           = Outer;
+		Position         = UDim2.new(0, 1, 0, 1);
+		Size             = UDim2.new(1, -2, 0, 1);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+		ZIndex           = 10;
+	});
+	Library:RegisterAccentGradient(self:CreateInstance("UIGradient", {
+		Parent = TopLine; Rotation = 0;
+	}));
+
+	local TitleLbl = self:CreateInstance("TextLabel", {
+		Name                   = "Title";
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 6, 0, 9);
+		Size                   = UDim2.new(1, -12, 0, 18);
+		BackgroundTransparency = 1;
+		Text                   = Title;
+		TextColor3             = Color3.fromHex("FFFFFF");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then TitleLbl.FontFace = ProggyCleanFont end;
+
+	local Content = self:CreateInstance("Frame", {
+		Name             = "Content";
+		Parent           = Outer;
+		Position         = UDim2.new(0, 5, 0, 34);
+		Size             = UDim2.new(1, -10, 1, -39);
+		BackgroundColor3 = Color3.fromHex("FFFFFF");
+		BorderSizePixel  = 0;
+	});
+	self:CreateInstance("UIGradient", {
+		Parent   = Content;
+		Rotation = 90;
+		Color    = NewColorSequence({
+			NewColorSequenceKeypoint(0, Color3.fromHex("161616"));
+			NewColorSequenceKeypoint(1, Color3.fromHex("101010"));
+		});
+	});
+
+	local function ContentEdge(Anchor, Pos, Sz, Color)
+		self:CreateInstance("Frame", {
+			Parent           = Content;
+			AnchorPoint      = Anchor;
+			Position         = Pos;
+			Size             = Sz;
+			BackgroundColor3 = Color3.fromHex(Color);
+			BorderSizePixel  = 0;
+			ZIndex           = 10;
+		});
+	end;
+	ContentEdge(Vector2.new(0,0), UDim2.new(0,0,0,0),   UDim2.new(0,1,1,0),   "000000");
+	ContentEdge(Vector2.new(0,0), UDim2.new(0,1,0,1),   UDim2.new(0,1,1,-2),  "393939");
+	ContentEdge(Vector2.new(1,0), UDim2.new(1,0,0,0),   UDim2.new(0,1,1,0),   "000000");
+	ContentEdge(Vector2.new(1,0), UDim2.new(1,-1,0,1),  UDim2.new(0,1,1,-2),  "393939");
+	ContentEdge(Vector2.new(0,1), UDim2.new(0,0,1,0),   UDim2.new(1,0,0,1),   "000000");
+	ContentEdge(Vector2.new(0,1), UDim2.new(0,1,1,-1),  UDim2.new(1,-2,0,1),  "393939");
+
+	local Scroller = self:CreateInstance("ScrollingFrame", {
+		Name                   = "Scroller";
+		Parent                 = Content;
+		Position               = UDim2.new(0, 2, 0, 2);
+		Size                   = UDim2.new(1, -4, 1, -4);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+		CanvasSize             = UDim2.new(0, 0, 0, 0);
+		AutomaticCanvasSize    = Enum.AutomaticSize.Y;
+		ScrollBarThickness     = 2;
+		ScrollBarImageColor3   = Library.Accent;
+		ScrollingDirection     = Enum.ScrollingDirection.Y;
+		ClipsDescendants       = true;
+	});
+	Library:RegisterAccent(Scroller, "ScrollBarImageColor3");
+	self:CreateInstance("UIListLayout", {
+		Parent        = Scroller;
+		FillDirection = Enum.FillDirection.Vertical;
+		SortOrder     = Enum.SortOrder.LayoutOrder;
+		Padding       = UDim.new(0, 6);
+	});
+	self:CreateInstance("UIPadding", {
+		Parent        = Scroller;
+		PaddingTop    = UDim.new(0, 4);
+		PaddingLeft   = UDim.new(0, 2);
+		PaddingRight  = UDim.new(0, 2);
+		PaddingBottom = UDim.new(0, 6);
+	});
+
+	self:Draggable(Outer);
+
+	local NameLbl = self:CreateInstance("TextLabel", {
+		Name                   = "NameLbl";
+		Parent                 = Scroller;
+		Size                   = UDim2.new(1, 0, 0, 16);
+		BackgroundTransparency = 1;
+		Text                   = "Player";
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+		LayoutOrder            = 0;
+	});
+	if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
+
+	local CategoryFrames = {};
+
+	local function ClearCategories()
+		for _, C in Scroller:GetChildren() do
+			if C:IsA("Frame") and C.Name == "Category" then
+				C:Destroy();
+			end;
+		end;
+		table.clear(CategoryFrames);
+	end;
+
+	local function BuildCategory(CatIdx, ItemList)
+		local CatName = tostring(ItemList[1] or ("Category " .. CatIdx));
+
+		local Sec = self:CreateInstance("Frame", {
+			Name                   = "Category";
+			Parent                 = Scroller;
+			Size                   = UDim2.new(1, 0, 0, 0);
+			AutomaticSize          = Enum.AutomaticSize.Y;
+			BackgroundTransparency = 1;
+			BorderSizePixel        = 0;
+			LayoutOrder            = CatIdx;
+		});
+
+		local HeaderBox = self:CreateInstance("Frame", {
+			Name             = "Header";
+			Parent           = Sec;
+			Size             = UDim2.new(1, 0, 0, 18);
+			BackgroundColor3 = Color3.fromHex("000000");
+			BorderSizePixel  = 0;
+		});
+		local HeaderGray = self:CreateInstance("Frame", {
+			Parent           = HeaderBox;
+			Position         = UDim2.new(0, 1, 0, 1);
+			Size             = UDim2.new(1, -2, 1, -2);
+			BackgroundColor3 = Color3.fromHex("393939");
+			BorderSizePixel  = 0;
+		});
+		local HeaderInside = self:CreateInstance("Frame", {
+			Parent           = HeaderGray;
+			Position         = UDim2.new(0, 1, 0, 1);
+			Size             = UDim2.new(1, -2, 1, -2);
+			BackgroundColor3 = Color3.fromHex("FFFFFF");
+			BorderSizePixel  = 0;
+		});
+		self:CreateInstance("UIGradient", {
+			Parent   = HeaderInside;
+			Rotation = 90;
+			Color    = NewColorSequence({
+				NewColorSequenceKeypoint(0, Color3.fromHex("1B1B1B"));
+				NewColorSequenceKeypoint(1, Color3.fromHex("121212"));
+			});
+		});
+		local HeaderLbl = self:CreateInstance("TextLabel", {
+			Parent                 = HeaderInside;
+			Position               = UDim2.new(0, 5, 0, 0);
+			Size                   = UDim2.new(1, -10, 1, 0);
+			BackgroundTransparency = 1;
+			Text                   = CatName;
+			TextColor3             = Color3.fromHex("FFFFFF");
+			TextSize               = 12;
+			TextXAlignment         = Enum.TextXAlignment.Left;
+			TextYAlignment         = Enum.TextYAlignment.Center;
+		});
+		if ProggyCleanFont then HeaderLbl.FontFace = ProggyCleanFont end;
+
+		local ItemsHolder = self:CreateInstance("Frame", {
+			Name                   = "Items";
+			Parent                 = Sec;
+			Position               = UDim2.new(0, 0, 0, 20);
+			Size                   = UDim2.new(1, 0, 0, 0);
+			AutomaticSize          = Enum.AutomaticSize.Y;
+			BackgroundTransparency = 1;
+			BorderSizePixel        = 0;
+		});
+		self:CreateInstance("UIListLayout", {
+			Parent        = ItemsHolder;
+			FillDirection = Enum.FillDirection.Vertical;
+			SortOrder     = Enum.SortOrder.LayoutOrder;
+			Padding       = UDim.new(0, 1);
+		});
+
+		local HasItems = false;
+		for I = 2, #ItemList do
+			local ItemName = tostring(ItemList[I]);
+			if ItemName ~= "" then
+				HasItems = true;
+				local Row = self:CreateInstance("TextLabel", {
+					Name                   = "Item_" .. (I - 1);
+					Parent                 = ItemsHolder;
+					Size                   = UDim2.new(1, 0, 0, 14);
+					BackgroundTransparency = 1;
+					Text                   = "-  " .. ItemName;
+					TextColor3             = Color3.fromHex("BFC4CC");
+					TextSize               = 12;
+					TextXAlignment         = Enum.TextXAlignment.Left;
+					TextYAlignment         = Enum.TextYAlignment.Center;
+					LayoutOrder            = I;
+				});
+				if ProggyCleanFont then Row.FontFace = ProggyCleanFont end;
+			end;
+		end;
+
+		if not HasItems then
+			local Empty = self:CreateInstance("TextLabel", {
+				Parent                 = ItemsHolder;
+				Size                   = UDim2.new(1, 0, 0, 14);
+				BackgroundTransparency = 1;
+				Text                   = "-  Empty";
+				TextColor3             = Color3.fromHex("5E626B");
+				TextSize               = 12;
+				TextXAlignment         = Enum.TextXAlignment.Left;
+				TextYAlignment         = Enum.TextYAlignment.Center;
+			});
+			if ProggyCleanFont then Empty.FontFace = ProggyCleanFont end;
+		end;
+
+		CategoryFrames[CatIdx] = Sec;
+		return Sec;
+	end;
+
+	local function Refresh(Name, CategorysAndItems)
+		if Name ~= nil then
+			NameLbl.Text = tostring(Name);
+		end;
+		if typeof(CategorysAndItems) == "table" then
+			ClearCategories();
+			for CatIdx, ItemList in CategorysAndItems do
+				if typeof(ItemList) == "table" then
+					BuildCategory(tonumber(CatIdx) or 1, ItemList);
+				end;
+			end;
+		end;
+	end;
+
+	local FadeOriginals = nil;
+	local FadeToken = 0;
+	local ShownAt = 0;
+
+	local function CaptureFade()
+		local Map = {};
+		local Types = {
+			Frame          = { "BackgroundTransparency" };
+			TextLabel      = { "BackgroundTransparency", "TextTransparency" };
+			ScrollingFrame = { "BackgroundTransparency", "ScrollBarImageTransparency" };
+			UIStroke       = { "Transparency" };
+		};
+		local function Cap(Inst)
+			local Props = Types[Inst.ClassName];
+			if not Props then return end;
+			local PMap = {};
+			for _, P in Props do
+				local Ok, V = pcall(function() return Inst[P] end);
+				if Ok then PMap[P] = V end;
+			end;
+			Map[Inst] = PMap;
+		end;
+		Cap(Outer);
+		for _, D in Outer:GetDescendants() do Cap(D) end;
+		return Map;
+	end;
+
+	local Obj = { Gui = Gui, Outer = Outer, _Visible = false };
+	Gui.Enabled = false;
+	Outer.Visible = false;
+
+	function Obj:SetVisible(State)
+		if self._Visible == State then return end;
+		self._Visible = State;
+		FadeToken += 1;
+		local Mine = FadeToken;
+		local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
+		if not State and FadeOriginals and os.clock() - ShownAt < Info.Time then
+			for Inst, PMap in FadeOriginals do
+				if Inst and Inst.Parent then
+					for P, V in PMap do Inst[P] = V end;
+				end;
+			end;
+		end;
+		if not State or not FadeOriginals then
+			FadeOriginals = CaptureFade();
+		end;
+		if State then
+			ShownAt = os.clock();
+			Gui.Enabled  = true;
+			Outer.Visible = true;
+			for Inst, PMap in FadeOriginals do
+				if Inst and Inst.Parent then
+					local Goal = {};
+					for P, V in PMap do Goal[P] = V end;
+					Library:Tween(Inst, Info, Goal):Play();
+				end;
+			end;
+		else
+			for Inst, PMap in FadeOriginals do
+				if Inst and Inst.Parent then
+					local Goal = {};
+					for P in PMap do Goal[P] = 1 end;
+					Library:Tween(Inst, Info, Goal):Play();
+				end;
+			end;
+			task.delay(Info.Time + 0.05, function()
+				if FadeToken == Mine and not self._Visible then
+					Gui.Enabled  = false;
+					Outer.Visible = false;
+				end;
+			end);
+		end;
+	end;
+
+	function Obj:Toggle()
+		self:SetVisible(not self._Visible);
+	end;
+
+	function Obj:SyncWithWindow(Window)
+		local OrigSetVisible = Window.SetVisible;
+		Window.SetVisible = function(Win, State)
+			OrigSetVisible(Win, State);
+			-- Master window kapanınca invviewer'ı da kapat, ama açılışında otomatik açma
+			if not State then self:SetVisible(false) end;
+		end;
+		local OrigToggle = Window.Toggle;
+		Window.Toggle = function(Win)
+			OrigToggle(Win);
+			if not Win.Visible then self:SetVisible(false) end;
+		end;
+	end;
+
+	function Obj:PositionNextTo(Window)
+		local WinOuter = Window.Outer;
+		if not WinOuter then return end;
+		local function UpdatePos()
+			local WinPos  = WinOuter.AbsolutePosition;
+			local WinSize = WinOuter.AbsoluteSize;
+			Outer.AnchorPoint = Vector2.new(0, 0);
+			Outer.Position = UDim2.fromOffset(WinPos.X + WinSize.X + 2, WinPos.Y + GuiInset);
+		end;
+		task.defer(UpdatePos);
+		WinOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
+		WinOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
+	end;
+
+	function Obj:PositionBelow(OtherObj)
+		local OtherOuter = OtherObj.Outer;
+		if not OtherOuter then return end;
+		local function UpdatePos()
+			local P = OtherOuter.AbsolutePosition;
+			local S = OtherOuter.AbsoluteSize;
+			Outer.AnchorPoint = Vector2.new(1, 0);
+			Outer.Position = UDim2.fromOffset(P.X, P.Y + S.Y + 2 + GuiInset);
+		end;
+		task.defer(UpdatePos);
+		OtherOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
+		OtherOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
+	end;
+
+	function Obj:Update(Data)
+		Data = typeof(Data) == "table" and Data or {};
+		Refresh(Data.Name, Data.CategorysAndItems);
+	end;
+
+	function Obj:Clear()
+		ClearCategories();
+		NameLbl.Text = "Player";
+	end;
+
+	function Obj:Destroy()
+		Gui:Destroy();
+	end;
+
+	Library._InvViewer = Obj;
+	return Obj;
+end;
+
 return Library;
