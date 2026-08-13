@@ -8309,7 +8309,7 @@ end;
 function Library:TargetUI(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Width  = tonumber(Opts.Width)  or 280;
-	local Height = tonumber(Opts.Height) or 70;
+	local Height = tonumber(Opts.Height) or 84;
 
 	local Players = game:GetService("Players");
 
@@ -8413,7 +8413,6 @@ function Library:TargetUI(Opts)
 	ContentEdge(Vector2.new(0,1), UDim2.new(0,0,1,0),   UDim2.new(1,0,0,1),   "000000");
 	ContentEdge(Vector2.new(0,1), UDim2.new(0,1,1,-1),  UDim2.new(1,-2,0,1),  "393939");
 
-	--// Avatar (sol)
 	local AvatarSize = Height - 18;
 	local AvatarBox = self:CreateInstance("Frame", {
 		Name             = "AvatarBox";
@@ -8450,7 +8449,6 @@ function Library:TargetUI(Opts)
 		ZIndex                 = 2;
 	});
 
-	--// Sağ taraf bilgi bloğu
 	local InfoBlock = self:CreateInstance("Frame", {
 		Name                   = "InfoBlock";
 		Parent                 = Content;
@@ -8461,7 +8459,6 @@ function Library:TargetUI(Opts)
 		BorderSizePixel        = 0;
 	});
 
-	--// İsim (sol üst) - Now with MOD support
 	local NameContainer = self:CreateInstance("Frame", {
 		Name                   = "NameContainer";
 		Parent                 = InfoBlock;
@@ -8485,7 +8482,6 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
 
-	--// MOD badge (initially hidden)
 	local ModBadge = self:CreateInstance("TextLabel", {
 		Name                   = "ModBadge";
 		Parent                 = NameContainer;
@@ -8502,12 +8498,10 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then ModBadge.FontFace = ProggyCleanFont end;
 
-	-- Update badge color when accent changes
 	Library:OnAccent(function(NewAccent)
 		ModBadge.TextColor3 = NewAccent;
 	end);
 
-	--// Visible yazısı (sağda, isimle aynı satırda)
 	local VisibleLbl = self:CreateInstance("TextLabel", {
 		Name                   = "VisibleLbl";
 		Parent                 = InfoBlock;
@@ -8523,7 +8517,6 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then VisibleLbl.FontFace = ProggyCleanFont end;
 
-	--// KDR (isim altı, solda)
 	local KdrLbl = self:CreateInstance("TextLabel", {
 		Name                   = "KdrLbl";
 		Parent                 = InfoBlock;
@@ -8538,11 +8531,24 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then KdrLbl.FontFace = ProggyCleanFont end;
 
-	--// Health değer yazısı (KDR'nin altında, solda)
+	local PlayTimeLbl = self:CreateInstance("TextLabel", {
+		Name                   = "PlayTimeLbl";
+		Parent                 = InfoBlock;
+		Position               = UDim2.new(0, 0, 0, 30);
+		Size                   = UDim2.new(1, 0, 0, 13);
+		BackgroundTransparency = 1;
+		Text                   = "Play Time: ";
+		TextColor3             = Color3.fromHex("8C8F99");
+		TextSize               = 12;
+		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextYAlignment         = Enum.TextYAlignment.Center;
+	});
+	if ProggyCleanFont then PlayTimeLbl.FontFace = ProggyCleanFont end;
+
 	local HealthText = self:CreateInstance("TextLabel", {
 		Name                   = "HealthText";
 		Parent                 = InfoBlock;
-		Position               = UDim2.new(0, 0, 0, 32);
+		Position               = UDim2.new(0, 0, 0, 44);
 		Size                   = UDim2.new(1, 0, 0, 13);
 		BackgroundTransparency = 1;
 		Text                   = "100 / 100";
@@ -8553,7 +8559,6 @@ function Library:TargetUI(Opts)
 	});
 	if ProggyCleanFont then HealthText.FontFace = ProggyCleanFont end;
 
-	--// Health bar (en altta)
 	local HealthTrack = self:CreateInstance("Frame", {
 		Name             = "HealthTrack";
 		Parent           = InfoBlock;
@@ -8586,16 +8591,46 @@ function Library:TargetUI(Opts)
 		BorderSizePixel  = 0;
 	});
 
-	--// Internal state — artık Library.Accent'i canlı takip ediyor
 	local VisibleColor = Color3.fromRGB(70, 230, 90);
 	local HiddenColor  = Color3.fromRGB(255, 65, 65);
 
-	local ThumbCache = {};
 	local CurrentUserId = nil;
-
 	local LastHealthPct = 1;
-	local HealthTweenToken = 0;
 	local HealthCounterToken = 0;
+
+	if not Library._AvatarThumbCache then
+		Library._AvatarThumbCache = {};
+	end;
+	local ThumbCache = Library._AvatarThumbCache;
+
+	local function PrefetchThumbnail(UserId)
+		if not UserId or UserId == 0 then return end;
+		if ThumbCache[UserId] ~= nil then return end;
+		ThumbCache[UserId] = false;
+
+		task.spawn(function()
+			local Ok, Content = pcall(function()
+				return Players:GetUserThumbnailAsync(UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size180x180);
+			end);
+			if Ok and Content and Content ~= "" then
+				ThumbCache[UserId] = Content;
+			else
+				ThumbCache[UserId] = nil;
+			end;
+		end);
+	end;
+
+	if not Library._AvatarPrefetchStarted then
+		Library._AvatarPrefetchStarted = true;
+
+		for _, Plr in Players:GetPlayers() do
+			PrefetchThumbnail(Plr.UserId);
+		end;
+
+		Library:Connection(Players.PlayerAdded, function(Plr)
+			PrefetchThumbnail(Plr.UserId);
+		end);
+	end;
 
 	local function SetAvatar(UserId)
 		if not UserId or UserId == 0 then
@@ -8607,21 +8642,29 @@ function Library:TargetUI(Opts)
 		if UserId == CurrentUserId then return; end;
 		CurrentUserId = UserId;
 
-		if ThumbCache[UserId] then
-			AvatarImage.Image = ThumbCache[UserId];
+		local Cached = ThumbCache[UserId];
+		if typeof(Cached) == "string" then
+			AvatarImage.Image = Cached;
 			return;
 		end;
 
-		task.spawn(function()
-			local Ok, Content = pcall(function()
-				return Players:GetUserThumbnailAsync(UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size180x180);
-			end);
+		if Cached == nil then
+			PrefetchThumbnail(UserId);
+		end;
 
-			if Ok and Content and Content ~= "" and CurrentUserId == UserId then
-				ThumbCache[UserId] = Content;
-				AvatarImage.Image = Content;
-			elseif not Ok then
-				warn("[TargetUI] Failed to load thumbnail for UserId " .. tostring(UserId) .. ": " .. tostring(Content));
+		AvatarImage.Image = "";
+		task.spawn(function()
+			local Waited = 0;
+			while CurrentUserId == UserId and Waited < 5 do
+				local Value = ThumbCache[UserId];
+				if typeof(Value) == "string" then
+					if CurrentUserId == UserId then
+						AvatarImage.Image = Value;
+					end;
+					return;
+				end;
+				task.wait(0.1);
+				Waited += 0.1;
 			end;
 		end);
 	end;
@@ -8636,14 +8679,7 @@ function Library:TargetUI(Opts)
 		if Max <= 0 then Max = 1; end;
 
 		local Pct = math.clamp(Current / Max, 0, 1);
-		local Color;
-		if Pct > 0.6 then
-			Color = Library.Accent;
-		elseif Pct > 0.3 then
-			Color = Library.Accent;
-		else
-			Color = Library.Accent;
-		end;
+		local Color = Library.Accent;
 
 		local BarInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
 		Library:Tween(HealthFill, BarInfo, {
@@ -8689,6 +8725,10 @@ function Library:TargetUI(Opts)
 		KdrLbl.Text = "KDR: " .. tostring(Text or "");
 	end;
 
+	local function SetPlayTime(Text)
+		PlayTimeLbl.Text = "Play Time: " .. tostring(Text or "");
+	end;
+
 	local function SetVisible(IsVisible)
 		local Target = IsVisible and VisibleColor or HiddenColor;
 		VisibleLbl.Text = IsVisible and "Visible" or "Not Visible";
@@ -8697,14 +8737,11 @@ function Library:TargetUI(Opts)
 		}):Play();
 	end;
 
-	--// New function to set MOD status
 	local function SetMod(IsMod)
 		if IsMod then
 			ModBadge.Visible = true;
-			-- Calculate width based on text
 			local TextBounds = ModBadge.TextBounds;
 			ModBadge.Size = UDim2.new(0, TextBounds.X + 4, 0, 14);
-			-- Adjust NameLbl to make room for badge
 			NameLbl.Size = UDim2.new(1, -(TextBounds.X + 4), 1, 0);
 		else
 			ModBadge.Visible = false;
@@ -8714,12 +8751,10 @@ function Library:TargetUI(Opts)
 
 	self:Draggable(Outer);
 
-	-- Library.Accent değiştiğinde health bar'ın rengini de canlı güncelle
 	Library:OnAccent(function(NewAccent)
 		Library:Tween(HealthFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 			BackgroundColor3 = NewAccent;
 		}):Play();
-		-- Also update MOD badge color
 		ModBadge.TextColor3 = NewAccent;
 	end);
 
@@ -8733,8 +8768,9 @@ function Library:TargetUI(Opts)
 			SetHealth(Data.Health, Data.MaxHealth);
 		end;
 		if Data.KDR ~= nil then SetKDR(Data.KDR); end;
+		if Data.PlayTime ~= nil then SetPlayTime(Data.PlayTime); end;
 		if Data.Visible ~= nil then SetVisible(Data.Visible); end;
-		if Data.ismod ~= nil then SetMod(Data.ismod); end; -- Added ismod support
+		if Data.ismod ~= nil then SetMod(Data.ismod); end;
 	end;
 
 	function Obj:Show()
@@ -8751,12 +8787,13 @@ function Library:TargetUI(Opts)
 		AvatarImage.Image = "";
 		NameLbl.Text = "Player";
 		KdrLbl.Text = "KDR: ";
+		PlayTimeLbl.Text = "Play Time: ";
 		HealthCounterToken = HealthCounterToken + 1;
 		HealthFill.Size = UDim2.new(1, -2, 1, -2);
 		HealthFill.BackgroundColor3 = Library.Accent;
 		HealthText.Text = "100 / 100";
 		SetVisible(false);
-		SetMod(false); -- Reset MOD status
+		SetMod(false);
 	end;
 
 	function Obj:Destroy()
