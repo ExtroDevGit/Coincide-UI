@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.1";
 };
 
 local Palette = {
@@ -8459,20 +8459,22 @@ function Library:TargetUI(Opts)
 		BorderSizePixel        = 0;
 	});
 
-	local NameContainer = self:CreateInstance("Frame", {
+local NameContainer = self:CreateInstance("Frame", {
 		Name                   = "NameContainer";
 		Parent                 = InfoBlock;
 		Position               = UDim2.new(0, 0, 0, 0);
 		Size                   = UDim2.new(0.6, 0, 0, 14);
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
+		ClipsDescendants       = false;
 	});
 
 	local NameLbl = self:CreateInstance("TextLabel", {
 		Name                   = "NameLbl";
 		Parent                 = NameContainer;
 		Position               = UDim2.new(0, 0, 0, 0);
-		Size                   = UDim2.new(1, 0, 1, 0);
+		Size                   = UDim2.new(0, 0, 1, 0);
+		AutomaticSize          = Enum.AutomaticSize.X;
 		BackgroundTransparency = 1;
 		Text                   = "Player";
 		TextColor3             = Color3.fromHex("FFFFFF");
@@ -8486,8 +8488,9 @@ function Library:TargetUI(Opts)
 		Name                   = "ModBadge";
 		Parent                 = NameContainer;
 		AnchorPoint            = Vector2.new(0, 0.5);
-		Position               = UDim2.new(1, 4, 0.5, 0);
+		Position               = UDim2.new(0, 0, 0.5, 0);
 		Size                   = UDim2.new(0, 0, 0, 12);
+		AutomaticSize          = Enum.AutomaticSize.X;
 		BackgroundTransparency = 1;
 		Text                   = "[MOD]";
 		TextColor3             = Library.Accent;
@@ -8497,6 +8500,7 @@ function Library:TargetUI(Opts)
 		Visible                = false;
 	});
 	if ProggyCleanFont then ModBadge.FontFace = ProggyCleanFont end;
+
 
 	Library:OnAccent(function(NewAccent)
 		ModBadge.TextColor3 = NewAccent;
@@ -8669,10 +8673,12 @@ function Library:TargetUI(Opts)
 		end);
 	end;
 
-	local function SetName(Name)
+local function SetName(Name)
 		NameLbl.Text = tostring(Name or "Player");
+		if ModBadge.Visible then
+			ModBadge.Position = UDim2.new(0, NameLbl.AbsoluteSize.X + 6, 0.5, 0);
+		end;
 	end;
-
 	local function SetHealth(Current, Max)
 		Current = tonumber(Current) or 0;
 		Max = tonumber(Max) or 100;
@@ -8737,15 +8743,12 @@ function Library:TargetUI(Opts)
 		}):Play();
 	end;
 
-	local function SetMod(IsMod)
+local function SetMod(IsMod)
 		if IsMod then
+			ModBadge.Position = UDim2.new(0, NameLbl.AbsoluteSize.X + 6, 0.5, 0);
 			ModBadge.Visible = true;
-			local TextBounds = ModBadge.TextBounds;
-			ModBadge.Size = UDim2.new(0, TextBounds.X + 4, 0, 14);
-			NameLbl.Size = UDim2.new(1, -(TextBounds.X + 4), 1, 0);
 		else
 			ModBadge.Visible = false;
-			NameLbl.Size = UDim2.new(1, 0, 1, 0);
 		end
 	end;
 
