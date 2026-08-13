@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -8770,7 +8770,7 @@ end;
 function Library:InvViewer(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Width     = tonumber(Opts.Width)     or 210;
-	local MaxHeight = tonumber(Opts.MaxHeight) or 500;
+	local MinHeight = tonumber(Opts.MinHeight) or 310;
 	local MaxItems  = tonumber(Opts.MaxItems)  or 35;
 
 	local Gui = self:CreateInstance("ScreenGui", {
@@ -8786,7 +8786,7 @@ function Library:InvViewer(Opts)
 		Parent           = Gui;
 		AnchorPoint      = Vector2.new(1, 0);
 		Position         = UDim2.new(1, -14, 0, 14);
-		Size             = UDim2.fromOffset(Width, 100);
+		Size             = UDim2.fromOffset(Width, MinHeight);
 		AutomaticSize    = Enum.AutomaticSize.Y;
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
@@ -8883,18 +8883,28 @@ function Library:InvViewer(Opts)
 	});
 	Library:RegisterAccentGradient(UnderlineGradient);
 
+	-- Content'in kendi minimum yüksekliğini korumasını sağlayan alan.
+	-- Content, Scroller'ın gerçek içerik boyuna göre büyür (AutomaticSize),
+	-- ama altındaki Spacer, panel toplamda MinHeight'ın altına düşmeyecek şekilde
+	-- boş alanı dolduruyor.
+	local BodyHolder = self:CreateInstance("Frame", {
+		Name                   = "BodyHolder";
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 5, 0, 36);
+		Size                   = UDim2.new(1, -10, 0, math.max(MinHeight - 41, 0));
+		AutomaticSize          = Enum.AutomaticSize.Y;
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+
 	local Content = self:CreateInstance("Frame", {
 		Name             = "Content";
-		Parent           = Outer;
-		Position         = UDim2.new(0, 5, 0, 36);
-		Size             = UDim2.new(1, -10, 0, 100);
+		Parent           = BodyHolder;
+		Position         = UDim2.new(0, 0, 0, 0);
+		Size             = UDim2.new(1, 0, 0, math.max(MinHeight - 41, 0));
 		AutomaticSize    = Enum.AutomaticSize.Y;
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
-	});
-	self:CreateInstance("UIPadding", {
-		Parent        = Outer;
-		PaddingBottom = UDim.new(0, 5);
 	});
 	self:CreateInstance("UIGradient", {
 		Parent   = Content;
@@ -8903,6 +8913,15 @@ function Library:InvViewer(Opts)
 			NewColorSequenceKeypoint(0, Color3.fromHex("161616"));
 			NewColorSequenceKeypoint(1, Color3.fromHex("101010"));
 		});
+	});
+	self:CreateInstance("UISizeConstraint", {
+		Parent       = Content;
+		MinSize      = Vector2.new(0, math.max(MinHeight - 41, 0));
+	});
+
+	self:CreateInstance("UIPadding", {
+		Parent        = Outer;
+		PaddingBottom = UDim.new(0, 5);
 	});
 
 	local function ContentEdge(Anchor, Pos, Sz, Color)
@@ -8927,7 +8946,7 @@ function Library:InvViewer(Opts)
 		Name                   = "Scroller";
 		Parent                 = Content;
 		Position               = UDim2.new(0, 2, 0, 2);
-		Size                   = UDim2.new(1, -4, 0, 96);
+		Size                   = UDim2.new(1, -4, 0, math.max(MinHeight - 45, 0));
 		AutomaticSize          = Enum.AutomaticSize.Y;
 		BackgroundTransparency = 1;
 		BorderSizePixel        = 0;
@@ -8937,6 +8956,10 @@ function Library:InvViewer(Opts)
 		ScrollBarImageColor3   = Library.Accent;
 		ScrollingDirection     = Enum.ScrollingDirection.Y;
 		ClipsDescendants       = true;
+	});
+	self:CreateInstance("UISizeConstraint", {
+		Parent  = Scroller;
+		MinSize = Vector2.new(0, math.max(MinHeight - 45, 0));
 	});
 	Library:RegisterAccent(Scroller, "ScrollBarImageColor3");
 	self:CreateInstance("UIListLayout", {
@@ -9049,7 +9072,6 @@ function Library:InvViewer(Opts)
 			HeaderLbl   = HeaderLbl;
 			ItemsHolder = ItemsHolder;
 			Rows        = {};
-			HiddenLbl   = nil;
 			Name        = CatName;
 			Items       = {};
 			HiddenCount = 0;
