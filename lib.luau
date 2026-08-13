@@ -5686,7 +5686,6 @@ function Library:Notify(Text, Time, Color)
     return Wrapper;
 end;
 
-
 function Library:Playerlist(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Title = tostring(Opts.Title or "Playerlist");
@@ -5883,6 +5882,64 @@ function Library:Playerlist(Opts)
 	local PlayerStates = {};
 	local RowRefs     = {};
 
+	-- Tabloları başlat
+	if not getgenv().friendlys or type(getgenv().friendlys) ~= "table" then
+		getgenv().friendlys = {};
+	end;
+	if not getgenv().prioritys or type(getgenv().prioritys) ~= "table" then
+		getgenv().prioritys = {};
+	end;
+
+	local function IsInTable(tbl, playerName)
+		if not tbl or type(tbl) ~= "table" then return false end;
+		for _, name in pairs(tbl) do
+			if type(name) == "string" and name:lower() == playerName:lower() then
+				return true;
+			end;
+		end;
+		return false;
+	end;
+
+	local function RemoveFromTable(tbl, playerName)
+		if not tbl or type(tbl) ~= "table" then return end;
+		for i = #tbl, 1, -1 do
+			if type(tbl[i]) == "string" and tbl[i]:lower() == playerName:lower() then
+				table.remove(tbl, i);
+			end;
+		end;
+	end;
+
+	local function AddToTable(tbl, playerName)
+		if not tbl or type(tbl) ~= "table" then return end;
+		if not IsInTable(tbl, playerName) then
+			table.insert(tbl, playerName);
+		end;
+	end;
+
+	local function GetStateFromTables(Player)
+		if IsInTable(getgenv().friendlys, Player.Name) then
+			return "Friendly";
+		elseif IsInTable(getgenv().prioritys, Player.Name) then
+			return "Priority";
+		end;
+		return "Neutral";
+	end;
+
+	local function UpdatePlayerState(Player, NewState)
+		-- Önce tüm tablolardan kaldır
+		RemoveFromTable(getgenv().friendlys, Player.Name);
+		RemoveFromTable(getgenv().prioritys, Player.Name);
+
+		-- Yeni duruma göre tabloya ekle
+		if NewState == "Friendly" then
+			AddToTable(getgenv().friendlys, Player.Name);
+		elseif NewState == "Priority" then
+			AddToTable(getgenv().prioritys, Player.Name);
+		end;
+
+		PlayerStates[Player] = NewState;
+	end;
+
 	local function GetStateColor(Player, State)
 		if Player == LP then return Library.Accent end;
 		if State == "Friendly" then return Color3.fromRGB(0, 200, 0) end;
@@ -5907,7 +5964,8 @@ function Library:Playerlist(Opts)
 	end;
 
 	local function BuildRow(Player, Idx)
-		local State = PlayerStates[Player] or "Neutral";
+		local State = GetStateFromTables(Player);
+		PlayerStates[Player] = State;
 		local IsMod = IsModerator(Player);
 
 		local Row = self:CreateInstance("Frame", {
@@ -6005,9 +6063,11 @@ function Library:Playerlist(Opts)
 
 		if Player ~= LP then
 			Btn.MouseButton1Click:Connect(function()
-				local Cur = PlayerStates[Player] or "Neutral";
+				local Cur = GetStateFromTables(Player);
 				local Next = Cur == "Neutral" and "Friendly" or Cur == "Friendly" and "Priority" or "Neutral";
-				PlayerStates[Player] = Next;
+				
+				-- Tabloları güncelle
+				UpdatePlayerState(Player, Next);
 
 				TweenService:Create(Row, TweenInfo.new(0.08), { BackgroundTransparency = 0.25 }):Play();
 				task.delay(0.1, function()
@@ -6048,7 +6108,12 @@ function Library:Playerlist(Opts)
 
 	RefreshPlayerList();
 	Players.PlayerAdded:Connect(function() RefreshPlayerList() end);
-	Players.PlayerRemoving:Connect(function() RefreshPlayerList() end);
+	Players.PlayerRemoving:Connect(function(Player)
+		-- Oyuncu ayrıldığında tablolardan temizle
+		RemoveFromTable(getgenv().friendlys, Player.Name);
+		RemoveFromTable(getgenv().prioritys, Player.Name);
+		RefreshPlayerList();
+	end);
 	SearchInput:GetPropertyChangedSignal("Text"):Connect(RefreshPlayerList);
 
 	local FadeOriginals = nil;
