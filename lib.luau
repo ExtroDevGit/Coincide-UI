@@ -28,7 +28,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -8769,9 +8769,8 @@ end;
 
 function Library:InvViewer(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
-	local Title  = tostring(Opts.Title or "Inventory");
-	local Width  = tonumber(Opts.Width)  or 200;
-	local Height = tonumber(Opts.Height) or 340;
+	local Width  = tonumber(Opts.Width)  or 210;
+	local Height = tonumber(Opts.Height) or 360;
 
 	local Gui = self:CreateInstance("ScreenGui", {
 		Name           = "InvViewerGui";
@@ -8785,13 +8784,13 @@ function Library:InvViewer(Opts)
 		Name             = "Outer";
 		Parent           = Gui;
 		AnchorPoint      = Vector2.new(1, 0);
-		Position         = UDim2.fromOffset(0, 0);
+		Position         = UDim2.new(1, -14, 0, 14);
 		Size             = UDim2.fromOffset(Width, Height);
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
-		Visible          = true;
+		Visible          = false;
 	});
-	Library:AddGlowingV2(Outer, Library.Accent, 0.4);
+	Library:AddGlowingV2(Outer, Library.Accent, 0.45);
 
 	self:CreateInstance("UIGradient", {
 		Parent   = Outer;
@@ -8838,25 +8837,55 @@ function Library:InvViewer(Opts)
 		Parent = TopLine; Rotation = 0;
 	}));
 
+	local TitleHolder = self:CreateInstance("Frame", {
+		Name                   = "TitleHolder";
+		Parent                 = Outer;
+		Position               = UDim2.new(0, 6, 0, 8);
+		Size                   = UDim2.new(1, -12, 0, 20);
+		BackgroundTransparency = 1;
+		BorderSizePixel        = 0;
+	});
+
 	local TitleLbl = self:CreateInstance("TextLabel", {
 		Name                   = "Title";
-		Parent                 = Outer;
-		Position               = UDim2.new(0, 6, 0, 9);
-		Size                   = UDim2.new(1, -12, 0, 18);
+		Parent                 = TitleHolder;
+		Size                   = UDim2.new(1, 0, 1, 0);
 		BackgroundTransparency = 1;
-		Text                   = Title;
+		Text                   = "Player's Inventory";
 		TextColor3             = Color3.fromHex("FFFFFF");
-		TextSize               = 12;
-		TextXAlignment         = Enum.TextXAlignment.Left;
+		TextSize               = 13;
+		TextXAlignment         = Enum.TextXAlignment.Center;
 		TextYAlignment         = Enum.TextYAlignment.Center;
+		TextTruncate           = Enum.TextTruncate.AtEnd;
 	});
 	if ProggyCleanFont then TitleLbl.FontFace = ProggyCleanFont end;
+
+	local TitleUnderline = self:CreateInstance("Frame", {
+		Name                   = "Underline";
+		Parent                 = Outer;
+		AnchorPoint            = Vector2.new(0.5, 0);
+		Position               = UDim2.new(0.5, 0, 0, 29);
+		Size                   = UDim2.new(0, 0, 0, 1);
+		BackgroundColor3       = Color3.fromHex("FFFFFF");
+		BorderSizePixel        = 0;
+		BackgroundTransparency = 0.3;
+	});
+	local UnderlineGradient = self:CreateInstance("UIGradient", {
+		Parent   = TitleUnderline;
+		Rotation = 0;
+		Transparency = NewNumberSequence({
+			NewNumberSequenceKeypoint(0, 1);
+			NewNumberSequenceKeypoint(0.5, 0);
+			NewNumberSequenceKeypoint(1, 1);
+		});
+	});
+	Library:RegisterAccentGradient(UnderlineGradient);
 
 	local Content = self:CreateInstance("Frame", {
 		Name             = "Content";
 		Parent           = Outer;
-		Position         = UDim2.new(0, 5, 0, 34);
-		Size             = UDim2.new(1, -10, 1, -39);
+		Position         = UDim2.new(0, 5, 0, 36);
+		Size             = UDim2.new(1, -10, 1, -41);
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel  = 0;
 	});
@@ -8906,7 +8935,7 @@ function Library:InvViewer(Opts)
 		Parent        = Scroller;
 		FillDirection = Enum.FillDirection.Vertical;
 		SortOrder     = Enum.SortOrder.LayoutOrder;
-		Padding       = UDim.new(0, 6);
+		Padding       = UDim.new(0, 7);
 	});
 	self:CreateInstance("UIPadding", {
 		Parent        = Scroller;
@@ -8918,34 +8947,18 @@ function Library:InvViewer(Opts)
 
 	self:Draggable(Outer);
 
-	local NameLbl = self:CreateInstance("TextLabel", {
-		Name                   = "NameLbl";
-		Parent                 = Scroller;
-		Size                   = UDim2.new(1, 0, 0, 16);
-		BackgroundTransparency = 1;
-		Text                   = "Player";
-		TextColor3             = Color3.fromHex("8C8F99");
-		TextSize               = 12;
-		TextXAlignment         = Enum.TextXAlignment.Left;
-		TextYAlignment         = Enum.TextYAlignment.Center;
-		LayoutOrder            = 0;
-	});
-	if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
+	local FlashInfo = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
+	local FlashOutInfo = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out);
 
-	local CategoryFrames = {};
+	local CategoryFrames  = {};
+	local CategoryState   = {};
 
-	local function ClearCategories()
-		for _, C in Scroller:GetChildren() do
-			if C:IsA("Frame") and C.Name == "Category" then
-				C:Destroy();
-			end;
-		end;
-		table.clear(CategoryFrames);
+	local function FlashRow(Row, Bg)
+		Bg.BackgroundTransparency = 0.55;
+		Library:Tween(Bg, FlashOutInfo, { BackgroundTransparency = 1 }):Play();
 	end;
 
-	local function BuildCategory(CatIdx, ItemList)
-		local CatName = tostring(ItemList[1] or ("Category " .. CatIdx));
-
+	local function BuildCategory(CatIdx, CatName)
 		local Sec = self:CreateInstance("Frame", {
 			Name                   = "Category";
 			Parent                 = Scroller;
@@ -8959,7 +8972,7 @@ function Library:InvViewer(Opts)
 		local HeaderBox = self:CreateInstance("Frame", {
 			Name             = "Header";
 			Parent           = Sec;
-			Size             = UDim2.new(1, 0, 0, 18);
+			Size             = UDim2.new(1, 0, 0, 19);
 			BackgroundColor3 = Color3.fromHex("000000");
 			BorderSizePixel  = 0;
 		});
@@ -8976,32 +8989,43 @@ function Library:InvViewer(Opts)
 			Size             = UDim2.new(1, -2, 1, -2);
 			BackgroundColor3 = Color3.fromHex("FFFFFF");
 			BorderSizePixel  = 0;
+			ClipsDescendants = true;
 		});
 		self:CreateInstance("UIGradient", {
 			Parent   = HeaderInside;
 			Rotation = 90;
 			Color    = NewColorSequence({
-				NewColorSequenceKeypoint(0, Color3.fromHex("1B1B1B"));
-				NewColorSequenceKeypoint(1, Color3.fromHex("121212"));
+				NewColorSequenceKeypoint(0, Color3.fromHex("232323"));
+				NewColorSequenceKeypoint(1, Color3.fromHex("161616"));
 			});
 		});
+		local HeaderAccentBar = self:CreateInstance("Frame", {
+			Name             = "AccentBar";
+			Parent           = HeaderInside;
+			Size             = UDim2.new(0, 2, 1, 0);
+			BackgroundColor3 = Library.Accent;
+			BorderSizePixel  = 0;
+			ZIndex           = 2;
+		});
+		Library:RegisterAccent(HeaderAccentBar);
 		local HeaderLbl = self:CreateInstance("TextLabel", {
 			Parent                 = HeaderInside;
-			Position               = UDim2.new(0, 5, 0, 0);
-			Size                   = UDim2.new(1, -10, 1, 0);
+			Position               = UDim2.new(0, 8, 0, 0);
+			Size                   = UDim2.new(1, -13, 1, 0);
 			BackgroundTransparency = 1;
 			Text                   = CatName;
 			TextColor3             = Color3.fromHex("FFFFFF");
 			TextSize               = 12;
 			TextXAlignment         = Enum.TextXAlignment.Left;
 			TextYAlignment         = Enum.TextYAlignment.Center;
+			ZIndex                 = 2;
 		});
 		if ProggyCleanFont then HeaderLbl.FontFace = ProggyCleanFont end;
 
 		local ItemsHolder = self:CreateInstance("Frame", {
 			Name                   = "Items";
 			Parent                 = Sec;
-			Position               = UDim2.new(0, 0, 0, 20);
+			Position               = UDim2.new(0, 0, 0, 21);
 			Size                   = UDim2.new(1, 0, 0, 0);
 			AutomaticSize          = Enum.AutomaticSize.Y;
 			BackgroundTransparency = 1;
@@ -9014,55 +9038,160 @@ function Library:InvViewer(Opts)
 			Padding       = UDim.new(0, 1);
 		});
 
-		local HasItems = false;
+		return {
+			Sec         = Sec;
+			HeaderLbl   = HeaderLbl;
+			ItemsHolder = ItemsHolder;
+			Rows        = {};
+			Name        = CatName;
+			Items       = {};
+		};
+	end;
+
+	local function BuildRow(Parent, ItemName, LayoutOrder)
+		local Row = self:CreateInstance("Frame", {
+			Name                   = "Item";
+			Parent                 = Parent;
+			Size                   = UDim2.new(1, 0, 0, 15);
+			BackgroundTransparency = 1;
+			BorderSizePixel        = 0;
+			LayoutOrder            = LayoutOrder;
+		});
+		local FlashBg = self:CreateInstance("Frame", {
+			Name                   = "Flash";
+			Parent                 = Row;
+			Size                   = UDim2.new(1, 0, 1, 0);
+			BackgroundColor3       = Library.Accent;
+			BackgroundTransparency = 1;
+			BorderSizePixel        = 0;
+		});
+		Library:RegisterAccent(FlashBg);
+		local Bullet = self:CreateInstance("Frame", {
+			Name             = "Bullet";
+			Parent           = Row;
+			AnchorPoint      = Vector2.new(0, 0.5);
+			Position         = UDim2.new(0, 8, 0.5, 0);
+			Size             = UDim2.fromOffset(3, 3);
+			BackgroundColor3 = Color3.fromHex("8C8F99");
+			BorderSizePixel  = 0;
+			Rotation         = 45;
+		});
+		local Lbl = self:CreateInstance("TextLabel", {
+			Name                   = "Label";
+			Parent                 = Row;
+			Position               = UDim2.new(0, 16, 0, 0);
+			Size                   = UDim2.new(1, -18, 1, 0);
+			BackgroundTransparency = 1;
+			Text                   = ItemName;
+			TextColor3             = Color3.fromHex("C4C8D1");
+			TextSize               = 12;
+			TextXAlignment         = Enum.TextXAlignment.Left;
+			TextYAlignment         = Enum.TextYAlignment.Center;
+			TextTruncate           = Enum.TextTruncate.AtEnd;
+		});
+		if ProggyCleanFont then Lbl.FontFace = ProggyCleanFont end;
+		return { Row = Row, Lbl = Lbl, Flash = FlashBg, Bullet = Bullet, Text = ItemName };
+	end;
+
+	local function BuildEmptyRow(Parent)
+		local Row = self:CreateInstance("Frame", {
+			Name                   = "EmptyItem";
+			Parent                 = Parent;
+			Size                   = UDim2.new(1, 0, 0, 15);
+			BackgroundTransparency = 1;
+			BorderSizePixel        = 0;
+		});
+		local Lbl = self:CreateInstance("TextLabel", {
+			Parent                 = Row;
+			Position               = UDim2.new(0, 16, 0, 0);
+			Size                   = UDim2.new(1, -18, 1, 0);
+			BackgroundTransparency = 1;
+			Text                   = "Empty";
+			TextColor3             = Color3.fromHex("4A4D55");
+			TextSize               = 12;
+			TextXAlignment         = Enum.TextXAlignment.Left;
+			TextYAlignment         = Enum.TextYAlignment.Center;
+		});
+		if ProggyCleanFont then Lbl.FontFace = ProggyCleanFont end;
+		return Row;
+	end;
+
+	local function DiffCategory(State, ItemList)
+		local CatName = tostring(ItemList[1] or State.Name);
+		if CatName ~= State.Name then
+			State.Name = CatName;
+			State.HeaderLbl.Text = CatName;
+		end;
+
+		local NewItems = {};
 		for I = 2, #ItemList do
-			local ItemName = tostring(ItemList[I]);
-			if ItemName ~= "" then
-				HasItems = true;
-				local Row = self:CreateInstance("TextLabel", {
-					Name                   = "Item_" .. (I - 1);
-					Parent                 = ItemsHolder;
-					Size                   = UDim2.new(1, 0, 0, 14);
-					BackgroundTransparency = 1;
-					Text                   = "-  " .. ItemName;
-					TextColor3             = Color3.fromHex("BFC4CC");
-					TextSize               = 12;
-					TextXAlignment         = Enum.TextXAlignment.Left;
-					TextYAlignment         = Enum.TextYAlignment.Center;
-					LayoutOrder            = I;
-				});
-				if ProggyCleanFont then Row.FontFace = ProggyCleanFont end;
+			local V = tostring(ItemList[I]);
+			if V ~= "" then table.insert(NewItems, V) end;
+		end;
+
+		local OldItems = State.Items;
+		local SameCount = #OldItems == #NewItems;
+		local Identical = SameCount;
+		if SameCount then
+			for I = 1, #NewItems do
+				if OldItems[I] ~= NewItems[I] then
+					Identical = false;
+					break;
+				end;
+			end;
+		end;
+		if Identical then return end;
+
+		for _, RowRef in State.Rows do
+			RowRef.Row:Destroy();
+		end;
+		table.clear(State.Rows);
+		for _, C in State.ItemsHolder:GetChildren() do
+			if C.Name == "EmptyItem" then C:Destroy() end;
+		end;
+
+		if #NewItems == 0 then
+			BuildEmptyRow(State.ItemsHolder);
+		else
+			for I, ItemName in NewItems do
+				local RowRef = BuildRow(State.ItemsHolder, ItemName, I);
+				table.insert(State.Rows, RowRef);
+				FlashRow(RowRef.Row, RowRef.Flash);
 			end;
 		end;
 
-		if not HasItems then
-			local Empty = self:CreateInstance("TextLabel", {
-				Parent                 = ItemsHolder;
-				Size                   = UDim2.new(1, 0, 0, 14);
-				BackgroundTransparency = 1;
-				Text                   = "-  Empty";
-				TextColor3             = Color3.fromHex("5E626B");
-				TextSize               = 12;
-				TextXAlignment         = Enum.TextXAlignment.Left;
-				TextYAlignment         = Enum.TextYAlignment.Center;
-			});
-			if ProggyCleanFont then Empty.FontFace = ProggyCleanFont end;
-		end;
-
-		CategoryFrames[CatIdx] = Sec;
-		return Sec;
+		State.Items = NewItems;
 	end;
 
 	local function Refresh(Name, CategorysAndItems)
 		if Name ~= nil then
-			NameLbl.Text = tostring(Name);
+			local NewTitle = tostring(Name) .. "'s Inventory";
+			if TitleLbl.Text ~= NewTitle then
+				TitleLbl.Text = NewTitle;
+			end;
 		end;
-		if typeof(CategorysAndItems) == "table" then
-			ClearCategories();
-			for CatIdx, ItemList in CategorysAndItems do
-				if typeof(ItemList) == "table" then
-					BuildCategory(tonumber(CatIdx) or 1, ItemList);
+
+		if typeof(CategorysAndItems) ~= "table" then return end;
+
+		local SeenIdx = {};
+		for CatIdx, ItemList in CategorysAndItems do
+			local Idx = tonumber(CatIdx) or 1;
+			if typeof(ItemList) == "table" then
+				SeenIdx[Idx] = true;
+				local State = CategoryState[Idx];
+				if not State then
+					local CatName = tostring(ItemList[1] or ("Category " .. Idx));
+					State = BuildCategory(Idx, CatName);
+					CategoryState[Idx] = State;
 				end;
+				DiffCategory(State, ItemList);
+			end;
+		end;
+
+		for Idx, State in CategoryState do
+			if not SeenIdx[Idx] then
+				State.Sec:Destroy();
+				CategoryState[Idx] = nil;
 			end;
 		end;
 	end;
@@ -9090,13 +9219,14 @@ function Library:InvViewer(Opts)
 			Map[Inst] = PMap;
 		end;
 		Cap(Outer);
-		for _, D in Outer:GetDescendants() do Cap(D) end;
+		for _, D in Outer:GetDescendants() do
+			if D.Name ~= "Flash" then Cap(D) end;
+		end;
 		return Map;
 	end;
 
 	local Obj = { Gui = Gui, Outer = Outer, _Visible = false };
 	Gui.Enabled = false;
-	Outer.Visible = false;
 
 	function Obj:SetVisible(State)
 		if self._Visible == State then return end;
@@ -9116,7 +9246,7 @@ function Library:InvViewer(Opts)
 		end;
 		if State then
 			ShownAt = os.clock();
-			Gui.Enabled  = true;
+			Gui.Enabled   = true;
 			Outer.Visible = true;
 			for Inst, PMap in FadeOriginals do
 				if Inst and Inst.Parent then
@@ -9135,7 +9265,7 @@ function Library:InvViewer(Opts)
 			end;
 			task.delay(Info.Time + 0.05, function()
 				if FadeToken == Mine and not self._Visible then
-					Gui.Enabled  = false;
+					Gui.Enabled   = false;
 					Outer.Visible = false;
 				end;
 			end);
@@ -9150,7 +9280,6 @@ function Library:InvViewer(Opts)
 		local OrigSetVisible = Window.SetVisible;
 		Window.SetVisible = function(Win, State)
 			OrigSetVisible(Win, State);
-			-- Master window kapanınca invviewer'ı da kapat, ama açılışında otomatik açma
 			if not State then self:SetVisible(false) end;
 		end;
 		local OrigToggle = Window.Toggle;
@@ -9160,42 +9289,17 @@ function Library:InvViewer(Opts)
 		end;
 	end;
 
-	function Obj:PositionNextTo(Window)
-		local WinOuter = Window.Outer;
-		if not WinOuter then return end;
-		local function UpdatePos()
-			local WinPos  = WinOuter.AbsolutePosition;
-			local WinSize = WinOuter.AbsoluteSize;
-			Outer.AnchorPoint = Vector2.new(0, 0);
-			Outer.Position = UDim2.fromOffset(WinPos.X + WinSize.X + 2, WinPos.Y + GuiInset);
-		end;
-		task.defer(UpdatePos);
-		WinOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
-		WinOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
-	end;
-
-	function Obj:PositionBelow(OtherObj)
-		local OtherOuter = OtherObj.Outer;
-		if not OtherOuter then return end;
-		local function UpdatePos()
-			local P = OtherOuter.AbsolutePosition;
-			local S = OtherOuter.AbsoluteSize;
-			Outer.AnchorPoint = Vector2.new(1, 0);
-			Outer.Position = UDim2.fromOffset(P.X, P.Y + S.Y + 2 + GuiInset);
-		end;
-		task.defer(UpdatePos);
-		OtherOuter:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdatePos);
-		OtherOuter:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdatePos);
-	end;
-
 	function Obj:Update(Data)
 		Data = typeof(Data) == "table" and Data or {};
 		Refresh(Data.Name, Data.CategorysAndItems);
 	end;
 
 	function Obj:Clear()
-		ClearCategories();
-		NameLbl.Text = "Player";
+		for _, State in CategoryState do
+			State.Sec:Destroy();
+		end;
+		table.clear(CategoryState);
+		TitleLbl.Text = "Player's Inventory";
 	end;
 
 	function Obj:Destroy()
