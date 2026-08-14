@@ -5940,17 +5940,18 @@ function Library:Playerlist(Opts)
 		PlayerStates[Player] = NewState;
 	end;
 
-	local function GetStateColor(Player, State)
-		if Player == LP then return Library.Accent end;
-		if State == "Friendly" then return Color3.fromRGB(0, 200, 0) end;
-		if State == "Priority" then return Color3.fromRGB(210, 0, 0) end;
-		return Color3.fromHex("A0A0A0");
-	end;
+local function GetStateColor(Player, State)
+    if Player == LP then return Library.Accent end;
+    if State == "Friendly"  then return Color3.fromRGB(80, 200, 120) end;
+    if State == "Priority"  then return Color3.fromRGB(220, 60,  60) end;
+    return Color3.fromRGB(90, 92, 102);   -- Neutral gri
+end;
 
-	local function GetStateText(Player, State)
-		if Player == LP then return "LocalPlayer" end;
-		return State or "Neutral";
-	end;
+local function GetStateText(Player, State)
+    if Player == LP then return "You" end;
+    return State or "Neutral";
+end;
+
 
 	local function IsModerator(Player)
 		local moderators = getgenv().moderators;
@@ -5962,125 +5963,211 @@ function Library:Playerlist(Opts)
 		end;
 		return false;
 	end;
+local function BuildRow(Player, Idx)
+    local State = GetStateFromTables(Player);
+    PlayerStates[Player] = State;
+    local IsMod = IsModerator(Player);
+    local IsLP  = (Player == LP);
 
-	local function BuildRow(Player, Idx)
-		local State = GetStateFromTables(Player);
-		PlayerStates[Player] = State;
-		local IsMod = IsModerator(Player);
+    -- Dış kapsayıcı
+    local Row = self:CreateInstance("Frame", {
+        Name             = "Row_" .. Player.Name;
+        Parent           = PlayerListScroll;
+        Size             = UDim2.new(1, 0, 0, 24);
+        BackgroundColor3 = Color3.fromHex("1C1C1C");
+        BackgroundTransparency = 1;
+        BorderSizePixel  = 0;
+        LayoutOrder      = Idx;
+        ClipsDescendants = true;
+    });
 
-		local Row = self:CreateInstance("Frame", {
-			Name             = "Row_" .. Player.Name;
-			Parent           = PlayerListScroll;
-			Size             = UDim2.new(1, 0, 0, 20);
-			BackgroundColor3 = Color3.fromHex("1E1E1E");
-			BackgroundTransparency = 1;
-			BorderSizePixel  = 0;
-			LayoutOrder      = Idx;
-		});
+    -- Sol accent şeridi (state göstergesi)
+    local AccentBar = self:CreateInstance("Frame", {
+        Name             = "AccentBar";
+        Parent           = Row;
+        Position         = UDim2.new(0, 0, 0, 3);
+        Size             = UDim2.new(0, 2, 1, -6);
+        BackgroundColor3 = GetStateColor(Player, State);
+        BorderSizePixel  = 0;
+        BackgroundTransparency = IsLP and 0 or (State == "Neutral" and 1 or 0);
+    });
 
-		self:CreateInstance("Frame", {
-			Parent           = Row;
-			AnchorPoint      = Vector2.new(0, 1);
-			Position         = UDim2.new(0, 0, 1, 0);
-			Size             = UDim2.new(1, 0, 0, 1);
-			BackgroundColor3 = Color3.fromHex("222222");
-			BorderSizePixel  = 0;
-			ZIndex           = 2;
-		});
+    -- Hover / seçim arka planı
+    local HoverBg = self:CreateInstance("Frame", {
+        Name             = "HoverBg";
+        Parent           = Row;
+        Position         = UDim2.new(0, 0, 0, 0);
+        Size             = UDim2.new(1, 0, 1, 0);
+        BackgroundColor3 = Color3.fromHex("2A2A2A");
+        BackgroundTransparency = 1;
+        BorderSizePixel  = 0;
+    });
 
-		local Btn = self:CreateInstance("TextButton", {
-			Parent                 = Row;
-			Size                   = UDim2.new(1, 0, 1, 0);
-			BackgroundTransparency = 1;
-			BorderSizePixel        = 0;
-			AutoButtonColor        = false;
-			Text                   = "";
-			ZIndex                 = 4;
-		});
+    -- Alt çizgi (separator) - son satır hariç
+    local Sep = self:CreateInstance("Frame", {
+        Name             = "Sep";
+        Parent           = Row;
+        AnchorPoint      = Vector2.new(0, 1);
+        Position         = UDim2.new(0, 6, 1, 0);
+        Size             = UDim2.new(1, -12, 0, 1);
+        BackgroundColor3 = Color3.fromHex("252525");
+        BorderSizePixel  = 0;
+        ZIndex           = 2;
+    });
 
-		local NameLbl = self:CreateInstance("TextLabel", {
-			Parent                 = Row;
-			AnchorPoint            = Vector2.new(0, 0.5);
-			Position               = UDim2.new(0, 4, 0.5, 0);
-			Size                   = UDim2.new(0.45, 0, 1, 0);
-			BackgroundTransparency = 1;
-			Text                   = Player.Name;
-			TextColor3             = Color3.fromHex("FFFFFF");
-			TextSize               = 12;
-			TextXAlignment         = Enum.TextXAlignment.Left;
-			TextYAlignment         = Enum.TextYAlignment.Center;
-			TextTruncate           = Enum.TextTruncate.AtEnd;
-			ZIndex                 = 5;
-		});
-		if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
+    -- Tıklama butonu (her şeyin üstünde)
+    local Btn = self:CreateInstance("TextButton", {
+        Parent                 = Row;
+        Size                   = UDim2.new(1, 0, 1, 0);
+        BackgroundTransparency = 1;
+        BorderSizePixel        = 0;
+        AutoButtonColor        = false;
+        Text                   = "";
+        ZIndex                 = 10;
+    });
 
-		-- 2. Row: Mod tag (orta kısım)
-		local ModLbl = self:CreateInstance("TextLabel", {
-			Name                   = "ModLbl";
-			Parent                 = Row;
-			AnchorPoint            = Vector2.new(0, 0.5);
-			Position               = UDim2.new(0.45, 4, 0.5, 0);
-			Size                   = UDim2.new(0.10, 0, 1, 0);
-			BackgroundTransparency = 1;
-			Text                   = "";
-			TextColor3             = Color3.fromHex("FFFFFF");
-			TextSize               = 12;
-			TextXAlignment         = Enum.TextXAlignment.Left;
-			TextYAlignment         = Enum.TextYAlignment.Center;
-			ZIndex                 = 5;
-		});
-		if ProggyCleanFont then ModLbl.FontFace = ProggyCleanFont end;
+    -- ── İsim etiketi ──────────────────────────
+    local NameLbl = self:CreateInstance("TextLabel", {
+        Parent                 = Row;
+        AnchorPoint            = Vector2.new(0, 0.5);
+        Position               = UDim2.new(0, 10, 0.5, 0);
+        Size                   = UDim2.new(0.55, 0, 1, 0);
+        BackgroundTransparency = 1;
+        Text                   = Player.Name;
+        TextColor3             = IsLP and Color3.fromHex("FFFFFF") or Color3.fromHex("D4D6DC");
+        TextSize               = 12;
+        TextXAlignment         = Enum.TextXAlignment.Left;
+        TextYAlignment         = Enum.TextYAlignment.Center;
+        TextTruncate           = Enum.TextTruncate.AtEnd;
+        ZIndex                 = 5;
+    });
+    if ProggyCleanFont then NameLbl.FontFace = ProggyCleanFont end;
 
-		-- Mod etiketi için rich text
-		if IsMod then
-			ModLbl.RichText = true;
-			ModLbl.Text = '[<font color="#' .. Library.Accent:ToHex() .. '">M</font>]';
-		end;
+    -- ── Mod rozeti ────────────────────────────
+    if IsMod then
+        local ModTag = self:CreateInstance("TextLabel", {
+            Name                   = "ModTag";
+            Parent                 = Row;
+            AnchorPoint            = Vector2.new(0, 0.5);
+            -- NameLbl'nin yanına; AbsoluteSize henüz hazır olmayacak,
+            -- task.defer ile yerleştiriyoruz
+            Position               = UDim2.new(0, 10, 0.5, 0);
+            Size                   = UDim2.new(0, 26, 0, 13);
+            BackgroundColor3       = Color3.fromHex("1E1E1E");
+            BackgroundTransparency = 0;
+            BorderSizePixel        = 0;
+            Text                   = "MOD";
+            TextColor3             = Library.Accent;
+            TextSize               = 9;
+            TextXAlignment         = Enum.TextXAlignment.Center;
+            TextYAlignment         = Enum.TextYAlignment.Center;
+            ZIndex                 = 6;
+        });
+        if ProggyCleanFont then ModTag.FontFace = ProggyCleanFont end;
 
-		-- 3. Row: State (sağ kısım)
-		local StateLbl = self:CreateInstance("TextLabel", {
-			Name                   = "StateLbl";
-			Parent                 = Row;
-			AnchorPoint            = Vector2.new(1, 0.5);
-			Position               = UDim2.new(1, -4, 0.5, 0);
-			Size                   = UDim2.new(0.45, 0, 1, 0);
-			BackgroundTransparency = 1;
-			Text                   = GetStateText(Player, State);
-			TextColor3             = GetStateColor(Player, State);
-			TextSize               = 12;
-			TextXAlignment         = Enum.TextXAlignment.Right;
-			TextYAlignment         = Enum.TextYAlignment.Center;
-			ZIndex                 = 5;
-		});
-		if ProggyCleanFont then StateLbl.FontFace = ProggyCleanFont end;
+        -- Mod tag için ince border
+        self:CreateInstance("UIStroke", {
+            Parent          = ModTag;
+            Color           = Library.Accent;
+            Thickness       = 1;
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border;
+        });
+        self:CreateInstance("UICorner", {
+            Parent         = ModTag;
+            CornerRadius   = UDim.new(0, 2);
+        });
 
-		Btn.MouseEnter:Connect(function()
-			TweenService:Create(Row, TweenInfo.new(0.1), { BackgroundTransparency = 0.7 }):Play();
-		end);
-		Btn.MouseLeave:Connect(function()
-			TweenService:Create(Row, TweenInfo.new(0.1), { BackgroundTransparency = 1 }):Play();
-		end);
+        -- Accent güncellemede ModTag rengini de güncelle
+        Library:OnAccent(function(NewAccent)
+            ModTag.TextColor3 = NewAccent;
+        end);
 
-		if Player ~= LP then
-			Btn.MouseButton1Click:Connect(function()
-				local Cur = GetStateFromTables(Player);
-				local Next = Cur == "Neutral" and "Friendly" or Cur == "Friendly" and "Priority" or "Neutral";
-				
-				-- Tabloları güncelle
-				UpdatePlayerState(Player, Next);
+        -- AbsoluteSize yerleşimini bir frame sonraya bırak
+        task.defer(function()
+            if ModTag and ModTag.Parent then
+                ModTag.Position = UDim2.new(
+                    0, NameLbl.AbsoluteSize.X + 14, 0.5, 0
+                );
+            end;
+        end);
+    end;
 
-				TweenService:Create(Row, TweenInfo.new(0.08), { BackgroundTransparency = 0.25 }):Play();
-				task.delay(0.1, function()
-					TweenService:Create(Row, TweenInfo.new(0.14), { BackgroundTransparency = 1 }):Play();
-				end);
+    -- ── State etiketi (sağ) ───────────────────
+    local StateLbl = self:CreateInstance("TextLabel", {
+        Name                   = "StateLbl";
+        Parent                 = Row;
+        AnchorPoint            = Vector2.new(1, 0.5);
+        Position               = UDim2.new(1, -8, 0.5, 0);
+        Size                   = UDim2.new(0.38, 0, 1, 0);
+        BackgroundTransparency = 1;
+        Text                   = GetStateText(Player, State);
+        TextColor3             = GetStateColor(Player, State);
+        TextSize               = 11;
+        TextXAlignment         = Enum.TextXAlignment.Right;
+        TextYAlignment         = Enum.TextYAlignment.Center;
+        ZIndex                 = 5;
+    });
+    if ProggyCleanFont then StateLbl.FontFace = ProggyCleanFont end;
 
-				StateLbl.Text       = GetStateText(Player, Next);
-				StateLbl.TextColor3 = GetStateColor(Player, Next);
-			end);
-		end;
+    -- ══════════════════════════════════════════
+    -- HOVER / CLICK ETKİLERİ
+    -- ══════════════════════════════════════════
+    Btn.MouseEnter:Connect(function()
+        TweenService:Create(HoverBg,
+            TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { BackgroundTransparency = 0.6 }
+        ):Play();
+    end);
+    Btn.MouseLeave:Connect(function()
+        TweenService:Create(HoverBg,
+            TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { BackgroundTransparency = 1 }
+        ):Play();
+    end);
 
-		return Row;
-	end;
+    if not IsLP then
+        Btn.MouseButton1Click:Connect(function()
+            local Cur  = GetStateFromTables(Player);
+            local Next = Cur == "Neutral" and "Friendly"
+                      or Cur == "Friendly" and "Priority"
+                      or "Neutral";
+
+            UpdatePlayerState(Player, Next);
+
+            local NewColor = GetStateColor(Player, Next);
+
+            -- AccentBar animasyonu
+            TweenService:Create(AccentBar,
+                TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                {
+                    BackgroundColor3       = NewColor;
+                    BackgroundTransparency = Next == "Neutral" and 1 or 0;
+                }
+            ):Play();
+
+            -- Kısa flash
+            TweenService:Create(HoverBg,
+                TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                { BackgroundTransparency = 0.25 }
+            ):Play();
+            task.delay(0.12, function()
+                TweenService:Create(HoverBg,
+                    TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 1 }
+                ):Play();
+            end);
+
+            -- Etiket güncelle
+            TweenService:Create(StateLbl,
+                TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                { TextColor3 = NewColor }
+            ):Play();
+            StateLbl.Text = GetStateText(Player, Next);
+        end);
+    end;
+
+    return Row;
+end;
 
 	local function RefreshPlayerList()
 		for _, Ref in RowRefs do
@@ -8707,22 +8794,26 @@ local NameContainer = self:CreateInstance("Frame", {
 	end;
 	local ThumbCache = Library._AvatarThumbCache;
 
-	local function PrefetchThumbnail(UserId)
-		if not UserId or UserId == 0 then return end;
-		if ThumbCache[UserId] ~= nil then return end;
-		ThumbCache[UserId] = false;
+local function PrefetchThumbnail(UserId)
+    if not UserId or UserId == 0 then return end;
+    if ThumbCache[UserId] ~= nil then return end;
+    ThumbCache[UserId] = false; -- yükleniyor işareti
 
-		task.spawn(function()
-			local Ok, Content = pcall(function()
-				return Players:GetUserThumbnailAsync(UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size180x180);
-			end);
-			if Ok and Content and Content ~= "" then
-				ThumbCache[UserId] = Content;
-			else
-				ThumbCache[UserId] = nil;
-			end;
-		end);
-	end;
+    task.spawn(function()
+        local Ok, Content = pcall(function()
+            return Players:GetUserThumbnailAsync(
+                UserId,
+                Enum.ThumbnailType.HeadShot,
+                Enum.ThumbnailSize.Size180x180
+            );
+        end);
+        if Ok and Content and Content ~= "" then
+            ThumbCache[UserId] = Content;
+        else
+            ThumbCache[UserId] = nil; -- nil = tekrar denenebilir
+        end;
+    end);
+end;
 
 	if not Library._AvatarPrefetchStarted then
 		Library._AvatarPrefetchStarted = true;
@@ -8736,42 +8827,46 @@ local NameContainer = self:CreateInstance("Frame", {
 		end);
 	end;
 
-	local function SetAvatar(UserId)
-		if not UserId or UserId == 0 then
-			CurrentUserId = nil;
-			AvatarImage.Image = "";
-			return;
-		end;
+local function SetAvatar(UserId)
+    if not UserId or UserId == 0 then
+        CurrentUserId = nil;
+        AvatarImage.Image = "";
+        return;
+    end;
 
-		if UserId == CurrentUserId then return; end;
-		CurrentUserId = UserId;
+    if UserId == CurrentUserId then return; end;
+    CurrentUserId = UserId;
 
-		local Cached = ThumbCache[UserId];
-		if typeof(Cached) == "string" then
-			AvatarImage.Image = Cached;
-			return;
-		end;
+    local Cached = ThumbCache[UserId];
+    if typeof(Cached) == "string" then
+        AvatarImage.Image = Cached;
+        return;
+    end;
 
-		if Cached == nil then
-			PrefetchThumbnail(UserId);
-		end;
+    -- false = hâlâ yükleniyor, nil = hiç başlatılmamış
+    if Cached == nil then
+        PrefetchThumbnail(UserId);
+    end;
 
-		AvatarImage.Image = "";
-		task.spawn(function()
-			local Waited = 0;
-			while CurrentUserId == UserId and Waited < 5 do
-				local Value = ThumbCache[UserId];
-				if typeof(Value) == "string" then
-					if CurrentUserId == UserId then
-						AvatarImage.Image = Value;
-					end;
-					return;
-				end;
-				task.wait(0.1);
-				Waited += 0.1;
-			end;
-		end);
-	end;
+    AvatarImage.Image = "";
+    task.spawn(function()
+        local Waited = 0;
+        while CurrentUserId == UserId and Waited < 8 do
+            local Value = ThumbCache[UserId];
+            if typeof(Value) == "string" then
+                if CurrentUserId == UserId then
+                    AvatarImage.Image = Value;
+                end;
+                return;
+            elseif Value == nil and Waited > 1 then
+                -- Prefetch başarısız oldu, tekrar dene
+                PrefetchThumbnail(UserId);
+            end;
+            task.wait(0.1);
+            Waited += 0.1;
+        end;
+    end);
+end;
 
 local function SetName(Name)
 		NameLbl.Text = tostring(Name or "Player");
