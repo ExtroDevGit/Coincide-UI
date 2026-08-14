@@ -50,16 +50,16 @@ local PlayerRemovingConnection
 local InputBeganConnection
 local CurrentRunId = HttpService:GenerateGUID(false)
 
-if getgenv().SensoryESP_Unload then
-    pcall(getgenv().SensoryESP_Unload)
+if getgenv().HydrogenESP_Unload then
+    pcall(getgenv().HydrogenESP_Unload)
 end
 
-local oldChams = UIContainer:FindFirstChild("SensoryESP_Chams")
+local oldChams = UIContainer:FindFirstChild("HydrogenESP_Chams")
 if oldChams then
     pcall(function() oldChams:Destroy() end)
 end
 
-local oldMeshFolder = Workspace:FindFirstChild("SensoryESP_MeshChams")
+local oldMeshFolder = Workspace:FindFirstChild("HydrogenESP_MeshChams")
 if oldMeshFolder then
     pcall(function() oldMeshFolder:Destroy() end)
 end
@@ -69,7 +69,7 @@ local function IsMeshChamArtifact(obj)
         return false
     end
 
-    if obj:GetAttribute("SensoryESP_MeshCham") == true then
+    if obj:GetAttribute("HydrogenESP_MeshCham") == true then
         return true
     end
 
@@ -121,23 +121,23 @@ end
 local function EnsureRootInstances()
     if not ChamsContainer or not ChamsContainer.Parent then
         ChamsContainer = Instance.new("Folder")
-        ChamsContainer.Name = "SensoryESP_Chams"
+        ChamsContainer.Name = "HydrogenESP_Chams"
         ChamsContainer.Parent = UIContainer
     end
 
     if not MeshChamsFolder or not MeshChamsFolder.Parent then
         MeshChamsFolder = Instance.new("Folder")
-        MeshChamsFolder.Name = "SensoryESP_MeshChams"
+        MeshChamsFolder.Name = "HydrogenESP_MeshChams"
         MeshChamsFolder.Parent = Workspace
     end
 
     if not ScreenGui or not ScreenGui.Parent then
         ScreenGui = Instance.new("ScreenGui")
-        ScreenGui.Name = "SensoryESP"
+        ScreenGui.Name = "HydrogenESP"
         ScreenGui.ResetOnSpawn = false
         ScreenGui.IgnoreGuiInset = true
         ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-        getgenv().SensoryESP_UI = ScreenGui
+        getgenv().HydrogenESP_UI = ScreenGui
 
         local success = pcall(function()
             ScreenGui.Parent = CoreGui
@@ -628,11 +628,11 @@ local _fontMap = {
 }
 
 local FontsToDownload = {
-    ["Tahoma"] = { TTF = "https://github.com/LuckyHub1/LuckyHub/raw/main/zekton_rg.ttf" },
-    ["Minecraftia"] = { TTF = "https://github.com/LuckyHub1/LuckyHub/raw/refs/heads/main/Minecraftia.ttf" },
-    ["Smallest Pixel-7"] = { TTF = "https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/smallest_pixel-7.ttf" },
-    ["Proggy Clean"] = { TTF = "https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/ProggyClean.ttf" },
-    ["Tahoma Modern Bold"] = { TTF = "https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/Tahoma-Modern-Bold.ttf" },
+    ["Tahoma"] = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/zekton_rg.ttf" },
+    ["Minecraftia"] = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/Minecraftia.ttf" },
+    ["Smallest Pixel-7"] = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/smallest_pixel-7.ttf" },
+    ["Proggy Clean"] = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/ProggyClean.ttf" },
+    ["Tahoma Modern Bold"] = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/Tahoma-Modern-Bold.ttf" },
 }
 
 local ESPFonts = { Loaded = {} }
@@ -1187,8 +1187,8 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
 
                     local shellModel   = Instance.new("Model")
                     shellModel.Name    = "ChamShells"
-                    shellModel:SetAttribute("SensoryESP_MeshCham", true)
-                    shellModel:SetAttribute("SensoryESP_RunId", CurrentRunId)
+                    shellModel:SetAttribute("HydrogenESP_MeshCham", true)
+                    shellModel:SetAttribute("HydrogenESP_RunId", CurrentRunId)
                     shellModel.Parent = instance
 
                     for _, partName in ipairs(bodyParts) do
@@ -1196,8 +1196,8 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
                         if realPart and realPart:IsA("BasePart") then
                             local shell = Instance.new("Part")
                             shell.Name  = "ChamShell_" .. partName
-                            shell:SetAttribute("SensoryESP_MeshCham", true)
-                            shell:SetAttribute("SensoryESP_RunId", CurrentRunId)
+                            shell:SetAttribute("HydrogenESP_MeshCham", true)
+                            shell:SetAttribute("HydrogenESP_RunId", CurrentRunId)
                             shell.Size         = realPart.Size * 1.015
                             shell.Transparency = 0.9999999
                             shell.CastShadow   = false
@@ -1221,8 +1221,8 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
                     -- Single Highlight covers the whole shell model, giving a mesh-like silhouette
                     local hl = Instance.new("Highlight")
                     hl.Name  = "ChamShellHighlight"
-                    hl:SetAttribute("SensoryESP_MeshCham", true)
-                    hl:SetAttribute("SensoryESP_RunId", CurrentRunId)
+                    hl:SetAttribute("HydrogenESP_MeshCham", true)
+                    hl:SetAttribute("HydrogenESP_RunId", CurrentRunId)
                     hl.Adornee           = shellModel
                     hl.Parent            = shellModel
                     espObj.MeshShell     = shellModel
@@ -2349,9 +2349,9 @@ function ESP:Unload()
         InputBeganConnection:Disconnect()
         InputBeganConnection = nil
     end
-    if getgenv().SensoryESP_Loop then
-        getgenv().SensoryESP_Loop:Disconnect()
-        getgenv().SensoryESP_Loop = nil
+    if getgenv().HydrogenESP_Loop then
+        getgenv().HydrogenESP_Loop:Disconnect()
+        getgenv().HydrogenESP_Loop = nil
     end
     if ScreenGui then
         ScreenGui:Destroy()
@@ -2371,7 +2371,7 @@ function ESP:Unload()
         CleanupCharacterMeshChams(player.Character)
     end
 
-    getgenv().SensoryESP_UI = nil
+    getgenv().HydrogenESP_UI = nil
 end
 
 function ESP:Load(config)
@@ -2398,7 +2398,7 @@ function ESP:Load(config)
         end
     end)
 
-    getgenv().SensoryESP_Loop = RunService.RenderStepped:Connect(RuntimeStep)
+    getgenv().HydrogenESP_Loop = RunService.RenderStepped:Connect(RuntimeStep)
     ScanDirectories()
     return self
 end
@@ -2407,7 +2407,7 @@ function ESP:GetConfig()
     return ESPConfig
 end
 
-getgenv().SensoryESP_Unload = function()
+getgenv().HydrogenESP_Unload = function()
     ESP:Unload()
 end
 
