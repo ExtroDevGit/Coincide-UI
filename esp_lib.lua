@@ -379,6 +379,126 @@ local ESPConfig = {
 
     -- directories
     Directories = {
+
+
+                {
+            DisplayName = "UAZ",
+            Path = "workspace",
+            Multiple = true,
+            Cheap = false,
+            NonHuman = true,
+            NoStatus = true,
+            Contains = {},
+            Names = { "UAZ" },
+            Config = {
+                -- Box Settings
+                Boxes = true,
+                BoxColor = Color3.fromRGB(255, 150, 0),
+                BoxThickness = 1.5,
+
+
+                BoxFill = {
+                    Enabled = true,
+                    Color = Color3.fromRGB(255, 150, 0),
+                    Transparency = 0.8,
+                    Gradient = {
+                        Enabled = true,
+                        Color1 = Color3.fromRGB(255, 150, 0),
+                        Color2 = Color3.fromRGB(255, 255, 255),
+                        Color3 = Color3.fromRGB(255, 150, 0),
+                        Rotation = 0,
+                        Animated = true,
+                        Speed = 90,
+                        Direction = "Left",
+                    }
+                },
+
+                -- Text Settings
+                TextColor = Color3.fromRGB(255, 200, 50),
+                TextSize = 12,
+                TextOutline = true,
+                TextGap = 4,
+                Font = "Proggy Clean",
+
+                -- Distance Settings
+                Distance = {
+                    Enabled = true,
+                    Unit = "Meters",
+                    Ending = "m",
+                    Gap = 5,
+                    Color = Color3.fromRGB(255, 200, 50),
+                },
+
+                -- Chams Settings
+                Chams = {
+                    Enabled = true,
+                    Type = "Highlight",
+                    Highlight = {
+                        FillColor = Color3.fromRGB(255, 150, 0),
+                        FillTransparency = 0.7,
+                        OutlineColor = Color3.fromRGB(255, 255, 255),
+                        OutlineTransparency = 1,
+                        VisibleCheck = false,
+                    },
+                    Adornment = {
+                        Color = Color3.fromRGB(255, 150, 0),
+                        VisibleColor = Color3.fromRGB(0, 255, 0),
+                        Transparency = 0.5,
+                        AlwaysOnTop = true,
+                        VisibleCheck = true,
+                    }
+                },
+
+                -- Flags Settings
+                Flags = {
+                    Enabled = true,
+                    Position = "Left",
+                    SideGap = 4,
+                    TextGap = 2,
+                    Font = "Smallest Pixel-7",
+                    TextSize = 9,
+                    Options = {
+                        Idle = true,
+                        Moving = true,
+                    },
+                    Colors = {
+                        Idle = Color3.fromRGB(255, 255, 255),
+                        Moving = Color3.fromRGB(255, 150, 0),
+                    }
+                },
+
+                -- HealthBar Settings
+                HealthBar = {
+                    Enabled = true,
+                    Position = "Bottom",
+                    SideGap = 2,
+                    Width = 2,
+                    ShowText = true,
+                    TextFollowBar = true,
+                    HideWhenFullHP = false,
+                    FollowGradientColorText = true,
+                    Outline = {
+                        Style = "Full",
+                        Color = Color3.fromRGB(0, 0, 0),
+                    },
+                    Gradient = {
+                        Enabled = true,
+                        Color1 = Color3.fromRGB(0, 255, 0),
+                        Color2 = Color3.fromRGB(255, 255, 0),
+                        Color3 = Color3.fromRGB(255, 0, 0),
+                    }
+                },
+
+                -- Skeleton Settings (Template only, usually for players)
+                Skeleton = {
+                    Enabled = false,
+                    Color = Color3.fromRGB(255, 255, 255),
+                    Outline = true,
+                    OutlineColor = Color3.fromRGB(0, 0, 0),
+                }
+            }
+        },
+        
         --[[{
                 DisplayName = "Part",
                 Path = "workspace.Folder.common3",
