@@ -825,23 +825,22 @@ function Library:Tooltip(Inst, Text)
 		self._TooltipFrame = Frame;
 		self._TooltipLabel = Lbl;
 
-		-- Güvenlik ağı: MouseLeave kaçırılırsa (instant teleport, hızlı sürükleme vb.)
-		-- gerçek mouse konumunu takip edip Inst'in dışına çıkıldığını tespit ediyoruz.
-		local UserInputService = game:GetService("UserInputService");
-		local RunService       = game:GetService("RunService");
+		-- Single shared heartbeat for the entire tooltip system.
+		-- GuiInset is cached once at module scope (already done: GuiInset = GuiService:GetGuiInset().Y).
+		-- This connection fires every frame but exits immediately when no tooltip is active,
+		-- and is created only once regardless of how many tooltips exist.
+		local _GuiInsetVec = Vector2.new(0, GuiInset);
 		self:Connection(RunService.Heartbeat, function()
 			local ActiveInst = self._TooltipActive;
 			if not ActiveInst then return end;
-			local ok, guiObj = pcall(function() return ActiveInst end);
-			if not ok or not guiObj or not guiObj.Parent then
+			if not ActiveInst.Parent then
 				self:_HideTooltip();
 				return;
 			end;
 			local MousePos = UserInputService:GetMouseLocation();
-			local AbsPos   = guiObj.AbsolutePosition;
-			local AbsSize  = guiObj.AbsoluteSize;
-			local Inset    = game:GetService("GuiService"):GetGuiInset();
-			local Adjusted = MousePos - Inset;
+			local Adjusted = MousePos - _GuiInsetVec;
+			local AbsPos   = ActiveInst.AbsolutePosition;
+			local AbsSize  = ActiveInst.AbsoluteSize;
 			if Adjusted.X < AbsPos.X or Adjusted.X > AbsPos.X + AbsSize.X
 				or Adjusted.Y < AbsPos.Y or Adjusted.Y > AbsPos.Y + AbsSize.Y then
 				self:_HideTooltip();
