@@ -49,7 +49,7 @@ local ScreenGui
 local PlayerRemovingConnection
 local InputBeganConnection
 local CurrentRunId = HttpService:GenerateGUID(false)
-local version = "1.1"
+local version = "1.0"
 print(version or "fail")
 
 if getgenv().HydrogenESP_Unload then
@@ -185,6 +185,9 @@ local ESPConfig = {
     BoxColor = Color3.fromRGB(255, 255, 255),
     BoxThickness = 1,
     Glow = false,
+    GlowColor = Color3.FromRGB(255,255,255),
+    GlowTransparency = 0.8,
+    GlowGradient = false,
     Outlines = {
         Style = "None", -- "Full", "None"
         Color = Color3.fromRGB(0, 0, 0),
@@ -1723,11 +1726,12 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     local hasOutline = outlineStyle ~= "None"
 
 
-    if ESPConfig.Glow and boxesEnabled then
+    if ESPConfig.Glow --[[and boxesEnabled--]] then
         espObj.Glow.Position = UDim2.new(0, x - 23, 0, y - 23);
         espObj.Glow.Size = UDim2.new(0, sx + 46, 0, sy + 46);
-        espObj.Glow.ImageColor3 = boxColor; -- Kutu rengiyle uyumlu olsun
-        espObj.Glow.Visible = true;
+        espObj.Glow.ImageColor3 = ESPConfig.GlowColor;
+        espObj.Glow.Visible = ESPConfig.Glow;
+        espObj.Glow.Transparency = ESPConfig.GlowTransparency
     else
         espObj.Glow.Visible = false;
     end
