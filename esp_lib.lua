@@ -49,7 +49,7 @@ local ScreenGui
 local PlayerRemovingConnection
 local InputBeganConnection
 local CurrentRunId = HttpService:GenerateGUID(false)
-local version = "1.0"
+local version = "1.1"
 print(version or "fail")
 
 if getgenv().HydrogenESP_Unload then
@@ -1709,14 +1709,6 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     espObj.Lines[4].Position = UDim2.new(0, x + sx, 0, y)
     espObj.Lines[4].Size = UDim2.new(0, t, 0, sy + t)
     --glow
-    if ESPConfig.Glow and boxesEnabled then
-        espObj.Glow.Position = UDim2.new(0, x - 23, 0, y - 23);
-        espObj.Glow.Size = UDim2.new(0, sx + 46, 0, sy + 46);
-        espObj.Glow.ImageColor3 = boxColor; -- Kutu rengiyle uyumlu olsun
-        espObj.Glow.Visible = true;
-    else
-        espObj.Glow.Visible = false;
-    end
 
     local boxesEnabled = GetCfg("Boxes")
     local boxType = GetCfg("BoxType") or "Normal"
@@ -1729,6 +1721,16 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     if GetCfg("Outlines.Enabled") == false then outlineStyle = "None" end
     local outlineTransparency = 0
     local hasOutline = outlineStyle ~= "None"
+
+
+    if ESPConfig.Glow and boxesEnabled then
+        espObj.Glow.Position = UDim2.new(0, x - 23, 0, y - 23);
+        espObj.Glow.Size = UDim2.new(0, sx + 46, 0, sy + 46);
+        espObj.Glow.ImageColor3 = boxColor; -- Kutu rengiyle uyumlu olsun
+        espObj.Glow.Visible = true;
+    else
+        espObj.Glow.Visible = false;
+    end
 
     if useCornerBoxes then
         local cornerWidth = math.max(math.floor(sx * 0.25), t * 3)
