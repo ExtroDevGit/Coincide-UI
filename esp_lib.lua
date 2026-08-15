@@ -1726,7 +1726,7 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     local hasOutline = outlineStyle ~= "None"
 
 
-    if ESPConfig.Glow --[[and boxesEnabled--]] then
+    if ESPConfig.Glow and boxesEnabled then
         espObj.Glow.Position = UDim2.new(0, x - 23, 0, y - 23);
         espObj.Glow.Size = UDim2.new(0, sx + 46, 0, sy + 46);
         espObj.Glow.ImageColor3 = ESPConfig.GlowColor;
