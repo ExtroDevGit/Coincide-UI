@@ -184,6 +184,7 @@ local ESPConfig = {
     BoxType = "Corner", -- "Normal", "Corner", or "Circle"
     BoxColor = Color3.fromRGB(255, 255, 255),
     BoxThickness = 1,
+    Glow = false,
     Outlines = {
         Style = "None", -- "Full", "None"
         Color = Color3.fromRGB(0, 0, 0),
@@ -941,6 +942,30 @@ local CreateESPObj = LPHNoVirtualize(function(name)
     fillGradient.Parent = boxFill
     espObj.BoxFillGradient = fillGradient
 
+
+
+    local glow = Instance.new("ImageLabel");
+    glow.Name = "Glow";
+    glow.Position = UDim2.new(0, -23, 0, -23);
+    glow.Size = UDim2.new(1, 45, 1, 45);
+    glow.BackgroundTransparency = 1;
+    glow.BorderSizePixel = 0;
+    glow.Image = "rbxassetid://18245826428";
+    glow.ImageColor3 = Color3.fromRGB(255, 255, 255);
+    glow.ImageTransparency = 0.8;
+    glow.ScaleType = Enum.ScaleType.Slice;
+    glow.SliceCenter = Rect.new(Vector2.new(21, 21), Vector2.new(80, 80));
+    glow.Visible = false;
+    glow.ZIndex = -1;
+    glow.Parent = container;
+    
+    local glowGradient = Instance.new("UIGradient");
+    glowGradient.Rotation = 90;
+    glowGradient.Parent = glow;
+    
+    espObj.Glow = glow;
+    espObj.GlowGradient = glowGradient;
+
     for i = 1, 4 do
         local line, outline = CreateLine(container)
         espObj.Lines[i] = line
@@ -1683,6 +1708,15 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     -- Right
     espObj.Lines[4].Position = UDim2.new(0, x + sx, 0, y)
     espObj.Lines[4].Size = UDim2.new(0, t, 0, sy + t)
+    --glow
+    if ESPConfig.Glow and boxesEnabled then
+        espObj.Glow.Position = UDim2.new(0, x - 23, 0, y - 23);
+        espObj.Glow.Size = UDim2.new(0, sx + 46, 0, sy + 46);
+        espObj.Glow.ImageColor3 = boxColor; -- Kutu rengiyle uyumlu olsun
+        espObj.Glow.Visible = true;
+    else
+        espObj.Glow.Visible = false;
+    end
 
     local boxesEnabled = GetCfg("Boxes")
     local boxType = GetCfg("BoxType") or "Normal"
