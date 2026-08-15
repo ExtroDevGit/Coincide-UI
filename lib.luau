@@ -6557,8 +6557,6 @@ function Library:SettingsWindow(Opts)
 			Callback = function(V) Library.AnimationSpeed = V end;
 		});
 		SecMenu:Slider({ Name = "Dragging Speed", Flag = "DraggingSpeed", Min = 0, Max = 2, Step = 0.05, Decimals = 2, Default = 0.05 });
-		SecMenu:Textbox({ Name = "Prefix", Flag = "MenuPrefix", Placeholder = "menu prefix" });
-		SecMenu:Textbox({ Name = "Suffix", Flag = "MenuSuffix", Placeholder = "menu suffix" });
 		SecMenu:Keybind({
 			Name     = "Menu Keybind";
 			Default  = Enum.KeyCode.RightShift;
