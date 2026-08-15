@@ -1128,18 +1128,16 @@ local CreateESPObj = LPHNoVirtualize(function(name)
     return espObj
 end)
 
-local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, distanceStuds, instance, isCheap, nonHuman,
-                                              noStatus,
-                                              configOverride, onScreen)
-    local cfgCache = {}
-    local function GetCfg(path)
-        local cached = cfgCache[path]
-        if cached ~= nil then return cached end
-        local keys = path:split(".")
-        local current = configOverride
-        local default = ESPConfig
+local _cfgCache = {}
+local _currentConfigOverride = nil
 
-        local foundOverride = true
+local function GetCfg(path)
+    local cached = _cfgCache[path]
+    if cached ~= nil then return cached end
+    local keys = path:split(".")
+    local current = _currentConfigOverride
+    local foundOverride = current ~= nil
+    if foundOverride then
         for _, key in ipairs(keys) do
             if type(current) == "table" and current[key] ~= nil then
                 current = current[key]
@@ -1148,19 +1146,28 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
                 break
             end
         end
-
-        if foundOverride then
-            cfgCache[path] = current
-            return current
-        end
-
-        local currentDefault = default
-        for _, key in ipairs(keys) do
-            currentDefault = currentDefault[key]
-        end
-        cfgCache[path] = currentDefault
-        return currentDefault
     end
+    if foundOverride then
+        _cfgCache[path] = current
+        return current
+    end
+    local def = ESPConfig
+    for _, key in ipairs(keys) do
+        def = def[key]
+    end
+    _cfgCache[path] = def
+    return def
+end
+
+
+local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, distanceStuds, instance, isCheap, nonHuman,
+                                              noStatus,
+                                              configOverride, onScreen)
+
+
+    _currentConfigOverride = configOverride
+    table.clear(_cfgCache)
+    
 
     local _now = tick()
     local humanoid = not nonHuman and instance:FindFirstChild("Humanoid") or nil
