@@ -49,6 +49,8 @@ local ScreenGui
 local PlayerRemovingConnection
 local InputBeganConnection
 local CurrentRunId = HttpService:GenerateGUID(false)
+local version = "1.0"
+print(version or "fail")
 
 if getgenv().HydrogenESP_Unload then
     pcall(getgenv().HydrogenESP_Unload)
@@ -2120,7 +2122,7 @@ end)
 --
 
 --// logic
-local Get2DBoundingBox = LPHNoVirtualize(function(instance)
+local Get2DBoundingBox = LPHNoVirtualize(function(instance, trackedData)
     local rootPart
     if instance:IsA("Model") then
         rootPart = instance:FindFirstChild("HumanoidRootPart") or instance:FindFirstChild("Torso") or
@@ -2181,16 +2183,23 @@ local Get2DBoundingBox = LPHNoVirtualize(function(instance)
     else
         -- DYNAMIC BOX
         local minX, minY, maxX, maxY = math.huge, math.huge, -math.huge, -math.huge
-        local parts = {}
+        local parts
         if instance:IsA("Model") then
-            local includeAll = ESPConfig.DynamicBoxesIncludeAll
-            for _, v in ipairs(instance:GetChildren()) do
-                if v:IsA("BasePart") and (includeAll or (v.Name ~= "HumanoidRootPart" and v.Transparency ~= 1)) then
-                    table.insert(parts, v)
+            -- Use cached parts list, only rebuild when ChildAdded/ChildRemoved fires
+            if trackedData and trackedData.PartsListDirty then
+                local includeAll = ESPConfig.DynamicBoxesIncludeAll
+                local built = {}
+                for _, v in ipairs(instance:GetChildren()) do
+                    if v:IsA("BasePart") and (includeAll or (v.Name ~= "HumanoidRootPart" and v.Transparency ~= 1)) then
+                        built[#built + 1] = v
+                    end
                 end
+                trackedData.PartsList = built
+                trackedData.PartsListDirty = false
             end
+            parts = (trackedData and trackedData.PartsList) or {}
         else
-            table.insert(parts, instance)
+            parts = { instance }
         end
 
         if #parts == 0 then return false, nil, nil end
@@ -2371,14 +2380,29 @@ local ScanDirectories = LPHNoVirtualize(function()
 
     for inst, data in pairs(newTracked) do
         if not TrackedInstances[inst] then
-            TrackedInstances[inst] = {
+            local entry = {
                 espObj = CreateESPObj(data.name),
                 name = data.name,
                 Cheap = data.Cheap,
                 NonHuman = data.NonHuman,
                 NoStatus = data.NoStatus,
-                Config = data.Config
+                Config = data.Config,
+                PartsList = nil,
+                PartsListDirty = true,
+                ChildConnections = {},
             }
+            -- Cache parts list and mark dirty on structure changes
+            if inst:IsA("Model") then
+                entry.ChildConnections[1] = inst.ChildAdded:Connect(function()
+                    local t = TrackedInstances[inst]
+                    if t then t.PartsListDirty = true end
+                end)
+                entry.ChildConnections[2] = inst.ChildRemoved:Connect(function()
+                    local t = TrackedInstances[inst]
+                    if t then t.PartsListDirty = true end
+                end)
+            end
+            TrackedInstances[inst] = entry
         else
             TrackedInstances[inst].name = data.name
             TrackedInstances[inst].Cheap = data.Cheap
@@ -2390,6 +2414,12 @@ local ScanDirectories = LPHNoVirtualize(function()
 
     for inst, data in pairs(TrackedInstances) do
         if not newTracked[inst] or not inst.Parent then
+            -- Disconnect child listeners before destroying
+            if data.ChildConnections then
+                for _, conn in ipairs(data.ChildConnections) do
+                    conn:Disconnect()
+                end
+            end
             data.espObj:Destroy()
             TrackedInstances[inst] = nil
         end
@@ -2399,15 +2429,13 @@ end)
 local lastScan = 0
 local lastRender = 0
 local lastFontRetry = 0
+-- Static table reused every frame to disable chams without allocating anything
+local _disabledChamsConfig = { Chams = { Enabled = false } }
 local function RuntimeStep()
     if not ESPConfig.Enabled then
         for inst, data in pairs(TrackedInstances) do
             if data.espObj then
-                local disabledConfig = DeepCopy(data.Config or {})
-                disabledConfig.Chams = disabledConfig.Chams or {}
-                disabledConfig.Chams.Enabled = false
-                UpdateESPObj(data.espObj, nil, nil, "", 0, inst, data.Cheap, data.NonHuman, data.NoStatus, disabledConfig,
-                    false)
+                UpdateESPObj(data.espObj, nil, nil, "", 0, inst, data.Cheap, data.NonHuman, data.NoStatus, _disabledChamsConfig, false)
             end
         end
         return
@@ -2449,7 +2477,7 @@ local function RuntimeStep()
             (inst:IsA("BasePart") and inst)
 
         if rootPart then
-            local onscreen, pos2d, size2d = Get2DBoundingBox(inst)
+            local onscreen, pos2d, size2d = Get2DBoundingBox(inst, data)
             local distanceStuds = (Camera.CFrame.Position - rootPart.Position).Magnitude
             UpdateESPObj(data.espObj, pos2d, size2d, data.name, distanceStuds, inst, data.Cheap, data.NonHuman,
                 data.NoStatus, data.Config, onscreen)
@@ -2462,6 +2490,11 @@ end
 
 function ESP:Unload()
     for inst, data in pairs(TrackedInstances) do
+        if data.ChildConnections then
+            for _, conn in ipairs(data.ChildConnections) do
+                conn:Disconnect()
+            end
+        end
         if data.espObj then
             data.espObj:Destroy()
         end
