@@ -1726,18 +1726,17 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     local hasOutline = outlineStyle ~= "None"
 
 
+    -- Glow pad must stay >= 22 so the 21px slice border renders outside the box.
+    -- Below 60px the box is too small for a 23px pad to look proportional, so hide it.
     local _glowMinDim = math.min(sx, sy)
-    if ESPConfig.Glow and boxesEnabled and _glowMinDim >= 20 then
-        local glowPad = math.min(math.max(math.floor(_glowMinDim * 0.12), 3), 24)
-        -- Pulse: sine wave ±0.2 at ~0.5 Hz, boosted for small/distant boxes
-        local distBoost = math.clamp(1 - (_glowMinDim / 80), 0, 0.35)
+    if ESPConfig.Glow and boxesEnabled and _glowMinDim >= 60 then
+        local glowPad = 23
         local pulse = math.sin(_now * 3) * 0.2
-        local baseTransp = (ESPConfig.GlowTransparency or 0.5) - distBoost
         espObj.Glow.Position = UDim2.new(0, x - glowPad, 0, y - glowPad);
         espObj.Glow.Size = UDim2.new(0, sx + glowPad * 2, 0, sy + glowPad * 2);
         espObj.Glow.ImageColor3 = ESPConfig.GlowColor;
         espObj.Glow.Visible = true;
-        espObj.Glow.ImageTransparency = math.clamp(baseTransp + pulse, 0, 0.95)
+        espObj.Glow.ImageTransparency = math.clamp((ESPConfig.GlowTransparency or 0.5) + pulse, 0, 0.95)
     else
         espObj.Glow.Visible = false;
     end
