@@ -186,7 +186,7 @@ local ESPConfig = {
     BoxThickness = 1,
     Glow = false,
     GlowColor = Color3.fromRGB(255,255,255),
-    GlowTransparency = 0.8,
+    GlowTransparency = 0.5,
     GlowGradient = false,
     Outlines = {
         Style = "None", -- "Full", "None"
@@ -1729,11 +1729,15 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     local _glowMinDim = math.min(sx, sy)
     if ESPConfig.Glow and boxesEnabled and _glowMinDim >= 20 then
         local glowPad = math.min(math.max(math.floor(_glowMinDim * 0.12), 3), 24)
+        -- Pulse: sine wave ±0.2 at ~0.5 Hz, boosted for small/distant boxes
+        local distBoost = math.clamp(1 - (_glowMinDim / 80), 0, 0.35)
+        local pulse = math.sin(_now * 3) * 0.2
+        local baseTransp = (ESPConfig.GlowTransparency or 0.5) - distBoost
         espObj.Glow.Position = UDim2.new(0, x - glowPad, 0, y - glowPad);
         espObj.Glow.Size = UDim2.new(0, sx + glowPad * 2, 0, sy + glowPad * 2);
         espObj.Glow.ImageColor3 = ESPConfig.GlowColor;
         espObj.Glow.Visible = true;
-        espObj.Glow.ImageTransparency = ESPConfig.GlowTransparency
+        espObj.Glow.ImageTransparency = math.clamp(baseTransp + pulse, 0, 0.95)
     else
         espObj.Glow.Visible = false;
     end
@@ -1789,7 +1793,9 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
         fill.Visible = true
         fill.Position = UDim2.new(0, x, 0, y)
         fill.Size = UDim2.new(0, sx, 0, sy)
-        fill.BackgroundTransparency = GetCfg("BoxFill.Transparency")
+        -- More opaque for distant/small boxes so fill stays visible at range
+        local fillDistComp = math.clamp(1 - (math.min(sx, sy) / 60), 0, 0.45)
+        fill.BackgroundTransparency = math.max(0, GetCfg("BoxFill.Transparency") - fillDistComp)
 
         if GetCfg("BoxFill.Gradient.Enabled") then
             grad.Enabled = true
