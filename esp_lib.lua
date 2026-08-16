@@ -2472,6 +2472,7 @@ end)
 local lastScan = 0
 local lastRender = 0
 local lastFontRetry = 0
+local _espDebugDone = false
 -- Static table reused every frame to disable chams without allocating anything
 local _disabledChamsConfig = { Chams = { Enabled = false } }
 local function RuntimeStep()
@@ -2524,10 +2525,22 @@ local function RuntimeStep()
             local distanceStuds = (Camera.CFrame.Position - rootPart.Position).Magnitude
             UpdateESPObj(data.espObj, pos2d, size2d, data.name, distanceStuds, inst, data.Cheap, data.NonHuman,
                 data.NoStatus, data.Config, onscreen)
+
+            if not _espDebugDone and onscreen and pos2d and size2d then
+                local bw, bh = math.floor(size2d.X), math.floor(size2d.Y)
+                local gp = math.min(math.max(math.floor(math.min(bw, bh) * 0.12), 5), 24)
+                local dm = math.floor(distanceStuds / 3)
+                print(string.format("[ESP] %-20s | dist=%3dm | box=%4dx%-4d | glowPad=%2d", data.name or "?", dm, bw, bh, gp))
+            end
         else
             UpdateESPObj(data.espObj, nil, nil, data.name, 0, inst, data.Cheap, data.NonHuman, data.NoStatus, data
                 .Config, false)
         end
+    end
+
+    if not _espDebugDone then
+        _espDebugDone = true
+        print("[ESP] --- debug snapshot complete (one-time) ---")
     end
 end
 
