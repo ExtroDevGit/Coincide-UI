@@ -176,7 +176,7 @@ local ESPConfig = {
     LimitFPS = 45, -- Set to 0 to disable limit
     DynamicBoxes = true,
     DynamicBoxesCheap = false,           -- needs DynamicBoxes enabled, only tracks main parts
-    DynamicBoxesIncludeAll = true,      -- needs DynamicBoxes enabled, includes every BasePart in the model
+    DynamicBoxesIncludeAll = false,     -- needs DynamicBoxes enabled, includes every BasePart in the model
     VisibilityCheckRate = 0.3,
 
     -- boxes
