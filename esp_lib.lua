@@ -1726,14 +1726,13 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     local hasOutline = outlineStyle ~= "None"
 
 
-    if ESPConfig.Glow and boxesEnabled then
-        -- 12% of box, clamped so close players don't get a massive halo and
-        -- distant players don't get a glow wider than the box itself
-        local glowPad = math.min(math.max(math.floor(math.min(sx, sy) * 0.12), 5), 24)
+    local _glowMinDim = math.min(sx, sy)
+    if ESPConfig.Glow and boxesEnabled and _glowMinDim >= 20 then
+        local glowPad = math.min(math.max(math.floor(_glowMinDim * 0.12), 3), 24)
         espObj.Glow.Position = UDim2.new(0, x - glowPad, 0, y - glowPad);
         espObj.Glow.Size = UDim2.new(0, sx + glowPad * 2, 0, sy + glowPad * 2);
         espObj.Glow.ImageColor3 = ESPConfig.GlowColor;
-        espObj.Glow.Visible = ESPConfig.Glow;
+        espObj.Glow.Visible = true;
         espObj.Glow.ImageTransparency = ESPConfig.GlowTransparency
     else
         espObj.Glow.Visible = false;
