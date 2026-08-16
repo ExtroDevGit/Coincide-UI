@@ -959,7 +959,7 @@ local CreateESPObj = LPHNoVirtualize(function(name)
     glow.ScaleType = Enum.ScaleType.Slice;
     glow.SliceCenter = Rect.new(Vector2.new(21, 21), Vector2.new(80, 80));
     glow.Visible = false;
-    glow.ZIndex = -1;
+    glow.ZIndex = 1;
     glow.Parent = container;
     
     local glowGradient = Instance.new("UIGradient");
@@ -1727,9 +1727,9 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
 
 
     -- Glow pad must stay >= 22 so the 21px slice border renders outside the box.
-    -- Below 60px the box is too small for a 23px pad to look proportional, so hide it.
+    -- Below 25px the box is too small to look reasonable with a 23px pad.
     local _glowMinDim = math.min(sx, sy)
-    if ESPConfig.Glow and boxesEnabled and _glowMinDim >= 60 then
+    if ESPConfig.Glow and boxesEnabled and _glowMinDim >= 25 then
         local glowPad = 23
         local pulse = math.sin(_now * 3) * 0.2
         espObj.Glow.Position = UDim2.new(0, x - glowPad, 0, y - glowPad);
