@@ -204,10 +204,13 @@ local ESPConfig = {
             Color1 = Color3.fromRGB(180, 255, 255),
             Color2 = Color3.fromRGB(0, 255, 255),
             Color3 = Color3.fromRGB(0, 120, 255),
-            Rotation = 0,
-            Animated = true,
-            Speed = 125,          -- degrees per second
-            Direction = "Right", -- "Left" or "Right"
+            Rotation = 90,        -- top-to-bottom
+            Animated = false,
+            Speed = 125,
+            Direction = "Right",
+            Alpha1 = 0.1,         -- top: 10% transparent
+            Alpha2 = 0.3,
+            Alpha3 = 0.5,         -- bottom: 50% transparent
         }
     },
 
@@ -1792,11 +1795,11 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
         fill.Visible = true
         fill.Position = UDim2.new(0, x, 0, y)
         fill.Size = UDim2.new(0, sx, 0, sy)
-        -- More opaque for distant/small boxes so fill stays visible at range
-        local fillDistComp = math.clamp(1 - (math.min(sx, sy) / 60), 0, 0.45)
-        fill.BackgroundTransparency = math.max(0, GetCfg("BoxFill.Transparency") - fillDistComp)
 
         if GetCfg("BoxFill.Gradient.Enabled") then
+            -- Gradient controls both color and transparency
+            fill.BackgroundTransparency = 0
+            fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             grad.Enabled = true
             local bgC1 = GetCfg("BoxFill.Gradient.Color1")
             local bgC2 = GetCfg("BoxFill.Gradient.Color2")
@@ -1806,18 +1809,23 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
                 ColorSequenceKeypoint.new(0.5, bgC2),
                 ColorSequenceKeypoint.new(1, bgC3)
             })
-
-            local rot = GetCfg("BoxFill.Gradient.Rotation")
+            grad.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0,   GetCfg("BoxFill.Gradient.Alpha1") or 0.1),
+                NumberSequenceKeypoint.new(0.5, GetCfg("BoxFill.Gradient.Alpha2") or 0.3),
+                NumberSequenceKeypoint.new(1,   GetCfg("BoxFill.Gradient.Alpha3") or 0.5),
+            })
+            local rot = GetCfg("BoxFill.Gradient.Rotation") or 90
             if GetCfg("BoxFill.Gradient.Animated") then
                 local speed = GetCfg("BoxFill.Gradient.Speed")
                 local dir = GetCfg("BoxFill.Gradient.Direction") == "Left" and -1 or 1
                 rot = (rot + (_now * speed * dir)) % 360
             end
             grad.Rotation = rot
-            fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         else
             grad.Enabled = false
             fill.BackgroundColor3 = GetCfg("BoxFill.Color")
+            local fillDistComp = math.clamp(1 - (math.min(sx, sy) / 60), 0, 0.45)
+            fill.BackgroundTransparency = math.max(0, GetCfg("BoxFill.Transparency") - fillDistComp)
         end
     else
         fill.Visible = false

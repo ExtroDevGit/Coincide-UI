@@ -2033,7 +2033,7 @@ local function BuildSection(Host, SecOpts)
 			end;
 
 			local function ApplyState()
-				local C = Color3.fromHSV(H, Sa, Va);
+				local C = Color3.fromHSV(math.clamp(H, 0, 1), math.clamp(Sa, 0, 1), math.clamp(Va, 0, 1));
 				Color                              = C;
 				SwFill.BackgroundColor3            = C;
 				SwFill.BackgroundTransparency      = 1 - A;
