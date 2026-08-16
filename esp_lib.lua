@@ -2527,9 +2527,12 @@ local function RuntimeStep()
 
             if not _espDebugDone and onscreen and pos2d and size2d then
                 local bw, bh = math.floor(size2d.X), math.floor(size2d.Y)
-                local gp = math.min(math.max(math.floor(math.min(bw, bh) * 0.12), 5), 24)
+                local minDim = math.min(bw, bh)
+                local gpVisible = minDim >= 20
+                local gp = gpVisible and math.min(math.max(math.floor(minDim * 0.12), 3), 24) or 0
                 local dm = math.floor(distanceStuds / 3)
-                print(string.format("[ESP] %-20s | dist=%3dm | box=%4dx%-4d | glowPad=%2d", data.name or "?", dm, bw, bh, gp))
+                print(string.format("[ESP] %-20s | dist=%3dm | box=%4dx%-4d | glowPad=%s",
+                    data.name or "?", dm, bw, bh, gpVisible and tostring(gp) or "hidden"))
             end
         else
             UpdateESPObj(data.espObj, nil, nil, data.name, 0, inst, data.Cheap, data.NonHuman, data.NoStatus, data
