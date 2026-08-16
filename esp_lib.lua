@@ -186,7 +186,7 @@ local ESPConfig = {
     BoxThickness = 1,
     Glow = false,
     GlowColor = Color3.fromRGB(255,255,255),
-    GlowTransparency = 0.5,
+    GlowTransparency = 0.72,
     GlowGradient = false,
     Outlines = {
         Style = "None", -- "Full", "None"
@@ -949,15 +949,15 @@ local CreateESPObj = LPHNoVirtualize(function(name)
 
     local glow = Instance.new("ImageLabel");
     glow.Name = "Glow";
-    glow.Position = UDim2.new(0, -13, 0, -13);
-    glow.Size = UDim2.new(1, 26, 1, 26);
+    glow.Position = UDim2.new(0, -23, 0, -23);
+    glow.Size = UDim2.new(1, 46, 1, 46);
     glow.BackgroundTransparency = 1;
     glow.BorderSizePixel = 0;
     glow.Image = "rbxassetid://18245826428";
     glow.ImageColor3 = Color3.fromRGB(255, 255, 255);
     glow.ImageTransparency = 0.8;
     glow.ScaleType = Enum.ScaleType.Slice;
-    glow.SliceCenter = Rect.new(Vector2.new(12, 12), Vector2.new(88, 88));
+    glow.SliceCenter = Rect.new(Vector2.new(21, 21), Vector2.new(80, 80));
     glow.Visible = false;
     glow.ZIndex = 1;
     glow.Parent = container;
@@ -1730,7 +1730,7 @@ local UpdateESPObj = LPHNoVirtualize(function(espObj, position, size, name, dist
     -- Below 25px the box is too small to look reasonable with a 23px pad.
     local _glowMinDim = math.min(sx, sy)
     if ESPConfig.Glow and boxesEnabled and _glowMinDim >= 20 then
-        local glowPad = 13
+        local glowPad = 23
         local pulse = math.sin(_now * 3) * 0.2
         espObj.Glow.Position = UDim2.new(0, x - glowPad, 0, y - glowPad);
         espObj.Glow.Size = UDim2.new(0, sx + glowPad * 2, 0, sy + glowPad * 2);
@@ -2476,7 +2476,7 @@ end)
 local lastScan = 0
 local lastRender = 0
 local lastFontRetry = 0
-local _espDebugDone = false
+local _espDebugDone = true
 -- Static table reused every frame to disable chams without allocating anything
 local _disabledChamsConfig = { Chams = { Enabled = false } }
 local function RuntimeStep()
