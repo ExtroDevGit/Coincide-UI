@@ -1,6 +1,6 @@
 # Lifecycle API
 
-The ESP module is returned from `esp_lib.lua` and auto-loads once required.
+The ESP module is returned from `esp_lib.lua` and auto-loads when required.
 
 ## Public methods
 - `ESP:Load(config?)` — resets and starts ESP with merged config overrides
