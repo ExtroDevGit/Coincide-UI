@@ -906,6 +906,8 @@ local function BuildSection(Host, SecOpts)
 	local Side    = string.lower(tostring(SecOpts.Side or "Left"));
 	local Column  = (Side == "right") and Host.Right or Host.Left;
 
+	Library:Log("Added section "..SecName)
+
 	local Sec = Library:CreateInstance("Frame", {
 		Name                   = "Section_" .. SecName;
 		Parent                 = Column;
@@ -1344,6 +1346,8 @@ local function BuildSection(Host, SecOpts)
 			local H, Sa, Va = Color3.toHSV(Color);
 			local A         = math.clamp(Alpha, 0, 1);
 			Library.Flags[Flag] = Color;
+
+			Library:Log("Added color picker "..Callback)
 
 			local SwW, SwH = 25, 15;
 			local Off = self._RightOffset or 0;
