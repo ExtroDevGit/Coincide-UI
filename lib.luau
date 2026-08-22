@@ -47,7 +47,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.2c";
 };
 
 local Palette = {
@@ -451,7 +451,8 @@ local LogStart = tick();
 
 function Library:Log(Text)
 	local Stamp = string.format("%.3f", tick() - LogStart);
-	appendfile(self.LogFile, "[" .. Stamp .. "s] " .. tostring(Text) .. "\n");
+	local Time = os.date("%H:%M:%S");
+	appendfile(self.LogFile, "[" .. Time .. "][" .. Stamp .. "s] " .. tostring(Text) .. "\n");
 end;
 
 Library.KeyNames = {
