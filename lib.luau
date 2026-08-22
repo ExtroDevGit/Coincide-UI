@@ -1347,7 +1347,7 @@ local function BuildSection(Host, SecOpts)
 			local A         = math.clamp(Alpha, 0, 1);
 			Library.Flags[Flag] = Color;
 
-			Library:Log("Added color picker "..Callback)
+			Library:Log("Added color picker 0x0")
 
 			local SwW, SwH = 25, 15;
 			local Off = self._RightOffset or 0;
