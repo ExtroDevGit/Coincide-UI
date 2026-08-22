@@ -186,7 +186,7 @@ local ESPConfig = {
 	},
 	Players = true,
 	LocalPlayer = false,
-	LimitFPS = 45, -- Set to 0 to disable limit
+	LimitFPS = 42, -- Set to 0 to disable limit
 	DynamicBoxes = false,
 	DynamicBoxesCheap = false, -- needs DynamicBoxes enabled, only tracks main parts
 	DynamicBoxesIncludeAll = false, -- needs DynamicBoxes enabled, includes every BasePart in the model
