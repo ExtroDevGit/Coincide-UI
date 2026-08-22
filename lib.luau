@@ -37,6 +37,18 @@ end;
 
 int();
 
+function FakePointer()
+	local A = math.random(0, 0xFFFFFF);
+	local B = math.random(0, 0xFFFFFF);
+	local Hex = string.format("%06x%06x", A, B);
+
+	return setmetatable({}, {
+		__tostring = function()
+			return "function: 0x" .. Hex;
+		end;
+	});
+end;
+
 local Library = {
 	Flags = {};
 	Toggles = {};
@@ -446,7 +458,7 @@ if isfile(Library.LogFile) then
 	delfile(Library.LogFile);
 end;
 
-writefile(Library.LogFile, "[0.000s] Hydrogen has started\n");
+writefile(Library.LogFile, "[0.000s] Hydrogen has started at " .. tostring(FakePointer()) .. "\n");
 
 local LogStart = tick();
 
