@@ -1025,6 +1025,8 @@ local function BuildSection(Host, SecOpts)
 		local State    = Default;
 		Library.Flags[Flag] = State;
 
+		self:Log("Added Toggle Opts: "..Name,Default)
+
 		local Risk = Opts.Risk and string.lower(tostring(Opts.Risk))
 			or (Opts.Risky and "risky") or (Opts.Warning and "warning") or nil;
 		local OnColor  = Color3.fromHex("FFFFFF");
@@ -2210,6 +2212,8 @@ function SecRef:Slider(Opts)
 	local Value    = math.clamp(tonumber(Opts.Default) or Min, Min, Max);
 	local IncreaseNumber = tonumber(Opts.IncreaseNumber) or Step;
 	Library.Flags[Flag] = Value;
+
+	self:Log("Added Slider Opts: "..Name,IncreaseNumber)
 
 	local Container = Library:CreateInstance("Frame", {
 Name                   = "Slider_" .. Name;
@@ -3576,6 +3580,8 @@ end;
 		local Callback = typeof(Opts.Callback) == "function" and Opts.Callback or function() end;
 		local Flag     = tostring(Opts.Flag or Opts.Pointer or ("_" .. Name));
 		local Multi    = Opts.Multi == true;
+
+		self:Log("Added Dropdown Opts: "..Name,Multi)
 
 		local Value;
 		if Multi then
@@ -9512,5 +9518,7 @@ function Library:InvViewer(Opts)
 	Library._InvViewer = Obj;
 	return Obj;
 end;
+
+Library:Log("Initialized Hydrogen UI Lib")
 
 return Library;
