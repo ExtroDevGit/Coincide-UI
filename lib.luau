@@ -42,11 +42,11 @@ local Library = {
 	Toggles = {};
 	Options = {};
 	Connections = {};
-	Directory = "afffaafafafafafafafafaa";
+	Directory = "Hydrogen";
 	Folders = { "/Fonts", "/Configs", "/Logs" };
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
-	LogFile = "afffaaaa/Logs/Session.log";
+	LogFile = "Hydrogen/Logs/Session.log";
     Version = "0.1c";
 };
 
