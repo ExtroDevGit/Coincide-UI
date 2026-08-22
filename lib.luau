@@ -445,7 +445,8 @@ end;
 if isfile(Library.LogFile) then
 	delfile(Library.LogFile);
 end;
-writefile(Library.LogFile, Library.Directory .. " has started\n");
+
+writefile(Library.LogFile, "[0.000s] Hydrogen has started\n");
 
 local LogStart = tick();
 
@@ -1026,7 +1027,7 @@ local function BuildSection(Host, SecOpts)
 		local State    = Default;
 		Library.Flags[Flag] = State;
 
-		self:Log("Added Toggle Opts: "..Name,Default)
+		Library:Log("Added Toggle Opts: "..Name,Default)
 
 		local Risk = Opts.Risk and string.lower(tostring(Opts.Risk))
 			or (Opts.Risky and "risky") or (Opts.Warning and "warning") or nil;
@@ -2214,7 +2215,7 @@ function SecRef:Slider(Opts)
 	local IncreaseNumber = tonumber(Opts.IncreaseNumber) or Step;
 	Library.Flags[Flag] = Value;
 
-	self:Log("Added Slider Opts: "..Name,IncreaseNumber)
+	Library:Log("Added Slider Opts: "..Name,IncreaseNumber)
 
 	local Container = Library:CreateInstance("Frame", {
 Name                   = "Slider_" .. Name;
@@ -9522,4 +9523,4 @@ end;
 
 Library:Log("Initialized Hydrogen UI Lib")
 
-return Library;
+getgenv().Library = Library
