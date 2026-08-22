@@ -37,8 +37,6 @@ end;
 
 int();
 
-local Logo = readfile("Hydrogen/logo2.png") or "will install"
-
 local Library = {
 	Flags = {};
 	Toggles = {};
@@ -49,7 +47,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "afffaaaa/Logs/Session.log";
-    Version = "0.1";
+    Version = "0.1c";
 };
 
 local Palette = {
@@ -89,6 +87,8 @@ end;
 function Library:GetVersion()
 	return Library.Version or "Unknown"
 end
+
+local Logo = readfile("Hydrogen/logo2.png") or "will install"
 
 print(Library:GetVersion())
 
