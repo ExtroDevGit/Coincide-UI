@@ -3581,7 +3581,7 @@ end;
 		local Flag     = tostring(Opts.Flag or Opts.Pointer or ("_" .. Name));
 		local Multi    = Opts.Multi == true;
 
-		self:Log("Added Dropdown Opts: "..Name,Multi)
+		Library:Log("Added Dropdown Opts: "..Name,Multi)
 
 		local Value;
 		if Multi then
