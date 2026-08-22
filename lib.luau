@@ -9523,4 +9523,5 @@ end;
 
 Library:Log("Initialized Hydrogen UI Lib")
 
-getgenv().Library = Library
+--getgenv().Library = Library
+return Library
