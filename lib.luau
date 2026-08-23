@@ -59,7 +59,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.2c";
 };
 
 Library._GradLerps = {}
