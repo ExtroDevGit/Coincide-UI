@@ -6668,10 +6668,13 @@ function Library:SettingsWindow(Opts)
 			Library:Connection(RunService.Heartbeat, function(Dt)
 				local W = Library._Watermark;
 				if not (W and W.Gui and W.Gui.Enabled) then return end;
+			
 				local Rate = Library.Flags.WatermarkRate or 0.1;
 				Acc = Acc + Dt;
-				Acc = 0;
+			
 				if Acc < Rate then return end;
+				Acc = 0;
+			
 				local Opts = Library.Flags.WatermarkOpts or {};
 				local Parts = {};
 				if Opts.Title              then table.insert(Parts, "Hydrogen") end;
