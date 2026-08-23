@@ -60,7 +60,7 @@ local DEFAULT_CONFIG = {
 	SmoothFollow        = false,
 	SmoothSpeed         = 18,
 
-	Version             = "0.2CQ",
+	Version             = "0.3CQ",
 }
 
 print(DEFAULT_CONFIG.Version)
@@ -267,18 +267,9 @@ function AxiomCrosshair:_Update(dt)
 	end
 	self._screenGui.Enabled = true
 
-	-- cursor position
-	local cx, cy = Mouse.X, Mouse.Y
-
-	if cfg.SmoothFollow then
-		local spd = cfg.SmoothSpeed
-		self._smoothX = self._smoothX + (cx - self._smoothX) * math.min(dt * spd, 1)
-		self._smoothY = self._smoothY + (cy - self._smoothY) * math.min(dt * spd, 1)
-		cx, cy = self._smoothX, self._smoothY
-	end
-
-	cx = cx + cfg.OffsetX
-	cy = cy + cfg.OffsetY
+	local screenSize = self._screenGui.AbsoluteSize
+	local cx = screenSize.X / 2 + cfg.OffsetX
+	local cy = screenSize.Y / 2 + cfg.OffsetY
 
 	-- move pivot dead onto cursor
 	self._pivot.Position = UDim2.new(0, cx, 0, cy)
