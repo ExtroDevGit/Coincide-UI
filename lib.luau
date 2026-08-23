@@ -62,6 +62,8 @@ local Library = {
     Version = "0.1c";
 };
 
+Library._GradLerps = {}
+
 local Palette = {
 	Default = {
 		Top = Color3.fromHex("161616");
@@ -393,6 +395,10 @@ end;
 Library.Keybinds         = {};
 Library.KeybindListeners = {};
 
+local function RegisterGradLerp(Entry)
+    table.insert(Library._GradLerps, Entry)
+end
+
 function Library:RegisterKeybind(Entry)
 	if typeof(Entry) ~= "table" then return end;
 	table.insert(self.Keybinds, Entry);
@@ -411,16 +417,22 @@ function Library:OnKeybindChange(Fn)
 end;
 
 local AccentClock = 0;
+local LastOff = nil
+
 game:GetService("RunService").Heartbeat:Connect(function(Dt)
-	AccentClock = AccentClock + Dt * 0.4;
-	local Off = (AccentClock % 2) - 1;
-	local OffsetV = Vector2.new(Off, 0);
-	for _, G in Library.AccentGradients do
-		if G and G.Parent then
-			G.Offset = OffsetV;
-		end;
-	end;
-end);
+    AccentClock = AccentClock + Dt * 0.4
+    local Off = (AccentClock % 2) - 1
+    
+    if LastOff and math.abs(Off - LastOff) < 0.001 then return end
+    LastOff = Off
+    
+    local OffsetV = Vector2.new(Off, 0)
+    for _, G in Library.AccentGradients do
+        if G and G.Parent then
+            G.Offset = OffsetV
+        end
+    end
+end)
 
 function Library:OnAccent(Fn)
 	if typeof(Fn) ~= "function" then return end;
@@ -4998,13 +5010,44 @@ Title.Position = UDim2.new(0, 5 + TitleLogo.AbsoluteSize.X + 4, 0, 9);
 		Gradient.Enabled = true;
 		ApplyGrad();
 		Library:Connection(RunService.Heartbeat, function(Dt)
-			if math.abs(GradTarget - GradT) < 0.001 then
-				if GradT ~= GradTarget then GradT = GradTarget; ApplyGrad() end;
-				return;
-			end;
-			GradT = GradT + (GradTarget - GradT) * (1 - math.exp(-Dt * 16));
-			ApplyGrad();
-		end);
+    local i = 1
+    local list = Library._GradLerps
+    while i <= #list do
+        local e = list[i]
+        -- temizle
+        if not e.Bg or not e.Bg.Parent then
+            list[i] = list[#list]
+            list[#list] = nil
+            continue
+        end
+        -- settle check
+        if math.abs(e.Target - e.T) < 0.001 then
+            if e.T ~= e.Target then
+                e.T = e.Target
+                e.Apply(e.T)
+            end
+            i += 1
+            continue
+        end
+        e.T = e.T + (e.Target - e.T) * (1 - math.exp(-Dt * 16))
+        e.Apply(e.T)
+        i += 1
+    end
+end)
+
+-- Tab yaratırken şöyle kullan:
+local GradEntry = {
+    Bg     = Bg,
+    T      = 0,
+    Target = 0,
+    Apply  = function(t)
+        Gradient.Color = NewColorSequence({
+            NewColorSequenceKeypoint(0, InactiveA:Lerp(ActiveA, t)),
+            NewColorSequenceKeypoint(1, InactiveB:Lerp(ActiveB, t)),
+        })
+    end
+}
+RegisterGradLerp(GradEntry)
 
 		function TabRef:SetActive(State)
 			self.Active = State;
@@ -6623,11 +6666,11 @@ function Library:SettingsWindow(Opts)
 			end);
 			local Acc = 0;
 			Library:Connection(RunService.Heartbeat, function(Dt)
+				if Acc < Rate then return end;
 				local W = Library._Watermark;
 				if not (W and W.Gui and W.Gui.Enabled) then return end;
 				local Rate = Library.Flags.WatermarkRate or 0.1;
 				Acc = Acc + Dt;
-				if Acc < Rate then return end;
 				Acc = 0;
 				local Opts = Library.Flags.WatermarkOpts or {};
 				local Parts = {};
