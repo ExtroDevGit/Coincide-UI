@@ -64,7 +64,11 @@ local DEFAULT_CONFIG = {
 
     SmoothFollow        = false,
     SmoothSpeed         = 18,
+
+    Version             = "0.1",
 }
+
+print(DEFAULT_CONFIG.Version)
 
 function AxiomCrosshair.new(customConfig)
     local self = setmetatable({}, AxiomCrosshair)
@@ -365,11 +369,12 @@ function AxiomCrosshair:OnShoot()
 end
 
 function AxiomCrosshair:Set(key, value)
-    self.Config[key] = value
-    local geometryKeys = { Style = true, OutlineEnabled = true, DotEnabled = true }
-    if geometryKeys[key] then
-        self:_RebuildLines()
-    end
+	if self.Config == nil then return end
+	self.Config[key] = value
+	local geometryKeys = { Style = true, OutlineEnabled = true, DotEnabled = true }
+	if geometryKeys[key] then
+		self:_RebuildLines()
+	end
 end
 
 function AxiomCrosshair:SetConfig(tbl)
