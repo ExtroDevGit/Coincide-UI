@@ -65,7 +65,7 @@ local DEFAULT_CONFIG = {
     SmoothFollow        = false,
     SmoothSpeed         = 18,
 
-    Version             = "0.1",
+    Version             = "0.1BQ",
 }
 
 print(DEFAULT_CONFIG.Version)
