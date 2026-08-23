@@ -225,12 +225,15 @@ function AxiomCrosshair:_StartLoop()
 end
 
 function AxiomCrosshair:_Update(dt)
-    local cfg = self.Config
-    if not cfg.Enabled then
-        self._screenGui.Enabled = false
-        return
-    end
-    self._screenGui.Enabled = true
+	local cfg = self.Config
+	if not self._screenGui then return end
+
+	if not cfg.Enabled then
+		self._screenGui.Enabled = false
+		return
+	end
+
+	self._screenGui.Enabled = true
 
     local cx, cy = Mouse.X, Mouse.Y
 
