@@ -28,7 +28,7 @@ local ESP              = {}
 local ChamsContainer, MeshChamsFolder, ScreenGui
 local PlayerRemovingConnection, InputBeganConnection
 local CurrentRunId = HttpService:GenerateGUID(false)
-local version = "1.0"
+local version = "1.1"
 print(version or "fail")
 
 if getgenv().HydrogenESP_Unload then pcall(getgenv().HydrogenESP_Unload) end
