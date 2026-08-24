@@ -87,6 +87,11 @@ Library.Accent          = Palette.Default.Accent;
 Library.AccentParts     = {};
 Library.AccentGradients = {};
 Library.AccentCallbacks = {};
+Library._SliderPool = {}
+Library._GradPool   = {}
+local _CachedOffset = Vector2.new(0, 0)
+local _LastEased   = -1
+local _LastHpText  = ""
 
 local function LightenAccent(C)
 	return C:Lerp(Color3.fromRGB(255, 255, 255), 0.6);
@@ -422,14 +427,25 @@ local LastOff = nil
 game:GetService("RunService").Heartbeat:Connect(function(Dt)
     AccentClock = AccentClock + Dt * 0.4
     local Off = (AccentClock % 2) - 1
-    
     if LastOff and math.abs(Off - LastOff) < 0.001 then return end
     LastOff = Off
-    
-    local OffsetV = Vector2.new(Off, 0)
-    for _, G in Library.AccentGradients do
+
+    -- Reuse one vector instead of allocating every frame
+    _CachedOffset = Vector2.new(Off, 0)
+
+    local Grads = Library.AccentGradients
+    local n = #Grads
+    local i = 1
+    while i <= n do
+        local G = Grads[i]
         if G and G.Parent then
-            G.Offset = OffsetV
+            G.Offset = _CachedOffset
+            i = i + 1
+        else
+            -- Swap-remove dead entry O(1), no shifting
+            Grads[i] = Grads[n]
+            Grads[n] = nil
+            n = n - 1
         end
     end
 end)
@@ -654,18 +670,18 @@ function Library:Draggable(TargetFrame, DragHandle)
 	local DragStart, StartPosition;
 	local DragInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out);
 
-	local function Set(Input)
-		if not DragStart or not StartPosition then return end;
-		local Delta = Input.Position - DragStart;
-		Library:Tween(TargetFrame, DragInfo, {
-			Position = UDim2.new(
-				StartPosition.X.Scale,
-				StartPosition.X.Offset + Delta.X,
-				StartPosition.Y.Scale,
-				StartPosition.Y.Offset + Delta.Y
-			);
-		}):Play();
-	end;
+		-- FIX: Just set position directly during drag, tween is useless here
+		-- Tweening a position you're actively setting every frame fights itself
+		local function Set(Input)
+		    if not DragStart or not StartPosition then return end
+		    local Delta = Input.Position - DragStart
+		    TargetFrame.Position = UDim2.new(
+		        StartPosition.X.Scale,
+		        StartPosition.X.Offset + Delta.X,
+		        StartPosition.Y.Scale,
+		        StartPosition.Y.Offset + Delta.Y
+		    )
+		end
 
 	self:Connection(Handle.InputBegan, function(Input)
 		if
@@ -688,15 +704,22 @@ function Library:Draggable(TargetFrame, DragHandle)
 		end;
 	end);
 
-	self:Connection(UserInputService.InputChanged, function(Input)
-		if
-			Input.UserInputType ~= Enum.UserInputType.MouseMovement
-			and Input.UserInputType ~= Enum.UserInputType.Touch
-		then
-			return;
-		end;
-		if Dragging then Set(Input) end;
-	end);
+	local Handler
+	self:Connection(Handle.InputBegan, function(Input)
+	    if Input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	    Dragging = true
+	    DragStart = Input.Position
+	    StartPosition = TargetFrame.Position
+	    Handler = Library:_RegisterDragger(function(Input)
+	        if Dragging then Set(Input) end
+	    end)
+	end)
+	self:Connection(Handle.InputEnded, function(Input)
+	    if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+	        Dragging = false
+	        Library:_UnregisterDragger(Handler)
+	    end
+	end)
 end;
 
 function Library:Resizable(TargetFrame, Minimum, Maximum)
@@ -1583,12 +1606,28 @@ local function BuildSection(Host, SecOpts)
 					RightBlack = RightBlack, RightGray = RightGray;
 					GradT = 0; GradTarget = 0;
 				};
-				local function ApplyGrad()
-					BgGrad.Color = NewColorSequence({
-						NewColorSequenceKeypoint(0, CpInactiveA:Lerp(CpActiveA, Entry.GradT));
-						NewColorSequenceKeypoint(1, CpInactiveB:Lerp(CpActiveB, Entry.GradT));
-					});
-				end;
+				local _SeqInactive = NewColorSequence({
+				    NewColorSequenceKeypoint(0, CpInactiveA),
+				    NewColorSequenceKeypoint(1, CpInactiveB),
+				})
+				local _SeqActive = NewColorSequence({
+				    NewColorSequenceKeypoint(0, CpActiveA),
+				    NewColorSequenceKeypoint(1, CpActiveB),
+				})
+				
+				local function ApplyGrad(t)
+				    if t <= 0.0005 then
+				        BgGrad.Color = _SeqInactive   -- zero-alloc
+				    elseif t >= 0.9995 then
+				        BgGrad.Color = _SeqActive     -- zero-alloc
+				    else
+				        -- Only allocates DURING the brief transition animation
+				        BgGrad.Color = NewColorSequence({
+				            NewColorSequenceKeypoint(0, CpInactiveA:Lerp(CpActiveA, t)),
+				            NewColorSequenceKeypoint(1, CpInactiveB:Lerp(CpActiveB, t)),
+				        })
+				    end
+				end
 				ApplyGrad();
 				Library:Connection(RunService.Heartbeat, function(Dt)
 					if math.abs(Entry.GradTarget - Entry.GradT) < 0.001 then
@@ -2404,12 +2443,39 @@ ValLbl.Text = FormatVal(Value);
 	Render();
 	Fill.Size = UDim2.new(VisualT, -2, 1, -2);
 
-	Library:Connection(RunService.Heartbeat, function(Dt)
-if math.abs(TargetT - VisualT) < 0.001 then return end;
-local Alpha = 1 - math.exp(-Dt * 14);
-VisualT   = VisualT + (TargetT - VisualT) * Alpha;
-Fill.Size = UDim2.new(VisualT, -2, 1, -2);
-	end);
+Library:Connection(RunService.Heartbeat, function(Dt)
+    local a14 = 1 - math.exp(-Dt * 14)
+    local a16 = 1 - math.exp(-Dt * 16)
+
+    -- All sliders
+    local sp = Library._SliderPool
+    for i = #sp, 1, -1 do
+        local s = sp[i]
+        if not s.Fill or not s.Fill.Parent then
+            sp[i] = sp[#sp]; sp[#sp] = nil; continue
+        end
+        local diff = s.Target - s.Visual
+        if math.abs(diff) >= 0.001 then
+            s.Visual = s.Visual + diff * a14
+            s.Fill.Size = UDim2.new(s.Visual, -2, 1, -2)
+        end
+    end
+
+    -- All tab/colorpicker gradients
+    local gp = Library._GradPool
+    for i = #gp, 1, -1 do
+        local e = gp[i]
+        if not e.Bg or not e.Bg.Parent then
+            gp[i] = gp[#gp]; gp[#gp] = nil; continue
+        end
+        local diff = e.Target - e.T
+        if math.abs(diff) >= 0.001 then
+            e.T = e.T + diff * a16
+            e.Apply(e.T)
+        end
+    end
+end)
+
 
 	local function SetVal(V, Fire)
 V = math.clamp(math.floor((V - Min) / Step + 0.5) * Step + Min, Min, Max);
@@ -7308,14 +7374,25 @@ function Library:_BuildPreview(Parent, Opts)
 	end;
 
 	local function ChangeHealth()
-		local Value = math.abs(math.sin(tick()));
-		local Eased = TweenService:GetValue(Value, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut);
-		HealthFade.Size = UDim2.new(1, -2, 1 - Eased, 0);
-		local C = Settings.HealthLow.Color:Lerp(Settings.HealthMid.Color, Eased):Lerp(Settings.HealthHigh.Color, Eased);
-		HealthText.TextColor3 = C;
-		HealthText.Text       = tostring(math.floor(Eased * 100 + 0.5));
-		HealthText.Position   = UDim2.new(0, -2, 1 - Eased, 0);
-	end;
+	    local Value = math.abs(math.sin(tick()))
+	    local Eased = TweenService:GetValue(Value, Enum.EasingStyle.Exponential, Enum.EasingDirection.InOut)
+	
+	    if math.abs(Eased - _LastEased) < 0.003 then return end  -- skip tiny changes
+	    _LastEased = Eased
+	
+	    HealthFade.Size     = UDim2.new(1, -2, 1 - Eased, 0)
+	    HealthText.Position = UDim2.new(0, -2, 1 - Eased, 0)
+	
+	    -- Lerp once through HealthMid as midpoint blend
+	    local C = Settings.HealthLow.Color:Lerp(Settings.HealthHigh.Color, Eased)
+	    HealthText.TextColor3 = C
+	
+	    local hp = tostring(math.floor(Eased * 100 + 0.5))
+	    if hp ~= _LastHpText then
+	        HealthText.Text = hp
+	        _LastHpText = hp
+	    end
+	end
 
 	Area.MouseEnter:Connect(function() Hovering = true end);
 	Area.MouseLeave:Connect(function() Hovering = false end);
