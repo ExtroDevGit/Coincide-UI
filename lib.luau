@@ -59,7 +59,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.2c";
+    Version = "0.2c debug";
 };
 
 Library._GradLerps = {}
@@ -434,6 +434,8 @@ game:GetService("RunService").Heartbeat:Connect(function(Dt)
     end
 end)
 
+print("rn4")
+
 function Library:OnAccent(Fn)
 	if typeof(Fn) ~= "function" then return end;
 	table.insert(self.AccentCallbacks, Fn);
@@ -479,6 +481,9 @@ function Library:Log(Text)
 	local Time = os.date("%H:%M:%S");
 	appendfile(self.LogFile, "[" .. Time .. "][" .. Stamp .. "s] " .. tostring(Text) .. "\n");
 end;
+
+print("rn5")
+
 
 Library.KeyNames = {
 	[Enum.UserInputType.MouseButton1] = "MB1";
@@ -698,6 +703,9 @@ function Library:Draggable(TargetFrame, DragHandle)
 		if Dragging then Set(Input) end;
 	end);
 end;
+
+print("rn7")
+
 
 function Library:Resizable(TargetFrame, Minimum, Maximum)
 	Minimum = Minimum or Vector2.new(TargetFrame.Size.X.Offset, TargetFrame.Size.Y.Offset);
