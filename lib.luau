@@ -781,6 +781,7 @@ function Library:AddGlowingV2(frame,color,transparency)
 	glow.Enabled = true;
 end
 
+print("rn8")
 
 local ProggyCleanFont;
 do
@@ -793,6 +794,8 @@ do
 end;
 
 getgenv().proggyfont = ProggyCleanFont
+
+print("rn9")
 
 function Library:Tooltip(Inst, Text)
 	if not Inst or not Text or Text == "" then return end;
