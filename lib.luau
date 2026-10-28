@@ -16,26 +16,31 @@ local NewColorSequenceKeypoint = ColorSequenceKeypoint.new;
 local NewNumberSequence = NumberSequence.new;
 local NewNumberSequenceKeypoint = NumberSequenceKeypoint.new;
 
+local LOGO_PATH = "Hydrogen/logo2.png"
+-- host this on the same raw.githubusercontent repo as the lib, not Dropbox:
+local LOGO_URL  = "https://raw.githubusercontent.com/ExtroDevGit/Coincide-UI/main/logo2.png"
+
+local LogoFetching = false
 local function int()
-	local logourl = "https://www.dropbox.com/scl/fi/r3qlj26fdg2bniukw6ut9/logo2.png?rlkey=5kq8p4mpdm4e5laqd7havyfsn&st=od93q1vk&dl=1";
+    if not isfolder("Hydrogen") then makefolder("Hydrogen") end
+    if isfile(LOGO_PATH) then return end
+    if LogoFetching then return end
+    LogoFetching = true
 
-	if not isfolder("Hydrogen") then
-		makefolder("Hydrogen");
-	end;
-
-	if not isfile("Hydrogen/logo2.png") then
-		local success, data = pcall(function()
-			return game:HttpGet(logourl);
-		end);
-
-		if success and data then
-			writefile("Hydrogen/logo2.png", data);
-			print("downloaded logo");
-		end;
-	end;
-end;
+    task.spawn(function()            -- off the main thread: UI never waits on it
+        local ok, data = pcall(function()
+            return game:HttpGet(LOGO_URL)
+        end)
+        if ok and data and #data > 0 then
+            pcall(writefile, LOGO_PATH, data)
+            print("downloaded logo")
+        end
+        LogoFetching = false
+    end)
+end
 
 int();
+
 
 function FakePointer()
 	local A = math.random(0, 0xFFFFFF);
