@@ -17,7 +17,6 @@ local NewNumberSequence = NumberSequence.new;
 local NewNumberSequenceKeypoint = NumberSequenceKeypoint.new;
 
 local LOGO_PATH = "Hydrogen/logo2.png"
--- host this on the same raw.githubusercontent repo as the lib, not Dropbox:
 local LOGO_URL  = "https://raw.githubusercontent.com/ExtroDevGit/Coincide-UI/main/logo2.png"
 
 local LogoFetching = false
@@ -27,7 +26,7 @@ local function int()
     if LogoFetching then return end
     LogoFetching = true
 
-    task.spawn(function()            -- off the main thread: UI never waits on it
+    task.spawn(function()          
         local ok, data = pcall(function()
             return game:HttpGet(LOGO_URL)
         end)
@@ -64,7 +63,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.2c debug";
+    Version = "0.1c";
 };
 
 Library._GradLerps = {}
@@ -8823,6 +8822,43 @@ end;
 		end);
 	end;
 
+local HttpService = game:GetService("HttpService")
+local getcustomasset = getcustomasset or getsynasset or getcustomassetfunc  -- executor alias
+
+if not Library._HeadAssetCache then Library._HeadAssetCache = {} end
+local HeadAssetCache = Library._HeadAssetCache
+
+local function GetHeadshotAsset(UserId)
+    UserId = tonumber(UserId)
+    if not UserId then return nil end
+    if HeadAssetCache[UserId] then return HeadAssetCache[UserId] end  -- already resolved
+
+    -- 1. hit the thumbnails API
+    local okApi, body = pcall(function()
+        return game:HttpGet(("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=180x180&format=Png&isCircular=false"):format(UserId))
+    end)
+    if not okApi or not body then return nil end
+
+    -- 2. decode JSON, extract imageUrl
+    local okJson, decoded = pcall(function() return HttpService:JSONDecode(body) end)
+    local entry = okJson and decoded and decoded.data and decoded.data[1]
+    if not entry or entry.state ~= "Completed" or not entry.imageUrl then return nil end
+
+    -- 3. download the actual PNG bytes
+    local okImg, png = pcall(function() return game:HttpGet(entry.imageUrl) end)
+    if not okImg or not png or #png == 0 then return nil end
+
+    -- 4. write to disk + turn into a usable asset id
+    if not isfolder("Hydrogen/Cache") then makefolder("Hydrogen/Cache") end
+    local path = "Hydrogen/Cache/head_" .. UserId .. ".png"
+    pcall(writefile, path, png)
+
+    local asset
+    pcall(function() asset = getcustomasset(path) end)
+    if asset then HeadAssetCache[UserId] = asset end
+    return asset
+end
+
 local function SetAvatar(UserId)
     UserId = tonumber(UserId)
     if not UserId or UserId == 0 then
@@ -8832,9 +8868,14 @@ local function SetAvatar(UserId)
     end
     if UserId == CurrentUserId then return end
     CurrentUserId = UserId
+    AvatarImage.Image = ""
 
-    -- native thumbnail URL; engine fetches & caches it automatically
-    AvatarImage.Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=180&h=180", UserId)
+    task.spawn(function()                      -- async: never freezes the UI
+        local asset = GetHeadshotAsset(UserId)
+        if asset and CurrentUserId == UserId then
+            AvatarImage.Image = asset
+        end
+    end)
 end
 
 local function SetName(Name)
