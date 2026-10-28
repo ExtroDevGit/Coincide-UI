@@ -8824,45 +8824,18 @@ end;
 	end;
 
 local function SetAvatar(UserId)
+    UserId = tonumber(UserId)
     if not UserId or UserId == 0 then
-        CurrentUserId = nil;
-        AvatarImage.Image = "";
-        return;
-    end;
+        CurrentUserId = nil
+        AvatarImage.Image = ""
+        return
+    end
+    if UserId == CurrentUserId then return end
+    CurrentUserId = UserId
 
-    if UserId == CurrentUserId then return; end;
-    CurrentUserId = UserId;
-
-    local Cached = ThumbCache[UserId];
-    if typeof(Cached) == "string" then
-        AvatarImage.Image = Cached;
-        return;
-    end;
-
-    -- false = hâlâ yükleniyor, nil = hiç başlatılmamış
-    if Cached == nil then
-        PrefetchThumbnail(UserId);
-    end;
-
-    AvatarImage.Image = "";
-    task.spawn(function()
-        local Waited = 0;
-        while CurrentUserId == UserId and Waited < 8 do
-            local Value = ThumbCache[UserId];
-            if typeof(Value) == "string" then
-                if CurrentUserId == UserId then
-                    AvatarImage.Image = Value;
-                end;
-                return;
-            elseif Value == nil and Waited > 1 then
-                -- Prefetch başarısız oldu, tekrar dene
-                PrefetchThumbnail(UserId);
-            end;
-            task.wait(0.1);
-            Waited += 0.1;
-        end;
-    end);
-end;
+    -- native thumbnail URL; engine fetches & caches it automatically
+    AvatarImage.Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=180&h=180", UserId)
+end
 
 local function SetName(Name)
 		NameLbl.Text = tostring(Name or "Player");
