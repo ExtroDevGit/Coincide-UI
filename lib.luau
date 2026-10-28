@@ -10,6 +10,11 @@ local CoreGui = game:GetService("CoreGui");
 local TweenService = game:GetService("TweenService");
 
 local GuiInset = GuiService:GetGuiInset().Y;
+----- Avatar viewport cache (LRU) -----
+local AVATAR_CACHE_MAX  = 6            -- how many target clones to keep in memory
+local AvatarCache       = {}          -- [Character] = { Model = clone, CF = CFrame }
+local AvatarCacheOrder  = {}          -- LRU order, oldest first
+local ActiveClone       = nil
 
 local NewColorSequence = ColorSequence.new;
 local NewColorSequenceKeypoint = ColorSequenceKeypoint.new;
@@ -63,7 +68,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.1c";
+    Version = "0.2c";
 };
 
 Library._GradLerps = {}
@@ -8633,7 +8638,7 @@ function Library:TargetUI(Opts)
 		ZIndex                 = 2;
 	});
 	local AvatarCamera = Instance.new("Camera");
-	AvatarCamera.FieldOfView = 50;   -- bigger FOV = more of the head/shoulders in frame
+		AvatarCamera.FieldOfView = 60;   -- was 50
 	AvatarViewport.CurrentCamera = AvatarCamera;
 	AvatarCamera.Parent = AvatarViewport;
 
@@ -8828,67 +8833,28 @@ end;
 		end);
 	end;
 
-local HttpService = game:GetService("HttpService")
-local getcustomasset = getcustomasset or getsynasset or getcustomassetfunc  -- executor alias
-
-if not Library._HeadAssetCache then Library._HeadAssetCache = {} end
-local HeadAssetCache = Library._HeadAssetCache
-
-local function GetHeadshotAsset(UserId)
-    UserId = tonumber(UserId)
-    if not UserId then return nil end
-    if HeadAssetCache[UserId] then return HeadAssetCache[UserId] end  -- already resolved
-
-    -- 1. hit the thumbnails API
-    local okApi, body = pcall(function()
-        return game:HttpGet(("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=%d&size=180x180&format=Png&isCircular=false"):format(UserId))
-    end)
-    if not okApi or not body then return nil end
-
-    -- 2. decode JSON, extract imageUrl
-    local okJson, decoded = pcall(function() return HttpService:JSONDecode(body) end)
-    local entry = okJson and decoded and decoded.data and decoded.data[1]
-    if not entry or entry.state ~= "Completed" or not entry.imageUrl then return nil end
-
-    -- 3. download the actual PNG bytes
-    local okImg, png = pcall(function() return game:HttpGet(entry.imageUrl) end)
-    if not okImg or not png or #png == 0 then return nil end
-
-    -- 4. write to disk + turn into a usable asset id
-    if not isfolder("Hydrogen/Cache") then makefolder("Hydrogen/Cache") end
-    local path = "Hydrogen/Cache/head_" .. UserId .. ".png"
-    pcall(writefile, path, png)
-
-    local asset
-    pcall(function() asset = getcustomasset(path) end)
-    if asset then HeadAssetCache[UserId] = asset end
-    return asset
+local function TouchLRU(Character)
+    for i, c in ipairs(AvatarCacheOrder) do
+        if c == Character then table.remove(AvatarCacheOrder, i); break end
+    end
+    table.insert(AvatarCacheOrder, Character)   -- newest at the end
 end
 
-local function ClearAvatarModel()
-    for _, c in AvatarViewport:GetChildren() do
-        if c:IsA("Model") then c:Destroy() end
+local function EvictIfNeeded()
+    while #AvatarCacheOrder > AVATAR_CACHE_MAX do
+        local old   = table.remove(AvatarCacheOrder, 1)   -- drop oldest
+        local entry = AvatarCache[old]
+        AvatarCache[old] = nil
+        if entry and entry.Model then entry.Model:Destroy() end
     end
 end
 
--- NOTE: reuses the existing `CurrentUserId` local (8779) to track the shown character
-local function SetAvatar(Character)
-    if typeof(Character) ~= "Instance" or not Character:IsA("Model") or not Character.Parent then
-        CurrentUserId = nil
-        ClearAvatarModel()
-        return
-    end
-
-    if Character == CurrentUserId then return end   -- same target, don't rebuild every frame
-    CurrentUserId = Character
-
-    ClearAvatarModel()
-
+local function BuildAvatar(Character)
     local prevArch = Character.Archivable
     Character.Archivable = true
     local ok, clone = pcall(function() return Character:Clone() end)
     Character.Archivable = prevArch
-    if not ok or not clone then return end
+    if not ok or not clone then return nil end
 
     for _, d in clone:GetDescendants() do
         if d:IsA("LuaSourceContainer") or d:IsA("Sound")
@@ -8897,18 +8863,51 @@ local function SetAvatar(Character)
         elseif d:IsA("BasePart") then
             d.Anchored   = true
             d.CanCollide = false
+            d.CastShadow = false      -- no shadow math in the viewport
         end
     end
 
-    clone.Parent = AvatarViewport
-
+    -- precompute the camera framing once (clone is frozen, so it never changes)
+    local cf
     local head = clone:FindFirstChild("Head") or clone:FindFirstChild("HumanoidRootPart")
     if head and head:IsA("BasePart") then
-        AvatarCamera.CFrame = CFrame.new(
+        cf = CFrame.new(
             head.Position + head.CFrame.LookVector * 2.5 + Vector3.new(0, 0.15, 0),
             head.Position
         )
     end
+
+    return { Model = clone, CF = cf }
+end
+
+-- reuses the existing `CurrentUserId` local (8779) as the "shown character" tracker
+local function SetAvatar(Character)
+    -- invalid -> just hide (keep cache intact)
+    if typeof(Character) ~= "Instance" or not Character:IsA("Model") or not Character.Parent then
+        if ActiveClone then ActiveClone.Parent = nil end
+        ActiveClone   = nil
+        CurrentUserId = nil
+        return
+    end
+
+    if Character == CurrentUserId then return end   -- same target already shown
+    CurrentUserId = Character
+
+    if ActiveClone then ActiveClone.Parent = nil end  -- hide current (stays alive in cache)
+
+    local entry = AvatarCache[Character]
+    if not entry then                                 -- cache miss -> build once
+        entry = BuildAvatar(Character)
+        if not entry then ActiveClone = nil; return end
+        AvatarCache[Character] = entry
+    end
+
+    TouchLRU(Character)
+    EvictIfNeeded()
+
+    entry.Model.Parent = AvatarViewport
+    ActiveClone = entry.Model
+    if entry.CF then AvatarCamera.CFrame = entry.CF end
 end
 
 local function SetName(Name)
