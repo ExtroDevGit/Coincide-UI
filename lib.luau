@@ -8620,16 +8620,22 @@ function Library:TargetUI(Opts)
 		BorderSizePixel  = 0;
 		ClipsDescendants = true;
 	});
-	local AvatarImage = self:CreateInstance("ImageLabel", {
+	local AvatarViewport = self:CreateInstance("ViewportFrame", {
 		Name                   = "Avatar";
 		Parent                 = AvatarInside;
 		Size                   = UDim2.new(1, 0, 1, 0);
-		BackgroundTransparency = 1;
+		BackgroundColor3       = Color3.fromHex("101010");
+		BackgroundTransparency = 0;
 		BorderSizePixel        = 0;
-		Image                  = "";
-		ScaleType              = Enum.ScaleType.Crop;
+		Ambient                = Color3.fromRGB(200, 200, 200);
+		LightColor             = Color3.fromRGB(255, 255, 255);
+		LightDirection         = Vector3.new(-0.3, -1, -0.4);
 		ZIndex                 = 2;
 	});
+	local AvatarCamera = Instance.new("Camera");
+	AvatarCamera.FieldOfView = 50;   -- bigger FOV = more of the head/shoulders in frame
+	AvatarViewport.CurrentCamera = AvatarCamera;
+	AvatarCamera.Parent = AvatarViewport;
 
 	local InfoBlock = self:CreateInstance("Frame", {
 		Name                   = "InfoBlock";
@@ -8859,23 +8865,50 @@ local function GetHeadshotAsset(UserId)
     return asset
 end
 
-local function SetAvatar(UserId)
-    UserId = tonumber(UserId)
-    if not UserId or UserId == 0 then
+local function ClearAvatarModel()
+    for _, c in AvatarViewport:GetChildren() do
+        if c:IsA("Model") then c:Destroy() end
+    end
+end
+
+-- NOTE: reuses the existing `CurrentUserId` local (8779) to track the shown character
+local function SetAvatar(Character)
+    if typeof(Character) ~= "Instance" or not Character:IsA("Model") or not Character.Parent then
         CurrentUserId = nil
-        AvatarImage.Image = ""
+        ClearAvatarModel()
         return
     end
-    if UserId == CurrentUserId then return end
-    CurrentUserId = UserId
-    AvatarImage.Image = ""
 
-    task.spawn(function()                      -- async: never freezes the UI
-        local asset = GetHeadshotAsset(UserId)
-        if asset and CurrentUserId == UserId then
-            AvatarImage.Image = asset
+    if Character == CurrentUserId then return end   -- same target, don't rebuild every frame
+    CurrentUserId = Character
+
+    ClearAvatarModel()
+
+    local prevArch = Character.Archivable
+    Character.Archivable = true
+    local ok, clone = pcall(function() return Character:Clone() end)
+    Character.Archivable = prevArch
+    if not ok or not clone then return end
+
+    for _, d in clone:GetDescendants() do
+        if d:IsA("LuaSourceContainer") or d:IsA("Sound")
+            or d:IsA("ParticleEmitter") or d:IsA("Trail") or d:IsA("Beam") then
+            d:Destroy()
+        elseif d:IsA("BasePart") then
+            d.Anchored   = true
+            d.CanCollide = false
         end
-    end)
+    end
+
+    clone.Parent = AvatarViewport
+
+    local head = clone:FindFirstChild("Head") or clone:FindFirstChild("HumanoidRootPart")
+    if head and head:IsA("BasePart") then
+        AvatarCamera.CFrame = CFrame.new(
+            head.Position + head.CFrame.LookVector * 2.5 + Vector3.new(0, 0.15, 0),
+            head.Position
+        )
+    end
 end
 
 local function SetName(Name)
@@ -8970,7 +9003,12 @@ local function SetMod(IsMod)
 
 	function Obj:SetTarget(Data)
 		Data = typeof(Data) == "table" and Data or {};
-		if Data.UserId then SetAvatar(Data.UserId); end;
+				if Data.Character ~= nil then
+			SetAvatar(Data.Character);
+		elseif Data.UserId then
+			local _p = Players:GetPlayerByUserId(Data.UserId);
+			SetAvatar(_p and _p.Character);
+		end;
 		if Data.Name then SetName(Data.Name); end;
 		if Data.Health ~= nil or Data.MaxHealth ~= nil then
 			SetHealth(Data.Health, Data.MaxHealth);
@@ -8992,7 +9030,7 @@ local function SetMod(IsMod)
 
 	function Obj:Clear()
 		self:Hide();
-		AvatarImage.Image = "";
+		SetAvatar(nil);
 		NameLbl.Text = "Player";
 		KdrLbl.Text = "KDR: ";
 		PlayTimeLbl.Text = "Play Time: ";
