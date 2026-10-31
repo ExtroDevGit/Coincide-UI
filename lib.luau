@@ -68,7 +68,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.2c";
+    Version = "0.3c";
 };
 
 Library._GradLerps = {}
@@ -4678,7 +4678,7 @@ function Library:Window(Opts)
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
 	});
 
-	local Outer = self:CreateInstance("Frame", {
+	local Outer = self:CreateInstance("CanvasGroup", {
 		Name = "Outer";
 		Parent = Gui;
 		AnchorPoint = Vector2.new(0.5, 0.5);
@@ -4686,6 +4686,7 @@ function Library:Window(Opts)
 		Size = UDim2.fromOffset(Width, Height);
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel = 0;
+		GroupTransparency = 0;
 	});
 	self:CreateInstance("UIGradient", {
 		Parent   = Outer;
@@ -5182,77 +5183,22 @@ RegisterGradLerp(GradEntry)
 
 	Window.Visible = true;
 	Window._FadeToken = 0;
-	Window._FadeOriginals = nil;
-	local FadeProps = {
-		Frame          = { "BackgroundTransparency" };
-		TextLabel      = { "BackgroundTransparency", "TextTransparency", "TextStrokeTransparency" };
-		TextButton     = { "BackgroundTransparency", "TextTransparency", "TextStrokeTransparency" };
-		TextBox        = { "BackgroundTransparency", "TextTransparency", "TextStrokeTransparency" };
-		ImageLabel     = { "BackgroundTransparency", "ImageTransparency" };
-		ImageButton    = { "BackgroundTransparency", "ImageTransparency" };
-		ScrollingFrame = { "BackgroundTransparency", "ScrollBarImageTransparency" };
-		CanvasGroup    = { "BackgroundTransparency", "GroupTransparency" };
-		UIStroke       = { "Transparency" };
-	};
-	local function CaptureOriginals()
-		local Map = {};
-		for _, Inst in Outer:GetDescendants() do
-			local Props = FadeProps[Inst.ClassName];
-			if Props then
-				local PMap = {};
-				for _, P in Props do
-					local Ok, V = pcall(function() return Inst[P] end);
-					if Ok then PMap[P] = V end;
-				end;
-				Map[Inst] = PMap;
-			end;
-		end;
-		local OuterProps = FadeProps[Outer.ClassName];
-		if OuterProps then
-			local PMap = {};
-			for _, P in OuterProps do
-				local Ok, V = pcall(function() return Outer[P] end);
-				if Ok then PMap[P] = V end;
-			end;
-			Map[Outer] = PMap;
-		end;
-		return Map;
-	end;
+	-- OPTIMIZED open/close: Outer is a CanvasGroup, so the whole window fades with ONE
+	-- tween on GroupTransparency instead of walking every descendant and creating a tween
+	-- per instance. With 100+ toggles that was 1000+ instances = 1000+ simultaneous tweens
+	-- (plus a full GetDescendants scan) every time the menu opened/closed — the FPS drop.
 	function Window:SetVisible(State)
+		State = State and true or false;
 		if self.Visible == State then return end;
-		self.Visible = State and true or false;
+		self.Visible = State;
 		self._FadeToken = self._FadeToken + 1;
 		local Mine = self._FadeToken;
 		local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
-		if not self.Visible and self._FadeOriginals
-			and os.clock() - (self._ShownAt or 0) < Info.Time then
-			for Inst, PMap in self._FadeOriginals do
-				if Inst.Parent then
-					for P, V in PMap do Inst[P] = V end;
-				end;
-			end;
-		end;
-		if not self.Visible or not self._FadeOriginals then
-			self._FadeOriginals = CaptureOriginals();
-		end;
-		if self.Visible then
-			self._ShownAt = os.clock();
+		if State then
 			Gui.Enabled = true;
-			for Inst, PMap in self._FadeOriginals do
-				if Inst.Parent then
-					local Goal = {};
-					for P, V in PMap do Goal[P] = V end;
-					Library:Tween(Inst, Info, Goal):Play();
-				end;
-			end;
+			Library:Tween(Outer, Info, { GroupTransparency = 0 }):Play();
 		else
-			for Inst, PMap in self._FadeOriginals do
-				if Inst.Parent then
-					local Goal = {};
-					for P in PMap do Goal[P] = 1 end;
-					Library:Tween(Inst, Info, Goal):Play();
-				end;
-			end;
+			Library:Tween(Outer, Info, { GroupTransparency = 1 }):Play();
 			task.delay(Info.Time, function()
 				if self._FadeToken == Mine and not self.Visible then
 					Gui.Enabled = false;
