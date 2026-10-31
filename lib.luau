@@ -561,6 +561,23 @@ function Library:Connection(Signal, Callback)
 	return Conn;
 end;
 
+-- One shared Heartbeat drives every per-frame UI animation (slider fills, color-picker
+-- gradients, the watermark text, ...) instead of each element holding its own connection.
+-- At high frame rates that's a single signal dispatch per frame rather than dozens, and the
+-- pcall keeps one misbehaving animation from stopping the rest.
+Library._FrameSteppers = {};
+function Library:FrameStep(Fn)
+	table.insert(self._FrameSteppers, Fn);
+	return Fn;
+end;
+Library:Connection(RunService.Heartbeat, function(DeltaTime)
+	local Steppers = Library._FrameSteppers;
+	for I = 1, #Steppers do
+		local Fn = Steppers[I];
+		if Fn then pcall(Fn, DeltaTime) end;
+	end;
+end);
+
 function Library:CreateInstance(ClassName, Properties)
 	local Inst = Instance.new(ClassName);
 	for K, V in (Properties or {}) do
@@ -1610,7 +1627,7 @@ local function BuildSection(Host, SecOpts)
 					});
 				end;
 				ApplyGrad();
-				Library:Connection(RunService.Heartbeat, function(Dt)
+				Library:FrameStep(function(Dt)
 					if math.abs(Entry.GradTarget - Entry.GradT) < 0.001 then
 						if Entry.GradT ~= Entry.GradTarget then
 							Entry.GradT = Entry.GradTarget;
@@ -2049,7 +2066,7 @@ local function BuildSection(Host, SecOpts)
 			local SpDragging = false;
 			local SpVisualT = 0.5;
 			local SpTargetT = 0.5;
-			Library:Connection(RunService.Heartbeat, function(Dt)
+			Library:FrameStep(function(Dt)
 				if math.abs(SpTargetT - SpVisualT) < 0.001 then return end;
 				local Alpha = 1 - math.exp(-Dt * 14);
 				SpVisualT = SpVisualT + (SpTargetT - SpVisualT) * Alpha;
@@ -2107,7 +2124,7 @@ local function BuildSection(Host, SecOpts)
 
 			local FadeColorA = Color3.fromRGB(255, 0, 0);
 			local FadeColorB = Color3.fromRGB(0, 0, 255);
-			Library:Connection(RunService.Heartbeat, function(Dt)
+			Library:FrameStep(function(Dt)
 				if Mode == "Rainbow" then
 					H = (H + Dt * (Speed / 100)) % 1;
 					ApplyState();
@@ -2424,7 +2441,7 @@ ValLbl.Text = FormatVal(Value);
 	Render();
 	Fill.Size = UDim2.new(VisualT, -2, 1, -2);
 
-	Library:Connection(RunService.Heartbeat, function(Dt)
+	Library:FrameStep(function(Dt)
 if math.abs(TargetT - VisualT) < 0.001 then return end;
 local Alpha = 1 - math.exp(-Dt * 14);
 VisualT   = VisualT + (TargetT - VisualT) * Alpha;
@@ -2892,7 +2909,7 @@ end;
 				});
 			end;
 			ApplyGrad();
-			Library:Connection(RunService.Heartbeat, function(Dt)
+			Library:FrameStep(function(Dt)
 				if math.abs(Entry.GradTarget - Entry.GradT) < 0.001 then
 					if Entry.GradT ~= Entry.GradTarget then
 						Entry.GradT = Entry.GradTarget;
@@ -3200,7 +3217,7 @@ end;
 		local SpDragging = false;
 		local SpVisualT = 0.5;
 		local SpTargetT = 0.5;
-		Library:Connection(RunService.Heartbeat, function(Dt)
+		Library:FrameStep(function(Dt)
 			if math.abs(SpTargetT - SpVisualT) < 0.001 then return end;
 			local Alpha = 1 - math.exp(-Dt * 14);
 			SpVisualT = SpVisualT + (SpTargetT - SpVisualT) * Alpha;
@@ -3471,7 +3488,7 @@ end;
 
 		local FadeColorA = Color3.fromRGB(255, 0, 0);
 		local FadeColorB = Color3.fromRGB(0, 0, 255);
-		Library:Connection(RunService.Heartbeat, function(Dt)
+		Library:FrameStep(function(Dt)
 			if Mode == "Rainbow" then
 				H = (H + Dt * (Speed / 100)) % 1;
 				ApplyState();
@@ -5029,7 +5046,7 @@ Title.Position = UDim2.new(0, 5 + TitleLogo.AbsoluteSize.X + 4, 0, 9);
 		end;
 		Gradient.Enabled = true;
 		ApplyGrad();
-		Library:Connection(RunService.Heartbeat, function(Dt)
+		Library:FrameStep(function(Dt)
     local i = 1
     local list = Library._GradLerps
     while i <= #list do
@@ -6693,7 +6710,7 @@ function Library:SettingsWindow(Opts)
 				if Ok and Info and Info.Name then GameName = Info.Name end;
 			end);
 			local Acc = 0;
-			Library:Connection(RunService.Heartbeat, function(Dt)
+			Library:FrameStep(function(Dt)
 				local W = Library._Watermark;
 				if not (W and W.Gui and W.Gui.Enabled) then return end;
 			
