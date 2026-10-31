@@ -68,7 +68,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.2c";
+    Version = "0.4c";
 };
 
 Library._GradLerps = {}
@@ -7270,7 +7270,7 @@ function Library:_BuildPreview(Parent, Opts)
 			NewColorSequenceKeypoint(1,   Settings.HealthLow.Color);
 		});
 
-		ChamsFrame.Visible                = Settings.Chams;
+		--ChamsFrame.Visible                = Settings.Chams;
 		ChamsFrame.BackgroundColor3       = Settings.ChamsColor.Color;
 		ChamsFrame.BackgroundTransparency = 1 - Settings.ChamsColor.Alpha;
 
