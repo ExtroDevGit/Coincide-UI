@@ -6215,6 +6215,7 @@ function Library:Playerlist(Opts)
 	local function CaptureFade()
 		local Map = {};
 		local Types = {
+			UIShadow = { "Transparency" };
 			Frame = {"BackgroundTransparency"};
 			TextLabel = {"BackgroundTransparency","TextTransparency"};
 			TextButton = {"BackgroundTransparency","TextTransparency"};
@@ -6498,6 +6499,7 @@ function Library:SettingsWindow(Opts)
 	local function CaptureFade()
 		local Map = {};
 		local Types = {
+			UIShadow = { "Transparency" };
 			Frame = {"BackgroundTransparency"};
 			TextLabel = {"BackgroundTransparency","TextTransparency"};
 			TextButton = {"BackgroundTransparency","TextTransparency"};
@@ -7586,6 +7588,7 @@ function Library:PreviewWindow(Opts)
 	local function CaptureFade()
 		local Map = {};
 		local Types = {
+			UIShadow = { "Transparency" };
 			Frame = {"BackgroundTransparency"};
 			TextLabel = {"BackgroundTransparency","TextTransparency"};
 			TextButton = {"BackgroundTransparency","TextTransparency"};
@@ -7959,6 +7962,7 @@ function Library:LogWindow(Opts)
 	local function CaptureFade()
 		local Map = {};
 		local Types = {
+			UIShadow = { "Transparency" };
 			Frame = {"BackgroundTransparency"};
 			TextLabel = {"BackgroundTransparency","TextTransparency"};
 			TextButton = {"BackgroundTransparency","TextTransparency"};
@@ -8385,6 +8389,7 @@ local Outer = self:CreateInstance("Frame", {
 	local function CaptureFade()
 		local Map = {};
 		local Types = {
+			UIShadow = { "Transparency" };
 			Frame     = { "BackgroundTransparency" };
 			TextLabel = { "BackgroundTransparency", "TextTransparency" };
 			UIStroke  = { "Transparency" };
@@ -9549,6 +9554,7 @@ function Library:InvViewer(Opts)
 	local function CaptureFade()
 		local Map = {};
 		local Types = {
+			UIShadow = { "Transparency" };
 			Frame          = { "BackgroundTransparency" };
 			TextLabel      = { "BackgroundTransparency", "TextTransparency" };
 			ScrollingFrame = { "BackgroundTransparency", "ScrollBarImageTransparency" };
