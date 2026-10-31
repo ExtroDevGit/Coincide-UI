@@ -68,7 +68,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.3c";
+    Version = "0.2c";
 };
 
 Library._GradLerps = {}
@@ -4678,7 +4678,7 @@ function Library:Window(Opts)
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling;
 	});
 
-	local Outer = self:CreateInstance("CanvasGroup", {
+	local Outer = self:CreateInstance("Frame", {
 		Name = "Outer";
 		Parent = Gui;
 		AnchorPoint = Vector2.new(0.5, 0.5);
@@ -4686,7 +4686,6 @@ function Library:Window(Opts)
 		Size = UDim2.fromOffset(Width, Height);
 		BackgroundColor3 = Color3.fromHex("FFFFFF");
 		BorderSizePixel = 0;
-		GroupTransparency = 0;
 	});
 	self:CreateInstance("UIGradient", {
 		Parent   = Outer;
@@ -5183,28 +5182,77 @@ RegisterGradLerp(GradEntry)
 
 	Window.Visible = true;
 	Window._FadeToken = 0;
-	-- OPTIMIZED open/close: Outer is a CanvasGroup, so the whole window fades with ONE
-	-- tween on GroupTransparency instead of walking every descendant and creating a tween
-	-- per instance. With 100+ toggles that was 1000+ instances = 1000+ simultaneous tweens
-	-- (plus a full GetDescendants scan) every time the menu opened/closed — the FPS drop.
+	Window._FadeOriginals = nil;
+	local FadeProps = {
+		Frame          = { "BackgroundTransparency" };
+		TextLabel      = { "BackgroundTransparency", "TextTransparency", "TextStrokeTransparency" };
+		TextButton     = { "BackgroundTransparency", "TextTransparency", "TextStrokeTransparency" };
+		TextBox        = { "BackgroundTransparency", "TextTransparency", "TextStrokeTransparency" };
+		ImageLabel     = { "BackgroundTransparency", "ImageTransparency" };
+		ImageButton    = { "BackgroundTransparency", "ImageTransparency" };
+		ScrollingFrame = { "BackgroundTransparency", "ScrollBarImageTransparency" };
+		CanvasGroup    = { "BackgroundTransparency", "GroupTransparency" };
+		UIStroke       = { "Transparency" };
+	};
+	local function CaptureOriginals()
+		local Map = {};
+		for _, Inst in Outer:GetDescendants() do
+			local Props = FadeProps[Inst.ClassName];
+			if Props then
+				local PMap = {};
+				for _, P in Props do
+					local Ok, V = pcall(function() return Inst[P] end);
+					if Ok then PMap[P] = V end;
+				end;
+				Map[Inst] = PMap;
+			end;
+		end;
+		local OuterProps = FadeProps[Outer.ClassName];
+		if OuterProps then
+			local PMap = {};
+			for _, P in OuterProps do
+				local Ok, V = pcall(function() return Outer[P] end);
+				if Ok then PMap[P] = V end;
+			end;
+			Map[Outer] = PMap;
+		end;
+		return Map;
+	end;
+	-- OPTIMIZED open/close: Outer stays a normal Frame (so the UI renders exactly as before).
+	-- The fade is driven by ONE coroutine that writes the transparencies directly, instead of
+	-- creating a TweenService tween for every descendant. With 100+ toggles the old code made
+	-- 1000+ tween OBJECTS every open/close (allocation + GC + scheduling) — that was the FPS
+	-- spike. The originals are captured once and cached, so no repeated GetDescendants scan.
+	local FADE_TIME = 0.2;
 	function Window:SetVisible(State)
 		State = State and true or false;
 		if self.Visible == State then return end;
 		self.Visible = State;
 		self._FadeToken = self._FadeToken + 1;
 		local Mine = self._FadeToken;
-		local Info = TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out);
-		if State then
-			Gui.Enabled = true;
-			Library:Tween(Outer, Info, { GroupTransparency = 0 }):Play();
-		else
-			Library:Tween(Outer, Info, { GroupTransparency = 1 }):Play();
-			task.delay(Info.Time, function()
-				if self._FadeToken == Mine and not self.Visible then
-					Gui.Enabled = false;
+		if not self._FadeOriginals then self._FadeOriginals = CaptureOriginals() end;
+		local Originals = self._FadeOriginals;
+		if State then Gui.Enabled = true end;
+		task.spawn(function()
+			local StartT = os.clock();
+			while true do
+				if self._FadeToken ~= Mine then return end;      -- superseded by a newer toggle
+				local A = (os.clock() - StartT) / FADE_TIME;
+				if A > 1 then A = 1 end;
+				local E = 1 - (1 - A) ^ 5;                        -- quint ease-out
+				local Factor = State and E or (1 - E);            -- 1 = fully shown, 0 = hidden
+				for Inst, PMap in Originals do
+					if Inst.Parent then
+						for P, V in PMap do
+							Inst[P] = 1 - (1 - V) * Factor;
+						end;
+					end;
 				end;
-			end);
-		end;
+				if A >= 1 then break end;
+				RunService.Heartbeat:Wait();
+			end;
+			if not State and self._FadeToken == Mine then Gui.Enabled = false end;
+		end);
 	end;
 	function Window:Toggle()
 		self:SetVisible(not self.Visible);
