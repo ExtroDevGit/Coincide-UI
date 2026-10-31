@@ -4678,6 +4678,8 @@ end;
 	return SecRef;
 end;
 
+print("rn10")
+
 function Library:Window(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Width     = tonumber(Opts.Width)     or 400;
@@ -7509,6 +7511,8 @@ function Library:GetESP()
 	return self._ESPModule;
 end;
 
+print("rn11")
+
 function Library:PreviewWindow(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 	local Title  = tostring(Opts.Title or "Preview");
@@ -8877,6 +8881,8 @@ local function EvictIfNeeded()
     end
 end
 
+print("rn12")
+
 local function BuildAvatar(Character)
     local prevArch = Character.Archivable
     Character.Archivable = true
@@ -9682,4 +9688,6 @@ end;
 Library:Log("Initialized Hydrogen UI Lib")
 
 --getgenv().Library = Library
+print("rn13")
+print("exit")
 return Library
