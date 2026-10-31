@@ -5222,7 +5222,8 @@ RegisterGradLerp(GradEntry)
 	-- The fade is driven by ONE coroutine that writes the transparencies directly, instead of
 	-- creating a TweenService tween for every descendant. With 100+ toggles the old code made
 	-- 1000+ tween OBJECTS every open/close (allocation + GC + scheduling) — that was the FPS
-	-- spike. The originals are captured once and cached, so no repeated GetDescendants scan.
+	-- spike. Originals are re-captured on each hide, so whatever you changed while the menu was
+	-- open (toggle states, the active tab) is preserved the next time it opens.
 	local FADE_TIME = 0.2;
 	function Window:SetVisible(State)
 		State = State and true or false;
@@ -5230,9 +5231,20 @@ RegisterGradLerp(GradEntry)
 		self.Visible = State;
 		self._FadeToken = self._FadeToken + 1;
 		local Mine = self._FadeToken;
-		if not self._FadeOriginals then self._FadeOriginals = CaptureOriginals() end;
+		-- If a hide interrupts a still-running fade-in, snap to the captured originals first so
+		-- the snapshot below doesn't record half-faded values.
+		if not State and self._FadeOriginals and os.clock() - (self._ShownAt or 0) < FADE_TIME then
+			for Inst, PMap in self._FadeOriginals do
+				if Inst.Parent then for P, V in PMap do Inst[P] = V end end;
+			end;
+		end;
+		-- Re-capture the real look on every hide (and the first time), so toggle states and the
+		-- active tab you changed while it was open are preserved when you reopen the menu.
+		if not State or not self._FadeOriginals then
+			self._FadeOriginals = CaptureOriginals();
+		end;
 		local Originals = self._FadeOriginals;
-		if State then Gui.Enabled = true end;
+		if State then self._ShownAt = os.clock(); Gui.Enabled = true end;
 		task.spawn(function()
 			local StartT = os.clock();
 			while true do
