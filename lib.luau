@@ -8539,7 +8539,7 @@ end;
 --   avatar        image for the picture (default: your Roblox headshot)
 --   progress      0..1, how full the bar under "time left" is (default 1)
 --   full_key      what "copy" puts on the clipboard (default: the key as shown)
---   spin_speed    degrees/sec of the light running around the border (default 120, 0 = still)
+--   comet_speed   px/sec of the two lines running around the border (default 300, 0 = still)
 --   dim           true (or a transparency 0..1) to darken the screen behind the panel
 --   skip_default  true to start with "skip this next time" ticked
 -- The accent colour follows Library.Accent (and updates live when the config changes it).
@@ -8583,7 +8583,7 @@ function Library:WelcomeUI(Opts)
 	end
 	local StreakText = JoinStreak();
 	local Progress  = math.clamp(tonumber(Opts.progress) or 1, 0, 1);
-	local SpinSpeed = tonumber(Opts.spin_speed) or 120;
+	local CometSpeed = tonumber(Opts.comet_speed) or 300;
 
 	getgenv().welcome_ui1 = false;
 
@@ -8592,21 +8592,23 @@ function Library:WelcomeUI(Opts)
 	local BLACK  = Color3.new(0, 0, 0);
 	local ACCENT = typeof(Library.Accent) == "Color3" and Library.Accent or Color3.fromHex("99BCFF");
 	local LINE   = Color3.fromHex("343434");                            -- 1px grey outlines
-	local RING   = Color3.fromHex("2C2C2C");                            -- border ring where the light isn't
+	local BAND   = Color3.fromHex("1C1C1C");                            -- 3px outer band the lines run in
 	local PANEL_T, PANEL_B = Color3.fromHex("1B1B1B"), Color3.fromHex("131313"); -- main background
 	local BOX_T, BOX_B = Color3.fromHex("252525"), Color3.fromHex("181818");     -- boxes
 	local SEP    = Color3.fromHex("242424");                            -- row separators
+	local BTN_T, BTN_B = Color3.fromHex("303030"), Color3.fromHex("1E1E1E"); -- continue
+	local HOV_T, HOV_B = Color3.fromHex("3A3A3A"), Color3.fromHex("262626"); -- continue (hover)
 	local DIM    = Color3.fromHex("7D7D7D");                            -- labels
 	local VAL    = Color3.fromHex("B4B4B4");                            -- values
 	local NAME   = Color3.fromHex("E4E4E4");                            -- username, button text
 
 	-- layout
 	local W      = 360;                     -- outer width
-	local BORDER = 3;                       -- black, light ring, black
+	local BORDER = 7;                       -- black, grey, 3px band, grey, black
 	local PAD    = 10;                      -- space inside the border
 	local GAP    = 6;                       -- space between rows
 	local INSET  = 9;                       -- text inset inside boxes and rows
-	local CW     = W - (BORDER + PAD) * 2;  -- 334, content width
+	local CW     = W - (BORDER + PAD) * 2;  -- 326, content width
 	local TSIZE  = 12;                      -- same text size as the rest of the lib
 
 	local TextFont = ProggyCleanFont or Font.fromEnum(Enum.Font.Code);
@@ -8673,14 +8675,11 @@ function Library:WelcomeUI(Opts)
 		New("Frame", { Name = "Dim"; Parent = Gui; Size = UDim2.fromScale(1, 1); BackgroundColor3 = BLACK; BackgroundTransparency = typeof(Opts.dim) == "number" and Opts.dim or 0.5; BorderSizePixel = 0; });
 	end
 
-	-- PANEL: black > light ring > black > background
-	-- The ring is one frame with a rotating UIGradient; its child covers everything but a 1px edge,
-	-- so only the edge shows the moving light. Roblox draws it, only the rotation changes per frame.
+	-- PANEL: black > grey > 3px band > grey > black > background
 	-- Placed on whole pixels (no 0.5 anchor) so the 1px lines never land between pixels.
 	local Outer    = New("Frame", { Name = "Outer"; Parent = Gui; Size = UDim2.fromOffset(W, 300); BackgroundColor3 = BLACK; BorderSizePixel = 0; Active = true; ZIndex = 2; });
-	local Ring     = Layer(Outer, WHITE, 1);
-	local RingGrad = New("UIGradient", { Parent = Ring; Rotation = 0; });
-	local Panel    = Layer(Layer(Ring, BLACK, 1), WHITE, 1);
+	local Band     = Layer(Layer(Outer, LINE, 1), BAND, 1);
+	local Panel    = Layer(Layer(Layer(Band, LINE, 3), BLACK, 1), WHITE, 1);
 	New("UIGradient", { Parent = Panel; Rotation = 90; Color = ColorSequence.new(PANEL_T, PANEL_B); });
 	local Content  = New("Frame", { Name = "Content"; Parent = Panel; Position = UDim2.fromOffset(PAD, PAD); Size = UDim2.new(1, -PAD * 2, 1, -PAD * 2); BackgroundTransparency = 1; BorderSizePixel = 0; });
 
@@ -8692,6 +8691,7 @@ function Library:WelcomeUI(Opts)
 	end
 
 	local Closed, Finished = false, false;
+	local PaintComets = function() end;   -- replaced once the border lines exist
 	local function Cleanup()
 		Closed = true;
 		for _, C in ipairs(Conns) do pcall(function() C:Disconnect(); end); end
@@ -8797,9 +8797,13 @@ function Library:WelcomeUI(Opts)
 	local ServerLbl   = Info("server", F.server);
 	local ExecutorLbl = Info("executor", F.executor);
 
-	-- CONTINUE: accent-filled button
-	local ContinueBtn, _, ContinueGrad, ContinueEdge = Box("TextButton", { Parent = Row(26); Size = UDim2.fromScale(1, 1); Text = ""; AutoButtonColor = false; Modal = true; });
-	Text("TextLabel", { Parent = ContinueBtn; Size = UDim2.fromScale(1, 1); Text = "continue"; TextColor3 = NAME; });
+	-- CONTINUE: grey button, lighter on hover
+	local ContinueBtn, _, ContinueGrad = Box("TextButton", { Parent = Row(26); Size = UDim2.fromScale(1, 1); Text = ""; AutoButtonColor = false; Modal = true; }, BTN_T, BTN_B);
+	local ContinueLbl = Text("TextLabel", { Parent = ContinueBtn; Size = UDim2.fromScale(1, 1); Text = "continue"; TextColor3 = VAL; });
+	Hover(ContinueBtn,
+		function() ContinueGrad.Color = ColorSequence.new(HOV_T, HOV_B); ContinueLbl.TextColor3 = NAME; end,
+		function() ContinueGrad.Color = ColorSequence.new(BTN_T, BTN_B); ContinueLbl.TextColor3 = VAL; end);
+	Bind(ContinueBtn.MouseButton1Click, Finish);
 
 	-- SKIP
 	local SkipRow = Row(14);
@@ -8811,27 +8815,14 @@ function Library:WelcomeUI(Opts)
 
 	-- everything that uses the accent, repainted on SetAccent / config load
 	local function Paint()
-		local Head = ACCENT:Lerp(WHITE, 0.55);
-		RingGrad.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0,    RING);
-			ColorSequenceKeypoint.new(0.55, RING);
-			ColorSequenceKeypoint.new(0.82, ACCENT);
-			ColorSequenceKeypoint.new(0.94, Head);
-			ColorSequenceKeypoint.new(1,    ACCENT);
-		});
 		Tag1.TextColor3 = ACCENT;
 		Tag1Edge.BackgroundColor3 = ACCENT:Lerp(BLACK, 0.45);
 		Divider.BackgroundColor3 = ACCENT;
 		if BarFill then BarFill.BackgroundColor3 = ACCENT; end
 		CopyLbl.TextColor3 = ACCENT;
-		local Lift = Hovered[ContinueBtn] and 0.15 or 0;
-		ContinueGrad.Color = ColorSequence.new(ACCENT:Lerp(BLACK, 0.3 - Lift), ACCENT:Lerp(BLACK, 0.6 - Lift));
-		ContinueEdge.BackgroundColor3 = ACCENT:Lerp(BLACK, 0.15 - Lift);
 		CheckGrad.Color = ColorSequence.new(ACCENT, ACCENT:Lerp(BLACK, 0.35));
 	end
 	Paint();
-	Hover(ContinueBtn, Paint, Paint);
-	Bind(ContinueBtn.MouseButton1Click, Finish);
 
 	local Checked = Opts.skip_default == true;
 	local function SetSkip(V)
@@ -8850,12 +8841,78 @@ function Library:WelcomeUI(Opts)
 			if Closed or typeof(C) ~= "Color3" then return end;
 			ACCENT = C;
 			pcall(Paint);
+			pcall(PaintComets);
 		end);
 	end
 
 	-- panel height follows the rows
 	local H = (Y - GAP) + (BORDER + PAD) * 2;
 	Outer.Size = UDim2.fromOffset(W, H);
+
+	-- BORDER LINES: two lines with a fading tail running clockwise through the middle of the
+	-- 3px band, half a lap apart. Each line is 63 solid 2px pieces (no gradients on 1px frames,
+	-- which Roblox sometimes draws wrong); each frame only moves the pieces. A 2px piece always
+	-- lands exactly on the path, corners included, because the path turns one pixel at a time.
+	local PW, PH = W - 7, H - 7;              -- path = centre line of the band
+	local Sides  = { PW, PH, PW, PH };        -- top, right, bottom, left
+	local Lap    = (PW + PH) * 2;
+	local PIECES = 63;                        -- 63 x 2px = 126px per line
+
+	local Comets = {};
+	for C = 1, 2 do
+		local Line = {};
+		for K = 1, PIECES do
+			Line[K] = { Frame = New("Frame", { Parent = Outer; BorderSizePixel = 0; ZIndex = 3; Size = UDim2.fromOffset(2, 1); Position = UDim2.fromOffset(-10, -10); }); Dir = 1; };
+		end
+		Comets[C] = Line;
+	end
+
+	-- piece 1 = end of the tail (faded, accent), piece 63 = head (solid, brighter)
+	PaintComets = function()
+		local Head = ACCENT:Lerp(WHITE, 0.5);
+		for _, Line in ipairs(Comets) do
+			for K, Piece in ipairs(Line) do
+				local T = (K - 0.5) / PIECES;
+				Piece.Frame.BackgroundColor3 = ACCENT:Lerp(Head, T);
+				Piece.Frame.BackgroundTransparency = 1 - T;
+			end
+		end
+	end
+	PaintComets();
+
+	local function SideOf(S)
+		local Side, Off = 1, S % Lap;
+		while Side < 4 and Off >= Sides[Side] do Off = Off - Sides[Side]; Side = Side + 1; end
+		return Side, Off;
+	end
+
+	local function DrawComet(Line, HeadPos)
+		local Tail = HeadPos - PIECES * 2 + 1;
+		for K, Piece in ipairs(Line) do
+			local Side, Off = SideOf(Tail + (K - 1) * 2);
+			local X, Yp;
+			if Side == 1 then     X, Yp = 3 + Off, 3;
+			elseif Side == 2 then X, Yp = W - 4, 3 + Off;
+			elseif Side == 3 then X, Yp = W - 5 - Off, H - 4;
+			else                  X, Yp = 3, H - 5 - Off; end
+			local Dir = (Side % 2 == 1) and 1 or 2;   -- 1 = horizontal piece, 2 = vertical piece
+			if Piece.Dir ~= Dir then
+				Piece.Dir = Dir;
+				Piece.Frame.Size = (Dir == 1) and UDim2.fromOffset(2, 1) or UDim2.fromOffset(1, 2);
+			end
+			Piece.Frame.Position = UDim2.fromOffset(X, Yp);
+		end
+	end
+
+	local CometOffset, LastHead = PW + math.floor(PH / 2), nil; -- first line starts halfway down the right edge
+	local function DrawComets()
+		local HeadPos = math.floor(CometOffset) % Lap;
+		if HeadPos == LastHead then return end;          -- nothing moved a whole pixel yet
+		LastHead = HeadPos;
+		DrawComet(Comets[1], HeadPos);
+		DrawComet(Comets[2], (HeadPos + math.floor(Lap / 2)) % Lap);
+	end
+	DrawComets();
 
 	-- DRAGGING: grab anywhere except the buttons; the panel glides to the mouse and stays on screen
 	local Target, Current = Vector2.new(0, 0), Vector2.new(0, 0);  -- offset from the centred spot
@@ -8902,8 +8959,7 @@ function Library:WelcomeUI(Opts)
 	end);
 	PlacePanel();
 
-	-- one loop for the drag glide and the border light
-	local Spin = 0;
+	-- one loop for the drag glide and the border lines
 	Bind(RunService.RenderStepped, function(Dt)
 		if Closed then return end;
 		if not Gui.Parent then Cleanup(); return end;
@@ -8918,9 +8974,9 @@ function Library:WelcomeUI(Opts)
 			PlacePanel();
 		end
 
-		if SpinSpeed ~= 0 then
-			Spin = (Spin + Dt * SpinSpeed) % 360;
-			RingGrad.Rotation = Spin;
+		if CometSpeed ~= 0 then
+			CometOffset = (CometOffset + Dt * CometSpeed) % Lap;
+			DrawComets();
 		end
 	end);
 
