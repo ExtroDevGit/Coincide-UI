@@ -8530,7 +8530,7 @@ end;
 -- = true, so the caller can:  getgenv().welcome_ui(); repeat task.wait() until getgenv().welcome_ui1
 -- All fields default to "n/a"; pass a table to override any of them, e.g.
 --   getgenv().welcome_ui({
---       username = "emirdel", badge1 = "buyer #27", badge2 = "lifetime",
+--       username = "emirdel", badge1 = "buyer", badge2 = "lifetime",
 --       time_left = "lifetime", progress = 1, executions = 167, time_used = "4h 0m",
 --       key = "**** **** **** 1bfa", discord = "@emirdelmc", streak = "1 day",
 --       online = "5 online now", server = "21/30 players", executor = "real",
@@ -9109,14 +9109,13 @@ function Library:LuaProtWelcomeData(Raw, Extra)
 
 	local O = {
 		username   = LPText(Raw.display) or Discord or (LP and (LP.DisplayName ~= "" and LP.DisplayName or LP.Name)) or "n/a";
-		badge1     = (Raw.premium == false and "free" or "buyer") .. (Serial and (" #" .. Serial) or "");
+		badge1     = (Raw.premium == false and "free" or "buyer");
 		badge2     = Note or (TimeLeft > 0 and "subscription" or "lifetime");
 		time_left  = TimeLeft > 0 and LPDuration(TimeLeft) or "lifetime";
 		progress   = Progress;
 		executions = tonumber(Raw.executions) or "n/a";
 		time_used  = Raw.usage ~= nil and LPDuration(Raw.usage) or "n/a";
 		discord    = Discord and ("@" .. Discord) or "n/a";
-		streak     = Streak and (Streak .. (Streak == 1 and " day" or " days")) or "n/a";
 		online     = Sessions and (Sessions .. " online now") or nil;
 		server     = #Players:GetPlayers() .. "/" .. Players.MaxPlayers .. " players";
 		executor   = Executor;
