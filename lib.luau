@@ -8539,7 +8539,7 @@ end;
 --   avatar        image for the picture (default: your Roblox headshot)
 --   progress      0..1, how full the bar under "time left" is (default 1)
 --   full_key      what "copy" puts on the clipboard (default: the key as shown)
---   comet_speed   px/sec of the two lines running around the border (default 300, 0 = still)
+--   spin_speed    degrees/sec of the light running around the border (default 120, 0 = still)
 --   dim           true (or a transparency 0..1) to darken the screen behind the panel
 --   skip_default  true to start with "skip this next time" ticked
 -- The accent colour follows Library.Accent (and updates live when the config changes it).
@@ -8575,34 +8575,38 @@ function Library:WelcomeUI(Opts)
 		server     = Opts.server     or "n/a";
 		executor   = Opts.executor   or "n/a";
 	};
-	local StreakText = tostring(F.streak);
-	if F.online then StreakText = StreakText .. "  •  " .. tostring(F.online); end
-	local Progress = math.clamp(tonumber(Opts.progress) or 1, 0, 1);
+	local function JoinStreak()
+		local S = tostring(F.streak);
+		if not F.online then return S; end
+		if S == "n/a" then return tostring(F.online); end
+		return S .. "  •  " .. tostring(F.online);
+	end
+	local StreakText = JoinStreak();
+	local Progress  = math.clamp(tonumber(Opts.progress) or 1, 0, 1);
+	local SpinSpeed = tonumber(Opts.spin_speed) or 120;
 
 	getgenv().welcome_ui1 = false;
 
 	-- palette (accent comes from the lib, so it matches the rest of the UI)
 	local WHITE  = Color3.new(1, 1, 1);
-	local ACCENT = typeof(Library.Accent) == "Color3" and Library.Accent or Color3.fromHex("99BCFF");
-	local HEAD   = ACCENT:Lerp(WHITE, 0.5);                              -- bright tip of the border lines
 	local BLACK  = Color3.new(0, 0, 0);
-	local LINE   = Color3.fromHex("363636");                            -- 1px grey outlines
-	local BAND   = Color3.fromHex("1C1C1C");                            -- 3px outer band
-	local PANEL  = Color3.fromHex("181818");                            -- main background
-	local BOX_T, BOX_B = Color3.fromHex("282828"), Color3.fromHex("171717"); -- boxes, badges, checkbox
-	local BTN_T, BTN_B = Color3.fromHex("303030"), Color3.fromHex("1E1E1E"); -- continue
-	local HOV_T, HOV_B = Color3.fromHex("3A3A3A"), Color3.fromHex("262626"); -- continue (hover)
-	local DIM    = Color3.fromHex("8B8B8B");                            -- labels
-	local VAL    = Color3.fromHex("A5A5A5");                            -- values
-	local BRIGHT = Color3.fromHex("D2D2D2");                            -- hovered text
+	local ACCENT = typeof(Library.Accent) == "Color3" and Library.Accent or Color3.fromHex("99BCFF");
+	local LINE   = Color3.fromHex("343434");                            -- 1px grey outlines
+	local RING   = Color3.fromHex("2C2C2C");                            -- border ring where the light isn't
+	local PANEL_T, PANEL_B = Color3.fromHex("1B1B1B"), Color3.fromHex("131313"); -- main background
+	local BOX_T, BOX_B = Color3.fromHex("252525"), Color3.fromHex("181818");     -- boxes
+	local SEP    = Color3.fromHex("242424");                            -- row separators
+	local DIM    = Color3.fromHex("7D7D7D");                            -- labels
+	local VAL    = Color3.fromHex("B4B4B4");                            -- values
+	local NAME   = Color3.fromHex("E4E4E4");                            -- username, button text
 
 	-- layout
-	local W      = 372;                     -- outer width
-	local BORDER = 7;                       -- black, grey, 3px band, grey, black
+	local W      = 360;                     -- outer width
+	local BORDER = 3;                       -- black, light ring, black
 	local PAD    = 10;                      -- space inside the border
-	local GAP    = 7;                       -- space between rows
+	local GAP    = 6;                       -- space between rows
 	local INSET  = 9;                       -- text inset inside boxes and rows
-	local CW     = W - (BORDER + PAD) * 2;  -- 338, content width
+	local CW     = W - (BORDER + PAD) * 2;  -- 334, content width
 	local TSIZE  = 12;                      -- same text size as the rest of the lib
 
 	local TextFont = ProggyCleanFont or Font.fromEnum(Enum.Font.Code);
@@ -8622,14 +8626,15 @@ function Library:WelcomeUI(Opts)
 		return New("Frame", { Parent = Parent; Position = UDim2.fromOffset(Inset, Inset); Size = UDim2.new(1, -Inset * 2, 1, -Inset * 2); BackgroundColor3 = Color; BorderSizePixel = 0; });
 	end
 
-	-- black 1px > grey 1px > top-to-bottom gradient: the style of every box
-	local function Box(Class, Props, Top, Bottom)
+	-- black 1px > outline 1px > top-to-bottom gradient
+	local function Box(Class, Props, Top, Bottom, Outline)
 		Props.BackgroundColor3 = BLACK;
 		Props.BorderSizePixel  = 0;
 		local Outer = New(Class, Props);
-		local Body  = Layer(Layer(Outer, LINE, 1), WHITE, 1);
+		local Edge  = Layer(Outer, Outline or LINE, 1);
+		local Body  = Layer(Edge, WHITE, 1);
 		local Grad  = New("UIGradient", { Parent = Body; Rotation = 90; Color = ColorSequence.new(Top or BOX_T, Bottom or BOX_B); });
-		return Outer, Body, Grad;
+		return Outer, Body, Grad, Edge;
 	end
 
 	-- every label: lib font, 1px black outline, centred vertically
@@ -8649,8 +8654,8 @@ function Library:WelcomeUI(Opts)
 	-- buttons register here so a click on them never starts a drag
 	local Hovered = {};
 	local function Hover(Btn, OnEnter, OnLeave)
-		Bind(Btn.MouseEnter, function() Hovered[Btn] = true;  if OnEnter then OnEnter() end; end);
-		Bind(Btn.MouseLeave, function() Hovered[Btn] = nil;   if OnLeave then OnLeave() end; end);
+		Bind(Btn.MouseEnter, function() Hovered[Btn] = true; if OnEnter then OnEnter() end; end);
+		Bind(Btn.MouseLeave, function() Hovered[Btn] = nil;  if OnLeave then OnLeave() end; end);
 	end
 
 	if Library._WelcomeUI and Library._WelcomeUI.Destroy then pcall(Library._WelcomeUI.Destroy); end
@@ -8668,12 +8673,16 @@ function Library:WelcomeUI(Opts)
 		New("Frame", { Name = "Dim"; Parent = Gui; Size = UDim2.fromScale(1, 1); BackgroundColor3 = BLACK; BackgroundTransparency = typeof(Opts.dim) == "number" and Opts.dim or 0.5; BorderSizePixel = 0; });
 	end
 
-	-- PANEL: black > grey > 3px band > grey > black > background
-	-- placed on whole pixels (no 0.5 anchor) so the 1px lines never land between pixels
-	local Outer   = New("Frame", { Name = "Outer"; Parent = Gui; Size = UDim2.fromOffset(W, 312); BackgroundColor3 = BLACK; BorderSizePixel = 0; Active = true; ZIndex = 2; });
-	local Band    = Layer(Layer(Outer, LINE, 1), BAND, 1);
-	local Panel   = Layer(Layer(Layer(Band, LINE, 3), BLACK, 1), PANEL, 1);
-	local Content = New("Frame", { Name = "Content"; Parent = Panel; Position = UDim2.fromOffset(PAD, PAD); Size = UDim2.new(1, -PAD * 2, 1, -PAD * 2); BackgroundTransparency = 1; BorderSizePixel = 0; });
+	-- PANEL: black > light ring > black > background
+	-- The ring is one frame with a rotating UIGradient; its child covers everything but a 1px edge,
+	-- so only the edge shows the moving light. Roblox draws it, only the rotation changes per frame.
+	-- Placed on whole pixels (no 0.5 anchor) so the 1px lines never land between pixels.
+	local Outer    = New("Frame", { Name = "Outer"; Parent = Gui; Size = UDim2.fromOffset(W, 300); BackgroundColor3 = BLACK; BorderSizePixel = 0; Active = true; ZIndex = 2; });
+	local Ring     = Layer(Outer, WHITE, 1);
+	local RingGrad = New("UIGradient", { Parent = Ring; Rotation = 0; });
+	local Panel    = Layer(Layer(Ring, BLACK, 1), WHITE, 1);
+	New("UIGradient", { Parent = Panel; Rotation = 90; Color = ColorSequence.new(PANEL_T, PANEL_B); });
+	local Content  = New("Frame", { Name = "Content"; Parent = Panel; Position = UDim2.fromOffset(PAD, PAD); Size = UDim2.new(1, -PAD * 2, 1, -PAD * 2); BackgroundTransparency = 1; BorderSizePixel = 0; });
 
 	local Y = 0;
 	local function Row(Height)
@@ -8696,106 +8705,133 @@ function Library:WelcomeUI(Opts)
 		Cleanup();
 	end
 
-	-- HEADER: avatar, greeting, name, badges
-	local Header = Row(54);
-	local AvBox  = New("Frame", { Parent = Header; Size = UDim2.fromOffset(54, 54); BackgroundColor3 = BLACK; BorderSizePixel = 0; });
+	-- HEADER: avatar, greeting, name, tags
+	local Header = Row(48);
+	local AvBox  = New("Frame", { Parent = Header; Size = UDim2.fromOffset(48, 48); BackgroundColor3 = BLACK; BorderSizePixel = 0; });
 	local Avatar = New("ImageLabel", { Parent = Layer(Layer(AvBox, LINE, 1), Color3.fromHex("101010"), 1); Size = UDim2.fromScale(1, 1); BackgroundTransparency = 1; Image = ""; ScaleType = Enum.ScaleType.Crop; });
 	if Opts.avatar and tostring(Opts.avatar) ~= "" then
 		Avatar.Image = tostring(Opts.avatar);
 	elseif LP then
 		-- shows right away without yielding; the async call below swaps in the cached url when it returns
-		Avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LP.UserId .. "&w=150&h=150";
+		local Placeholder = "rbxthumb://type=AvatarHeadShot&id=" .. LP.UserId .. "&w=150&h=150";
+		Avatar.Image = Placeholder;
 		task.spawn(function()
 			local Ok, Img = pcall(function() return Players:GetUserThumbnailAsync(LP.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150); end);
-			if Ok and Img and Img ~= "" and Avatar.Parent then Avatar.Image = Img; end
+			-- only if nothing else (e.g. a Discord avatar) was set in the meantime
+			if Ok and Img and Img ~= "" and Avatar.Parent and Avatar.Image == Placeholder then Avatar.Image = Img; end
 		end);
 	end
 
-	Text("TextLabel", { Parent = Header; Position = UDim2.fromOffset(66, 2);  Size = UDim2.new(1, -66, 0, 14); Text = tostring(F.greeting); TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
-	Text("TextLabel", { Parent = Header; Position = UDim2.fromOffset(66, 18); Size = UDim2.new(1, -66, 0, 14); Text = tostring(F.username); TextColor3 = VAL; TextXAlignment = Enum.TextXAlignment.Left; });
+	Text("TextLabel", { Parent = Header; Position = UDim2.fromOffset(58, 1);  Size = UDim2.new(1, -58, 0, 14); Text = tostring(F.greeting) .. ","; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
+	local UserLbl = Text("TextLabel", { Parent = Header; Position = UDim2.fromOffset(58, 15); Size = UDim2.new(1, -58, 0, 14); Text = tostring(F.username); TextColor3 = NAME; TextXAlignment = Enum.TextXAlignment.Left; });
 
-	local Badges = New("Frame", { Parent = Header; Position = UDim2.fromOffset(66, 35); Size = UDim2.new(1, -66, 0, 16); BackgroundTransparency = 1; BorderSizePixel = 0; });
-	New("UIListLayout", { Parent = Badges; FillDirection = Enum.FillDirection.Horizontal; SortOrder = Enum.SortOrder.LayoutOrder; Padding = UDim.new(0, 5); });
-	-- badge width = text width + 7px each side, measured from TextBounds (refits when the font loads)
-	local function Badge(Str, Color, Order)
-		local B = Box("Frame", { Parent = Badges; Size = UDim2.fromOffset(40, 16); LayoutOrder = Order; });
+	local Tags = New("Frame", { Parent = Header; Position = UDim2.fromOffset(58, 32); Size = UDim2.new(1, -58, 0, 15); BackgroundTransparency = 1; BorderSizePixel = 0; });
+	New("UIListLayout", { Parent = Tags; FillDirection = Enum.FillDirection.Horizontal; SortOrder = Enum.SortOrder.LayoutOrder; Padding = UDim.new(0, 4); });
+	-- tag: thin outline in its own colour, width = text width + 6px each side (refits when the font loads)
+	local function Tag(Str, Color, Order)
+		local B, _, _, Edge = Box("Frame", { Parent = Tags; Size = UDim2.fromOffset(40, 15); LayoutOrder = Order; }, Color3.fromHex("1E1E1E"), Color3.fromHex("161616"));
 		local T = Text("TextLabel", { Parent = B; Size = UDim2.fromScale(1, 1); Text = tostring(Str); TextColor3 = Color; });
-		local function Fit() B.Size = UDim2.fromOffset(math.ceil(T.TextBounds.X) + 14, 16); end
+		local function Fit() B.Size = UDim2.fromOffset(math.ceil(T.TextBounds.X) + 12, 15); end
 		Bind(T:GetPropertyChangedSignal("TextBounds"), Fit);
 		Fit();
-		return T;
+		return T, Edge;
 	end
-	local Badge1 = Badge(F.badge1, ACCENT, 1);
-	Badge(F.badge2, DIM, 2);
+	local Tag1, Tag1Edge = Tag(F.badge1, ACCENT, 1);
+	local Tag2 = Tag(F.badge2, VAL, 2);
 
-	-- STATS: three boxes, the first one has the time-left bar
-	local Stats = Row(48);
-	local Each  = math.floor((CW - 12) / 3);
-	local Spare = (CW - 12) - Each * 3;
-	local StatX = 0;
+	-- accent line that fades out to the right
+	local Divider = New("Frame", { Parent = Row(1); Size = UDim2.fromScale(1, 1); BackgroundColor3 = ACCENT; BorderSizePixel = 0; });
+	New("UIGradient", { Parent = Divider; Transparency = NumberSequence.new(0.15, 1); });
+
+	-- STATS: one box split in three cells, value on top and label under it
+	local StatBox = Box("Frame", { Parent = Row(44); Size = UDim2.fromScale(1, 1); });
+	local CellW   = math.floor((CW - 4) / 3);
 	local BarFill;
-	local function Stat(Index, Label, Value, WithBar)
-		local BW = Each + (((Index == 1 and Spare >= 1) or (Index == 3 and Spare >= 2)) and 1 or 0);
-		local B = Box("Frame", { Parent = Stats; Position = UDim2.fromOffset(StatX, 0); Size = UDim2.fromOffset(BW, 48); });
-		StatX = StatX + BW + 6;
-		Text("TextLabel", { Parent = B; Position = UDim2.fromOffset(INSET, 10); Size = UDim2.new(1, -INSET * 2, 0, 14); Text = Label; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
-		Text("TextLabel", { Parent = B; Position = UDim2.fromOffset(INSET, 24); Size = UDim2.new(1, -INSET * 2, 0, 14); Text = tostring(Value); TextColor3 = VAL; TextXAlignment = Enum.TextXAlignment.Left; });
+	local function Cell(Index, Value, Label, WithBar)
+		local X  = 2 + (Index - 1) * CellW;
+		local Wd = (Index == 3) and (CW - 4 - CellW * 2) or CellW;
+		if Index > 1 then
+			New("Frame", { Parent = StatBox; Position = UDim2.fromOffset(X, 8); Size = UDim2.new(0, 1, 1, -16); BackgroundColor3 = LINE; BorderSizePixel = 0; ZIndex = 2; });
+		end
+		local ValueLbl = Text("TextLabel", { Parent = StatBox; Position = UDim2.fromOffset(X + 8, 6);  Size = UDim2.fromOffset(Wd - 14, 14); Text = tostring(Value); TextColor3 = NAME; TextXAlignment = Enum.TextXAlignment.Left; });
+		Text("TextLabel", { Parent = StatBox; Position = UDim2.fromOffset(X + 8, 20); Size = UDim2.fromOffset(Wd - 14, 14); Text = Label; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
 		if WithBar then
-			local Track = New("Frame", { Parent = B; Position = UDim2.fromOffset(INSET, 38); Size = UDim2.new(1, -INSET * 2, 0, 4); BackgroundColor3 = BLACK; BorderSizePixel = 0; ZIndex = 2; });
+			local Track = New("Frame", { Parent = StatBox; Position = UDim2.fromOffset(X + 8, 35); Size = UDim2.fromOffset(Wd - 16, 4); BackgroundColor3 = BLACK; BorderSizePixel = 0; ZIndex = 2; });
 			BarFill = New("Frame", { Parent = Layer(Track, Color3.fromHex("101010"), 1); Size = UDim2.fromScale(Progress, 1); BackgroundColor3 = ACCENT; BorderSizePixel = 0; });
 		end
+		return ValueLbl;
 	end
-	Stat(1, "time left", F.time_left, true);
-	Stat(2, "executions", F.executions, false);
-	Stat(3, "time used", F.time_used, false);
+	local TimeLeftLbl   = Cell(1, F.time_left, "time left", true);
+	local ExecutionsLbl = Cell(2, F.executions, "executions", false);
+	local TimeUsedLbl   = Cell(3, F.time_used, "time used", false);
 
-	-- KEY
-	local KeyBox = Box("Frame", { Parent = Row(22); Size = UDim2.fromScale(1, 1); });
+	-- KEY: value on the right, small "copy" button inside the box
+	local KeyBox = Box("Frame", { Parent = Row(24); Size = UDim2.fromScale(1, 1); });
 	Text("TextLabel", { Parent = KeyBox; Position = UDim2.fromOffset(INSET, 0); Size = UDim2.new(0, 40, 1, 0); Text = "key"; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
-	local KeyLbl  = Text("TextLabel", { Parent = KeyBox; AnchorPoint = Vector2.new(1, 0); Position = UDim2.new(1, -54, 0, 0); Size = UDim2.new(1, -110, 1, 0); Text = tostring(F.key); TextColor3 = VAL; TextXAlignment = Enum.TextXAlignment.Right; });
-	local CopyBtn = Text("TextButton", { Parent = KeyBox; AnchorPoint = Vector2.new(1, 0); Position = UDim2.new(1, -INSET, 0, 0); Size = UDim2.new(0, 40, 1, 0); Text = "copy"; TextColor3 = ACCENT; TextXAlignment = Enum.TextXAlignment.Right; });
-	-- keep a fixed gap between the key and "copy" whatever the font's width is
-	local function FitKey()
-		if CopyBtn.Text == "copy" and CopyBtn.TextBounds.X > 0 then
-			KeyLbl.Position = UDim2.new(1, -(INSET + math.ceil(CopyBtn.TextBounds.X) + 17), 0, 0);
-		end
-	end
-	Bind(CopyBtn:GetPropertyChangedSignal("TextBounds"), FitKey);
-	FitKey();
-	Hover(CopyBtn, function() CopyBtn.TextColor3 = HEAD; end, function() CopyBtn.TextColor3 = ACCENT; end);
+	local KeyLbl = Text("TextLabel", { Parent = KeyBox; AnchorPoint = Vector2.new(1, 0); Position = UDim2.new(1, -54, 0, 0); Size = UDim2.new(1, -104, 1, 0); Text = tostring(F.key); TextColor3 = VAL; TextXAlignment = Enum.TextXAlignment.Right; });
+	local CopyBtn, _, CopyGrad = Box("TextButton", { Parent = KeyBox; AnchorPoint = Vector2.new(1, 0.5); Position = UDim2.new(1, -4, 0.5, 0); Size = UDim2.fromOffset(44, 16); Text = ""; AutoButtonColor = false; ZIndex = 2; }, Color3.fromHex("2C2C2C"), Color3.fromHex("1C1C1C"));
+	local CopyLbl = Text("TextLabel", { Parent = CopyBtn; Size = UDim2.fromScale(1, 1); Text = "copy"; TextColor3 = ACCENT; });
+	Hover(CopyBtn,
+		function() CopyGrad.Color = ColorSequence.new(Color3.fromHex("383838"), Color3.fromHex("242424")); end,
+		function() CopyGrad.Color = ColorSequence.new(Color3.fromHex("2C2C2C"), Color3.fromHex("1C1C1C")); end);
 	Bind(CopyBtn.MouseButton1Click, function()
 		local Clip = setclipboard or toclipboard;
 		if Clip then pcall(Clip, tostring(Opts.full_key or F.key)); end
-		CopyBtn.Text = "copied";
-		task.delay(1, function() if CopyBtn.Parent then CopyBtn.Text = "copy"; end; end);
+		CopyLbl.Text = "copied";
+		task.delay(1, function() if CopyLbl.Parent then CopyLbl.Text = "copy"; end; end);
 	end);
 
-	-- INFO ROWS
+	-- INFO ROWS with thin separators between them
+	local InfoCount = 0;
 	local function Info(Label, Value)
-		local R = Row(14);
+		local R = Row(16);
+		InfoCount = InfoCount + 1;
+		if InfoCount > 1 then
+			New("Frame", { Parent = R; Position = UDim2.fromOffset(INSET - 2, -4); Size = UDim2.new(1, -(INSET - 2) * 2, 0, 1); BackgroundColor3 = SEP; BorderSizePixel = 0; });
+		end
 		Text("TextLabel", { Parent = R; Position = UDim2.fromOffset(INSET, 0); Size = UDim2.new(0.4, 0, 1, 0); Text = Label; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
-		Text("TextLabel", { Parent = R; AnchorPoint = Vector2.new(1, 0); Position = UDim2.new(1, -INSET, 0, 0); Size = UDim2.new(0.6, -INSET, 1, 0); Text = tostring(Value); TextColor3 = VAL; TextXAlignment = Enum.TextXAlignment.Right; });
+		return Text("TextLabel", { Parent = R; AnchorPoint = Vector2.new(1, 0); Position = UDim2.new(1, -INSET, 0, 0); Size = UDim2.new(0.6, -INSET, 1, 0); Text = tostring(Value); TextColor3 = VAL; TextXAlignment = Enum.TextXAlignment.Right; });
 	end
-	Info("discord", F.discord);
-	Info("streak", StreakText);
-	Info("server", F.server);
-	Info("executor", F.executor);
+	local DiscordLbl  = Info("discord", F.discord);
+	local StreakLbl   = Info("streak", StreakText);
+	local ServerLbl   = Info("server", F.server);
+	local ExecutorLbl = Info("executor", F.executor);
 
-	-- CONTINUE
-	local ContinueBtn, _, ContinueGrad = Box("TextButton", { Parent = Row(28); Size = UDim2.fromScale(1, 1); Text = ""; AutoButtonColor = false; Modal = true; }, BTN_T, BTN_B);
-	local ContinueLbl = Text("TextLabel", { Parent = ContinueBtn; Size = UDim2.fromScale(1, 1); Text = "continue"; TextColor3 = VAL; });
-	Hover(ContinueBtn,
-		function() ContinueGrad.Color = ColorSequence.new(HOV_T, HOV_B); ContinueLbl.TextColor3 = BRIGHT; end,
-		function() ContinueGrad.Color = ColorSequence.new(BTN_T, BTN_B); ContinueLbl.TextColor3 = VAL; end);
-	Bind(ContinueBtn.MouseButton1Click, Finish);
+	-- CONTINUE: accent-filled button
+	local ContinueBtn, _, ContinueGrad, ContinueEdge = Box("TextButton", { Parent = Row(26); Size = UDim2.fromScale(1, 1); Text = ""; AutoButtonColor = false; Modal = true; });
+	Text("TextLabel", { Parent = ContinueBtn; Size = UDim2.fromScale(1, 1); Text = "continue"; TextColor3 = NAME; });
 
 	-- SKIP
 	local SkipRow = Row(14);
 	New("UIListLayout", { Parent = SkipRow; FillDirection = Enum.FillDirection.Horizontal; HorizontalAlignment = Enum.HorizontalAlignment.Center; VerticalAlignment = Enum.VerticalAlignment.Center; SortOrder = Enum.SortOrder.LayoutOrder; Padding = UDim.new(0, 6); });
 	local CheckBtn, CheckBody = Box("TextButton", { Parent = SkipRow; Size = UDim2.fromOffset(11, 11); Text = ""; AutoButtonColor = false; LayoutOrder = 1; });
 	local CheckFill = New("Frame", { Parent = CheckBody; Size = UDim2.fromScale(1, 1); BackgroundColor3 = WHITE; BorderSizePixel = 0; Visible = false; });
-	local CheckGrad = New("UIGradient", { Parent = CheckFill; Rotation = 90; Color = ColorSequence.new(ACCENT, ACCENT:Lerp(BLACK, 0.35)); });
+	local CheckGrad = New("UIGradient", { Parent = CheckFill; Rotation = 90; });
 	local SkipLbl = Text("TextButton", { Parent = SkipRow; AutomaticSize = Enum.AutomaticSize.X; Size = UDim2.fromOffset(0, 14); Text = "skip this next time"; TextColor3 = DIM; LayoutOrder = 2; });
+
+	-- everything that uses the accent, repainted on SetAccent / config load
+	local function Paint()
+		local Head = ACCENT:Lerp(WHITE, 0.55);
+		RingGrad.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0,    RING);
+			ColorSequenceKeypoint.new(0.55, RING);
+			ColorSequenceKeypoint.new(0.82, ACCENT);
+			ColorSequenceKeypoint.new(0.94, Head);
+			ColorSequenceKeypoint.new(1,    ACCENT);
+		});
+		Tag1.TextColor3 = ACCENT;
+		Tag1Edge.BackgroundColor3 = ACCENT:Lerp(BLACK, 0.45);
+		Divider.BackgroundColor3 = ACCENT;
+		if BarFill then BarFill.BackgroundColor3 = ACCENT; end
+		CopyLbl.TextColor3 = ACCENT;
+		local Lift = Hovered[ContinueBtn] and 0.15 or 0;
+		ContinueGrad.Color = ColorSequence.new(ACCENT:Lerp(BLACK, 0.3 - Lift), ACCENT:Lerp(BLACK, 0.6 - Lift));
+		ContinueEdge.BackgroundColor3 = ACCENT:Lerp(BLACK, 0.15 - Lift);
+		CheckGrad.Color = ColorSequence.new(ACCENT, ACCENT:Lerp(BLACK, 0.35));
+	end
+	Paint();
+	Hover(ContinueBtn, Paint, Paint);
+	Bind(ContinueBtn.MouseButton1Click, Finish);
 
 	local Checked = Opts.skip_default == true;
 	local function SetSkip(V)
@@ -8809,7 +8845,15 @@ function Library:WelcomeUI(Opts)
 	Bind(CheckBtn.MouseButton1Click, function() SetSkip(not Checked); end);
 	Bind(SkipLbl.MouseButton1Click, function() SetSkip(not Checked); end);
 
-	-- panel height follows the rows (312 with the rows above)
+	if Library.OnAccent then
+		Library:OnAccent(function(C)
+			if Closed or typeof(C) ~= "Color3" then return end;
+			ACCENT = C;
+			pcall(Paint);
+		end);
+	end
+
+	-- panel height follows the rows
 	local H = (Y - GAP) + (BORDER + PAD) * 2;
 	Outer.Size = UDim2.fromOffset(W, H);
 
@@ -8827,7 +8871,7 @@ function Library:WelcomeUI(Opts)
 
 	local function PlacePanel()
 		local Screen = Gui.AbsoluteSize;
-		local X = math.floor((Screen.X - W) / 2) + math.floor(Current.X + 0.5);
+		local X  = math.floor((Screen.X - W) / 2) + math.floor(Current.X + 0.5);
 		local Yp = math.floor((Screen.Y - H) / 2) + math.floor(Current.Y + 0.5);
 		if X ~= LastX or Yp ~= LastY then
 			LastX, LastY = X, Yp;
@@ -8858,73 +8902,8 @@ function Library:WelcomeUI(Opts)
 	end);
 	PlacePanel();
 
-	-- BORDER LINES: two 1px lines with a fading tail running clockwise through the middle
-	-- of the 3px band, half a lap apart
-	local PW, PH = W - 7, H - 7;              -- path = centre line of the band
-	local Sides  = { PW, PH, PW, PH };        -- top, right, bottom, left
-	local Lap    = (PW + PH) * 2;
-	local Length = 126;
-	local Speed  = tonumber(Opts.comet_speed) or 300;
-
-	local function Segment()
-		local Fr = New("Frame", { Parent = Outer; BackgroundColor3 = WHITE; BorderSizePixel = 0; ZIndex = 3; Visible = false; });
-		return { Frame = Fr; Grad = New("UIGradient", { Parent = Fr; }); };
-	end
-	local Comets = { { Segment(), Segment(), Segment() }, { Segment(), Segment(), Segment() } };
-
-	local function Place(Seg, Side, P0, P1, T0, T1)
-		local Fr, N = Seg.Frame, P1 - P0 + 1;
-		if Side == 1 then     Fr.Position = UDim2.fromOffset(3 + P0, 3);         Fr.Size = UDim2.fromOffset(N, 1); Seg.Grad.Rotation = 0;
-		elseif Side == 2 then Fr.Position = UDim2.fromOffset(W - 4, 3 + P0);     Fr.Size = UDim2.fromOffset(1, N); Seg.Grad.Rotation = 90;
-		elseif Side == 3 then Fr.Position = UDim2.fromOffset(W - 4 - P1, H - 4); Fr.Size = UDim2.fromOffset(N, 1); Seg.Grad.Rotation = 180;
-		else                  Fr.Position = UDim2.fromOffset(3, H - 4 - P1);     Fr.Size = UDim2.fromOffset(1, N); Seg.Grad.Rotation = 270; end
-		Seg.Grad.Color        = ColorSequence.new(ACCENT:Lerp(HEAD, T0), ACCENT:Lerp(HEAD, T1));
-		Seg.Grad.Transparency = NumberSequence.new(math.clamp(1 - T0, 0, 1), math.clamp(1 - T1, 0, 1));
-		if not Fr.Visible then Fr.Visible = true; end
-	end
-
-	local function DrawComet(Segs, HeadPos)
-		local Pos, Left, Used = HeadPos - Length + 1, Length, 0;
-		while Left > 0 and Used < #Segs do
-			local Side, Off = 1, Pos % Lap;
-			while Side < 4 and Off >= Sides[Side] do Off = Off - Sides[Side]; Side = Side + 1; end
-			local Take = math.max(1, math.min(Left, Sides[Side] - Off));
-			local Done = Length - Left;
-			Used = Used + 1;
-			Place(Segs[Used], Side, Off, Off + Take - 1, Done / (Length - 1), (Done + Take - 1) / (Length - 1));
-			Pos, Left = Pos + Take, Left - Take;
-		end
-		for I = Used + 1, #Segs do
-			if Segs[I].Frame.Visible then Segs[I].Frame.Visible = false; end
-		end
-	end
-
-	local Offset, LastHead = PW + math.floor(PH / 2), nil; -- first line starts halfway down the right edge
-	local function DrawComets(Force)
-		local HeadPos = math.floor(Offset) % Lap;
-		if HeadPos == LastHead and not Force then return end;  -- nothing moved a whole pixel yet
-		LastHead = HeadPos;
-		DrawComet(Comets[1], HeadPos);
-		DrawComet(Comets[2], (HeadPos + math.floor(Lap / 2)) % Lap);
-	end
-
-	-- live accent: follows Library:SetAccent / config loads
-	if Library.OnAccent then
-		Library:OnAccent(function(C)
-			if Closed or typeof(C) ~= "Color3" then return end;
-			ACCENT, HEAD = C, C:Lerp(WHITE, 0.5);
-			pcall(function()
-				Badge1.TextColor3 = C;
-				CopyBtn.TextColor3 = Hovered[CopyBtn] and HEAD or C;
-				if BarFill then BarFill.BackgroundColor3 = C; end
-				CheckGrad.Color = ColorSequence.new(C, C:Lerp(BLACK, 0.35));
-				DrawComets(true);
-			end);
-		end);
-	end
-
-	-- one loop for the drag glide and the border lines
-	DrawComets(true);
+	-- one loop for the drag glide and the border light
+	local Spin = 0;
 	Bind(RunService.RenderStepped, function(Dt)
 		if Closed then return end;
 		if not Gui.Parent then Cleanup(); return end;
@@ -8939,18 +8918,197 @@ function Library:WelcomeUI(Opts)
 			PlacePanel();
 		end
 
-		if Speed ~= 0 then
-			Offset = (Offset + Dt * Speed) % Lap;
-			DrawComets(false);
+		if SpinSpeed ~= 0 then
+			Spin = (Spin + Dt * SpinSpeed) % 360;
+			RingGrad.Rotation = Spin;
 		end
 	end);
 
-	local Obj = { Gui = Gui; Outer = Outer; Finish = Finish; Destroy = Cleanup; };
+	-- Update({ executions = 168, online = "6 online now", ... }) changes any shown field while open
+	local function Update(New)
+		if Closed or typeof(New) ~= "table" then return end;
+		for K, V in pairs(New) do
+			if K == "executions" then F[K] = tostring(V) else F[K] = V end;
+		end
+		if New.progress ~= nil then Progress = math.clamp(tonumber(New.progress) or 1, 0, 1); end
+		local Streak = JoinStreak();
+		pcall(function()
+			UserLbl.Text       = tostring(F.username);
+			Tag1.Text          = tostring(F.badge1);
+			Tag2.Text          = tostring(F.badge2);
+			TimeLeftLbl.Text   = tostring(F.time_left);
+			ExecutionsLbl.Text = tostring(F.executions);
+			TimeUsedLbl.Text   = tostring(F.time_used);
+			KeyLbl.Text        = tostring(F.key);
+			DiscordLbl.Text    = tostring(F.discord);
+			StreakLbl.Text     = Streak;
+			ServerLbl.Text     = tostring(F.server);
+			ExecutorLbl.Text   = tostring(F.executor);
+			if BarFill then BarFill.Size = UDim2.fromScale(Progress, 1); end
+			if New.avatar and tostring(New.avatar) ~= "" then Avatar.Image = tostring(New.avatar); end
+			if New.full_key ~= nil then Opts.full_key = New.full_key; end
+		end);
+	end
+
+	local Obj = { Gui = Gui; Outer = Outer; Finish = Finish; Destroy = Cleanup; Update = Update; };
 	Library._WelcomeUI = Obj;
 	return Obj;
 end
 
 getgenv().welcome_ui = function(Opts) return Library:WelcomeUI(Opts); end
+
+-- ─── WELCOME UI WITH REAL LUAPROT DATA ─────────────────────────────────────────
+-- LuaProt's LP_* runtime variables only exist inside your obfuscated script (not in this lib,
+-- which is loaded separately), so your script hands the lib a small reader function. The lib
+-- calls it again every second while the panel is open, so the counters stay live.
+-- Put this in your obfuscated script:
+--   getgenv().welcome_ui_luaprot(function()
+--       return {
+--           discord = LP_DISCORD; display = LP_DISCORD_DISPLAY_NAME; pfp = LP_DISCORD_PFP;
+--           premium = LP_PREMIUM; serial = LP_SERIAL; note = LP_KEYNOTE;
+--           timeleft = LP_TIMELEFT; created = LP_CREATED_AT; executions = LP_EXECUTIONS;
+--           usage = LP_USAGE; streak = LP_STREAK; sessions = LP_SESSION_COUNT;
+--       };
+--   end, { key = script_key });
+--   repeat task.wait() until getgenv().welcome_ui1
+-- The second table takes any normal welcome_ui option and overrides what LuaProt gives.
+-- LuaProt doesn't expose the raw key inside the script, so pass key = <your key variable>
+-- yourself if your loader has it (it is shown masked, "copy" copies the full key).
+-- If "skip this next time" was ticked, no panel is shown and welcome_ui1 is set right away
+-- (pass ignore_skip = true in the second table to always show it).
+
+local function LPText(V) -- nil / "" / "unknown" all mean "not available"
+	if V == nil then return nil end;
+	V = tostring(V);
+	if V == "" or V == "unknown" or V == "nil" or V == "0" then return nil end;
+	return V;
+end
+
+local function LPDuration(S)
+	S = math.max(0, math.floor(tonumber(S) or 0));
+	local D, H, M = math.floor(S / 86400), math.floor((S % 86400) / 3600), math.floor((S % 3600) / 60);
+	if D > 0 then return D .. "d " .. H .. "h"; end
+	if H > 0 then return H .. "h " .. M .. "m"; end
+	if M > 0 then return M .. "m"; end
+	return S .. "s";
+end
+
+local function LPMask(K)
+	K = tostring(K or "");
+	if K == "" then return "n/a"; end
+	if #K <= 4 then return K; end
+	return "**** **** **** " .. K:sub(-4);
+end
+
+-- turns the raw LP_* values into welcome_ui fields
+function Library:LuaProtWelcomeData(Raw, Extra)
+	Raw = typeof(Raw) == "table" and Raw or {};
+	local Players = game:GetService("Players");
+	local LP = Players.LocalPlayer;
+
+	local TimeLeft = tonumber(Raw.timeleft) or 0;          -- seconds, 0 = lifetime
+	local Created  = tonumber(Raw.created);                -- unix seconds
+	local Discord  = LPText(Raw.discord);
+	local Serial   = LPText(Raw.serial);
+	local Note     = LPText(Raw.note);
+	local Streak   = tonumber(Raw.streak);
+	local Sessions = tonumber(Raw.sessions);
+	if Note and #Note > 16 then Note = Note:sub(1, 14) .. ".."; end
+
+	-- bar = share of the key's lifetime that is left (full for lifetime keys)
+	local Progress = 1;
+	if TimeLeft > 0 then
+		Progress = 0;
+		if Created then
+			local Total = (os.time() - Created) + TimeLeft;
+			if Total > 0 then Progress = TimeLeft / Total; end
+		end
+	end
+
+	local Executor = "n/a";
+	if identifyexecutor then
+		local Ok, Name = pcall(identifyexecutor);
+		if Ok and Name then Executor = tostring(Name); end
+	end
+
+	local O = {
+		username   = LPText(Raw.display) or Discord or (LP and (LP.DisplayName ~= "" and LP.DisplayName or LP.Name)) or "n/a";
+		badge1     = (Raw.premium == false and "free" or "buyer") .. (Serial and (" #" .. Serial) or "");
+		badge2     = Note or (TimeLeft > 0 and "subscription" or "lifetime");
+		time_left  = TimeLeft > 0 and LPDuration(TimeLeft) or "lifetime";
+		progress   = Progress;
+		executions = tonumber(Raw.executions) or "n/a";
+		time_used  = Raw.usage ~= nil and LPDuration(Raw.usage) or "n/a";
+		discord    = Discord and ("@" .. Discord) or "n/a";
+		streak     = Streak and (Streak .. (Streak == 1 and " day" or " days")) or "n/a";
+		online     = Sessions and (Sessions .. " online now") or nil;
+		server     = #Players:GetPlayers() .. "/" .. Players.MaxPlayers .. " players";
+		executor   = Executor;
+	};
+	if typeof(Extra) == "table" then
+		for K, V in pairs(Extra) do O[K] = V; end
+		if Extra.key ~= nil and Extra.full_key == nil then
+			O.full_key = tostring(Extra.key);
+			O.key = LPMask(Extra.key);
+		end
+	end
+	return O;
+end
+
+-- downloads the Discord avatar and returns it as a usable image through Done(asset)
+local function LPAvatar(Url, Done)
+	Url = LPText(Url);
+	if not Url or not writefile or not getcustomasset then return; end
+	task.spawn(function()
+		local Path = "Hydrogen/discord-pfp.png";
+		local Ok = pcall(function()
+			local Clean = Url:gsub("%.webp", ".png"):gsub("%.gif", ".png");
+			writefile(Path, game:HttpGet(Clean));
+		end);
+		if not Ok then return; end
+		local Ok2, Asset = pcall(getcustomasset, Path);
+		if Ok2 and Asset then Done(Asset); end
+	end);
+end
+
+function Library:WelcomeUILuaProt(Read, Extra)
+	Extra = typeof(Extra) == "table" and Extra or {};
+
+	if not Extra.ignore_skip then
+		local Skip = false;
+		pcall(function()
+			Skip = isfile and isfile("Hydrogen/Configs/skip_welcome.txt") and readfile("Hydrogen/Configs/skip_welcome.txt") == "1";
+		end);
+		if Skip then
+			getgenv().welcome_ui1 = true;
+			return nil;
+		end
+	end
+
+	local LastRaw = {};
+	local function Gather()
+		local Ok, Raw = pcall(Read);
+		if Ok and typeof(Raw) == "table" then LastRaw = Raw; end
+		return self:LuaProtWelcomeData(LastRaw, Extra);
+	end
+
+	local Obj = self:WelcomeUI(Gather());
+	if not Extra.avatar then
+		LPAvatar(LastRaw.pfp, function(Asset) Obj.Update({ avatar = Asset }); end);
+	end
+
+	-- live: LuaProt refreshes its counters every 15-30s, time left/server change every second
+	task.spawn(function()
+		while Obj.Gui and Obj.Gui.Parent do
+			task.wait(1);
+			if not (Obj.Gui and Obj.Gui.Parent) then break; end
+			pcall(function() Obj.Update(Gather()); end);
+		end
+	end);
+	return Obj;
+end
+
+getgenv().welcome_ui_luaprot = function(Read, Extra) return Library:WelcomeUILuaProt(Read, Extra); end
 
 function Library:TargetUI(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
