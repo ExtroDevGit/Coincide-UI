@@ -8541,9 +8541,10 @@ end;
 --   full_key      what "copy" puts on the clipboard (default: the key as shown)
 --   comet_speed   px/sec of the two lines running around the border (default 300, 0 = still)
 --   dim           true (or a transparency 0..1) to darken the screen behind the panel
---   skip_default  true to start with "skip this next time" ticked
+--   greeting      fixed greeting text (default: follows the clock, re-checked every second)
 -- The accent colour follows Library.Accent (and updates live when the config changes it).
--- The panel can be dragged anywhere except on its buttons.
+-- The panel can be dragged anywhere except on its buttons, and the mouse is forced visible
+-- and free while it is open (restored when it closes).
 function Library:WelcomeUI(Opts)
 	Opts = typeof(Opts) == "table" and Opts or {};
 
@@ -8552,12 +8553,18 @@ function Library:WelcomeUI(Opts)
 	local UIS        = game:GetService("UserInputService");
 	local LP = Players.LocalPlayer;
 
+	-- greeting from the player's own clock: 5-12 morning, 12-17 afternoon, 17-22 evening, else night
 	local function Greeting()
-		local h = tonumber(os.date("%H")) or 12;
-		if h < 5 then return "good night";
-		elseif h < 12 then return "good morning";
-		elseif h < 18 then return "good afternoon";
-		else return "good evening"; end
+		local Hour;
+		pcall(function() Hour = DateTime.now():ToLocalTime().Hour; end);
+		if type(Hour) ~= "number" then
+			local Ok, T = pcall(os.date, "*t");
+			Hour = (Ok and type(T) == "table" and T.hour) or 12;
+		end
+		if Hour >= 5 and Hour < 12 then return "good morning";
+		elseif Hour >= 12 and Hour < 17 then return "good afternoon";
+		elseif Hour >= 17 and Hour < 22 then return "good evening";
+		else return "good night"; end
 	end
 
 	local F = {
@@ -8692,7 +8699,13 @@ function Library:WelcomeUI(Opts)
 
 	local Closed, Finished = false, false;
 	local PaintComets = function() end;   -- replaced once the border lines exist
+	local MouseBind = "WelcomeUIMouse" .. tostring(math.random(1, 1e9));
+	local PrevMouseIcon, PrevMouseBehavior = UIS.MouseIconEnabled, UIS.MouseBehavior;
 	local function Cleanup()
+		if not Closed then
+			pcall(function() RunService:UnbindFromRenderStep(MouseBind); end);
+			pcall(function() UIS.MouseIconEnabled = PrevMouseIcon; UIS.MouseBehavior = PrevMouseBehavior; end);
+		end
 		Closed = true;
 		for _, C in ipairs(Conns) do pcall(function() C:Disconnect(); end); end
 		Conns = {};
@@ -8722,7 +8735,7 @@ function Library:WelcomeUI(Opts)
 		end);
 	end
 
-	Text("TextLabel", { Parent = Header; Position = UDim2.fromOffset(58, 1);  Size = UDim2.new(1, -58, 0, 14); Text = tostring(F.greeting) .. ","; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
+	local GreetLbl = Text("TextLabel", { Parent = Header; Position = UDim2.fromOffset(58, 1);  Size = UDim2.new(1, -58, 0, 14); Text = tostring(F.greeting) .. ","; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
 	local UserLbl = Text("TextLabel", { Parent = Header; Position = UDim2.fromOffset(58, 15); Size = UDim2.new(1, -58, 0, 14); Text = tostring(F.username); TextColor3 = NAME; TextXAlignment = Enum.TextXAlignment.Left; });
 
 	local Tags = New("Frame", { Parent = Header; Position = UDim2.fromOffset(58, 32); Size = UDim2.new(1, -58, 0, 15); BackgroundTransparency = 1; BorderSizePixel = 0; });
@@ -8805,14 +8818,6 @@ function Library:WelcomeUI(Opts)
 		function() ContinueGrad.Color = ColorSequence.new(BTN_T, BTN_B); ContinueLbl.TextColor3 = VAL; end);
 	Bind(ContinueBtn.MouseButton1Click, Finish);
 
-	-- SKIP
-	local SkipRow = Row(14);
-	New("UIListLayout", { Parent = SkipRow; FillDirection = Enum.FillDirection.Horizontal; HorizontalAlignment = Enum.HorizontalAlignment.Center; VerticalAlignment = Enum.VerticalAlignment.Center; SortOrder = Enum.SortOrder.LayoutOrder; Padding = UDim.new(0, 6); });
-	local CheckBtn, CheckBody = Box("TextButton", { Parent = SkipRow; Size = UDim2.fromOffset(11, 11); Text = ""; AutoButtonColor = false; LayoutOrder = 1; });
-	local CheckFill = New("Frame", { Parent = CheckBody; Size = UDim2.fromScale(1, 1); BackgroundColor3 = WHITE; BorderSizePixel = 0; Visible = false; });
-	local CheckGrad = New("UIGradient", { Parent = CheckFill; Rotation = 90; });
-	local SkipLbl = Text("TextButton", { Parent = SkipRow; AutomaticSize = Enum.AutomaticSize.X; Size = UDim2.fromOffset(0, 14); Text = "skip this next time"; TextColor3 = DIM; LayoutOrder = 2; });
-
 	-- everything that uses the accent, repainted on SetAccent / config load
 	local function Paint()
 		Tag1.TextColor3 = ACCENT;
@@ -8820,21 +8825,8 @@ function Library:WelcomeUI(Opts)
 		Divider.BackgroundColor3 = ACCENT;
 		if BarFill then BarFill.BackgroundColor3 = ACCENT; end
 		CopyLbl.TextColor3 = ACCENT;
-		CheckGrad.Color = ColorSequence.new(ACCENT, ACCENT:Lerp(BLACK, 0.35));
 	end
 	Paint();
-
-	local Checked = Opts.skip_default == true;
-	local function SetSkip(V)
-		Checked = V; CheckFill.Visible = V;
-		getgenv().welcome_ui_skip = V;
-		pcall(function() if writefile then writefile("Hydrogen/Configs/skip_welcome.txt", V and "1" or "0"); end; end);
-	end
-	SetSkip(Checked);
-	Hover(CheckBtn);
-	Hover(SkipLbl, function() SkipLbl.TextColor3 = VAL; end, function() SkipLbl.TextColor3 = DIM; end);
-	Bind(CheckBtn.MouseButton1Click, function() SetSkip(not Checked); end);
-	Bind(SkipLbl.MouseButton1Click, function() SetSkip(not Checked); end);
 
 	if Library.OnAccent then
 		Library:OnAccent(function(C)
@@ -8959,7 +8951,8 @@ function Library:WelcomeUI(Opts)
 	end);
 	PlacePanel();
 
-	-- one loop for the drag glide and the border lines
+	-- one loop for the drag glide, the border lines and the clock greeting
+	local ClockTimer = 0;
 	Bind(RunService.RenderStepped, function(Dt)
 		if Closed then return end;
 		if not Gui.Parent then Cleanup(); return end;
@@ -8978,7 +8971,28 @@ function Library:WelcomeUI(Opts)
 			CometOffset = (CometOffset + Dt * CometSpeed) % Lap;
 			DrawComets();
 		end
+
+		ClockTimer = ClockTimer + Dt;
+		if ClockTimer >= 1 then
+			ClockTimer = 0;
+			if not Opts.greeting then
+				local Now = Greeting();
+				if Now ~= F.greeting then F.greeting = Now; GreetLbl.Text = Now .. ","; end
+			end
+		end
 	end);
+
+	-- MOUSE: forced visible and free every frame while the panel is open. Bound at the very end
+	-- of the render step so it runs after the game's camera/mouse-lock scripts.
+	RunService:BindToRenderStep(MouseBind, (Enum.RenderPriority.Last.Value or 2000) + 1, function()
+		if Closed then return end;
+		if not UIS.MouseIconEnabled then UIS.MouseIconEnabled = true; end
+		if UIS.MouseBehavior ~= Enum.MouseBehavior.Default then UIS.MouseBehavior = Enum.MouseBehavior.Default; end
+	end);
+	-- Library:Unload() disconnects everything in Library.Connections, so give it a way to unbind this too
+	local MouseUnbinder = { Disconnect = function() pcall(function() RunService:UnbindFromRenderStep(MouseBind); end); end; };
+	table.insert(Conns, MouseUnbinder);
+	if typeof(Library.Connections) == "table" then table.insert(Library.Connections, MouseUnbinder); end
 
 	-- Update({ executions = 168, online = "6 online now", ... }) changes any shown field while open
 	local function Update(New)
@@ -8989,6 +9003,7 @@ function Library:WelcomeUI(Opts)
 		if New.progress ~= nil then Progress = math.clamp(tonumber(New.progress) or 1, 0, 1); end
 		local Streak = JoinStreak();
 		pcall(function()
+			GreetLbl.Text      = tostring(F.greeting) .. ",";
 			UserLbl.Text       = tostring(F.username);
 			Tag1.Text          = tostring(F.badge1);
 			Tag2.Text          = tostring(F.badge2);
@@ -9025,13 +9040,18 @@ getgenv().welcome_ui = function(Opts) return Library:WelcomeUI(Opts); end
 --           timeleft = LP_TIMELEFT; created = LP_CREATED_AT; executions = LP_EXECUTIONS;
 --           usage = LP_USAGE; streak = LP_STREAK; sessions = LP_SESSION_COUNT;
 --       };
---   end, { key = script_key });
+--   end);
 --   repeat task.wait() until getgenv().welcome_ui1
--- The second table takes any normal welcome_ui option and overrides what LuaProt gives.
--- LuaProt doesn't expose the raw key inside the script, so pass key = <your key variable>
--- yourself if your loader has it (it is shown masked, "copy" copies the full key).
--- If "skip this next time" was ticked, no panel is shown and welcome_ui1 is set right away
--- (pass ignore_skip = true in the second table to always show it).
+-- The second (optional) table takes any normal welcome_ui option and overrides what LuaProt gives.
+--
+-- THE KEY: LuaProt has no runtime variable or macro that returns the buyer's key (checked against
+-- the v3 runtime variables, macros, Luraph macros and dev stub docs). So the lib looks for it in:
+--   1. key = ... in the second table
+--   2. globals loaders use: script_key / SCRIPT_KEY / Key / key / luaprot_key (getgenv() and _G)
+--   3. Hydrogen/Configs/key.txt, saved the last time a key was found
+-- If you use LuaProt's Key System GUI, save the key from its callback so it is found next time:
+--   keySystem.validCallback = function(key) getgenv().welcome_ui_save_key(key) end
+-- The key is shown masked; "copy" copies the full key.
 
 local function LPText(V) -- nil / "" / "unknown" all mean "not available"
 	if V == nil then return nil end;
@@ -9103,12 +9123,52 @@ function Library:LuaProtWelcomeData(Raw, Extra)
 	};
 	if typeof(Extra) == "table" then
 		for K, V in pairs(Extra) do O[K] = V; end
-		if Extra.key ~= nil and Extra.full_key == nil then
+		if Extra.key ~= nil and Extra.key ~= "n/a" and Extra.full_key == nil then
 			O.full_key = tostring(Extra.key);
 			O.key = LPMask(Extra.key);
 		end
 	end
 	return O;
+end
+
+-- finds the buyer's key (see THE KEY above) and remembers it for next time
+local KEY_FILE = "Hydrogen/Configs/key.txt";
+local function LPValidKey(V)
+	return type(V) == "string" and #V >= 6 and #V <= 128 and not V:find("%s");
+end
+local function LPSaveKey(K)
+	if not LPValidKey(K) then return; end
+	pcall(function()
+		if isfolder and makefolder and not isfolder("Hydrogen/Configs") then makefolder("Hydrogen/Configs"); end
+		if writefile then writefile(KEY_FILE, K); end
+	end);
+end
+local function LPFindKey(Given)
+	if LPValidKey(Given) then LPSaveKey(Given); return Given; end
+	local Envs = {};
+	if getgenv then table.insert(Envs, getgenv()); end
+	table.insert(Envs, _G);
+	for _, Name in ipairs({ "script_key", "SCRIPT_KEY", "Key", "key", "luaprot_key" }) do
+		for _, Env in ipairs(Envs) do
+			local V = rawget(Env, Name);
+			if LPValidKey(V) then LPSaveKey(V); return V; end
+		end
+	end
+	local Saved;
+	pcall(function() if isfile and isfile(KEY_FILE) then Saved = readfile(KEY_FILE); end end);
+	if type(Saved) == "string" then Saved = Saved:gsub("%s+", ""); end
+	if LPValidKey(Saved) then return Saved; end
+	return nil;
+end
+getgenv().welcome_ui_save_key = function(K)
+	if not LPValidKey(K) then return false; end
+	LPSaveKey(K);
+	getgenv().script_key = getgenv().script_key or K;
+	if Library._WelcomeLPExtra then Library._WelcomeLPExtra.key = K; Library._WelcomeLPExtra.full_key = nil; end
+	if Library._WelcomeUI and Library._WelcomeUI.Update then
+		Library._WelcomeUI.Update({ key = LPMask(K), full_key = K });
+	end
+	return true;
 end
 
 -- downloads the Discord avatar and returns it as a usable image through Done(asset)
@@ -9128,18 +9188,14 @@ local function LPAvatar(Url, Done)
 end
 
 function Library:WelcomeUILuaProt(Read, Extra)
-	Extra = typeof(Extra) == "table" and Extra or {};
-
-	if not Extra.ignore_skip then
-		local Skip = false;
-		pcall(function()
-			Skip = isfile and isfile("Hydrogen/Configs/skip_welcome.txt") and readfile("Hydrogen/Configs/skip_welcome.txt") == "1";
-		end);
-		if Skip then
-			getgenv().welcome_ui1 = true;
-			return nil;
-		end
+	local Given = typeof(Extra) == "table" and Extra or {};
+	Extra = {};
+	for K, V in pairs(Given) do Extra[K] = V; end
+	if Extra.full_key == nil then
+		Extra.key = LPFindKey(Extra.key) or "n/a";   -- found once; masked by LuaProtWelcomeData
+		if Extra.key == "n/a" then Extra.full_key = ""; end
 	end
+	Library._WelcomeLPExtra = Extra;   -- welcome_ui_save_key updates this so the refresh keeps the key
 
 	local LastRaw = {};
 	local function Gather()
