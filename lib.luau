@@ -24,23 +24,32 @@ local NewNumberSequenceKeypoint = NumberSequenceKeypoint.new;
 local LOGO_PATH = "Hydrogen/logo2.png"
 local LOGO_URL  = "https://raw.githubusercontent.com/ExtroDevGit/Coincide-UI/main/logo2.png"
 
-local LogoFetching = false
+-- Roblox can't play GIFs, so the spinning logo is a sprite sheet: 75 frames of 64x64, 10 per row, 25 fps
+local SPIN_PATH  = "Hydrogen/hydrogen-logo-spin-sheet.png"
+local SPIN_URL   = "https://raw.githubusercontent.com/ExtroDevGit/Coincide-UI/main/g%C3%B6rsel_2026-11-07_203513844.png"
+local SPIN_SHEET = { Frames = 75; Columns = 10; Cell = 64; Fps = 25; };
+
+local Fetching = {}
+local function Download(Path, Url, Name)
+    if isfile(Path) or Fetching[Path] then return end
+    Fetching[Path] = true
+
+    task.spawn(function()
+        local ok, data = pcall(function()
+            return game:HttpGet(Url)
+        end)
+        if ok and type(data) == "string" and #data > 0 then
+            pcall(writefile, Path, data)
+            print("downloaded " .. Name)
+        end
+        Fetching[Path] = nil
+    end)
+end
+
 local function int()
     if not isfolder("Hydrogen") then makefolder("Hydrogen") end
-    if isfile(LOGO_PATH) then return end
-    if LogoFetching then return end
-    LogoFetching = true
-
-    task.spawn(function()          
-        local ok, data = pcall(function()
-            return game:HttpGet(LOGO_URL)
-        end)
-        if ok and data and #data > 0 then
-            pcall(writefile, LOGO_PATH, data)
-            print("downloaded logo")
-        end
-        LogoFetching = false
-    end)
+    Download(LOGO_PATH, LOGO_URL, "logo")
+    Download(SPIN_PATH, SPIN_URL, "spinning logo")
 end
 
 int();
@@ -5571,16 +5580,43 @@ function Library:Watermark(Opts)
 		PaddingRight = UDim.new(0, 10);
 	});
 
-local Logo = self:CreateInstance("ImageLabel", {
-	Name = "Logo";
-	Parent = Inside;
-	Size = UDim2.fromOffset(24, 24);
-	AnchorPoint = Vector2.new(0, 0.3);
-	Position = UDim2.new(0, -7, 0.32, 0);
-	BackgroundTransparency = 1;
-});
+	local Logo = self:CreateInstance("ImageLabel", {
+		Name = "Logo";
+		Parent = Inside;
+		Size = UDim2.fromOffset(24, 24);
+		AnchorPoint = Vector2.new(0, 0.3);
+		Position = UDim2.new(0, -7, 0.32, 0);
+		BackgroundTransparency = 1;
+	});
 
-	Logo.Image = getcustomasset("Hydrogen/logo2.png");
+	-- the normal logo shows until the spin sheet is on disk, then the sheet plays one frame at a time
+	pcall(function() Logo.Image = getcustomasset(LOGO_PATH); end);
+	local SpinStep;
+	task.spawn(function()
+		local Waited = 0;
+		while not isfile(SPIN_PATH) and Waited < 15 do
+			Waited = Waited + task.wait(0.25);
+		end
+		if not Logo.Parent or not isfile(SPIN_PATH) then return end;
+
+		local Ok, Asset = pcall(getcustomasset, SPIN_PATH);
+		if not Ok or not Asset then return end;
+
+		local Cell = SPIN_SHEET.Cell;
+		Logo.Image = Asset;
+		Logo.ImageRectSize = Vector2.new(Cell, Cell);
+		Logo.ImageRectOffset = Vector2.new(0, 0);
+
+		local Clock, Shown = 0, 0;
+		SpinStep = Library:FrameStep(function(Dt)
+			if not Logo.Parent or not Gui.Enabled then return end;
+			Clock = (Clock + Dt * SPIN_SHEET.Fps) % SPIN_SHEET.Frames;
+			local Frame = math.floor(Clock);
+			if Frame == Shown then return end;
+			Shown = Frame;
+			Logo.ImageRectOffset = Vector2.new((Frame % SPIN_SHEET.Columns) * Cell, math.floor(Frame / SPIN_SHEET.Columns) * Cell);
+		end);
+	end);
 
 	local Lbl = self:CreateInstance("TextLabel", {
 		Name                   = "Label";
@@ -5605,6 +5641,11 @@ local Logo = self:CreateInstance("ImageLabel", {
 		Lbl.Text = tostring(NewText);
 	end;
 	function Obj:Destroy()
+		if SpinStep then
+			local Index = table.find(Library._FrameSteppers, SpinStep);
+			if Index then table.remove(Library._FrameSteppers, Index); end;
+			SpinStep = nil;
+		end
 		Gui:Destroy();
 	end;
 
