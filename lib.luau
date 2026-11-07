@@ -41,7 +41,7 @@ local Library = {
 	CurrentlyOpen = nil;
 	AnimationSpeed = 1;
 	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.4c";
+    Version = "0.3c";
 };
 
 local function Download(Path, Url, Name)
@@ -5584,9 +5584,9 @@ function Library:Watermark(Opts)
 	local Logo = self:CreateInstance("ImageLabel", {
 		Name = "Logo";
 		Parent = Inside;
-		Size = UDim2.fromOffset(12, 12);
-		AnchorPoint = Vector2.new(0, 0.3);
-		Position = UDim2.new(0, -7, 0.32, 0);
+		Size = UDim2.fromOffset(10, 10);
+		AnchorPoint = Vector2.new(0, 0.5);
+		Position = UDim2.new(0, -1, 0.5, 0);
 		BackgroundTransparency = 1;
 	});
 
