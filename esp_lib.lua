@@ -112,6 +112,7 @@ local ESPConfig = {
 	Enabled = false,
 	Keybind = { Enabled = false, Key = Enum.KeyCode.B },
 	Players = true, LocalPlayer = false,
+	FadeOnDeath = false, FadeOnDeathTime = 0.6,   -- fade a player's ESP out when they die instead of removing it at once
 	LimitFPS = 42,
 	DynamicBoxes = false, DynamicBoxesCheap = false, DynamicBoxesIncludeAll = false,
 	VisibilityCheckRate = 0.3,
@@ -502,6 +503,8 @@ local function GetInstanceFromPath(path)
 	end
 	return current ~= game and current or nil
 end
+
+local FinishESPFade   -- defined with the fade helpers below
 
 -- ─── CreateLine ──────────────────────────────────────────────────────────────
 local function CreateLine(parent)
@@ -1518,10 +1521,43 @@ local ScanDirectories = LPHNoVirtualize(function()
 	for inst, data in pairs(TrackedInstances) do
 		if not newTracked[inst] or not inst.Parent then
 			if data.ChildConnections then for _,conn in ipairs(data.ChildConnections) do conn:Disconnect() end end
-			data.espObj:Destroy(); TrackedInstances[inst]=nil
+			FinishESPFade(data); data.espObj:Destroy(); TrackedInstances[inst]=nil
 		end
 	end
 end)
+
+-- ─── Fade on death ───────────────────────────────────────────────────────────
+-- While fading, the ESP object's frames are moved into a full-screen CanvasGroup so the
+-- whole box/name/health bar fades together through GroupTransparency. Only dying players
+-- get a CanvasGroup, and only for the fade, so normal rendering costs nothing extra.
+local function StartESPFade(data, now)
+	data.FadeStart = now
+	local group = Instance.new("CanvasGroup")
+	group.Name = "ESPFade"
+	group.BackgroundTransparency = 1
+	group.BorderSizePixel = 0
+	group.Size = UDim2.fromScale(1, 1)
+	group.ZIndex = data.espObj.Container.ZIndex
+	group.Parent = ScreenGui
+	data.FadeGroup = group
+	local e = data.espObj
+	data.FadeMoved = {}
+	for _, ui in ipairs({ e.Container, e.ArrowInner, e.ArrowOutline, e.ArrowName, e.ArrowDist }) do
+		if ui and ui.Parent then
+			table.insert(data.FadeMoved, ui)
+			ui.Parent = group
+		end
+	end
+end
+
+FinishESPFade = function(data)
+	if not data or not data.FadeGroup then return end
+	for _, ui in ipairs(data.FadeMoved or {}) do
+		if ui.Parent == data.FadeGroup then ui.Parent = ScreenGui end
+	end
+	data.FadeGroup:Destroy()
+	data.FadeGroup, data.FadeMoved, data.FadeStart = nil, nil, nil
+end
 
 -- ─── Runtime loop ────────────────────────────────────────────────────────────
 local lastScan      = 0
@@ -1565,13 +1601,24 @@ local function RuntimeStep()
 
 	for inst, data in pairs(TrackedInstances) do
 		if not inst or not inst.Parent then
-			data.espObj:Destroy(); TrackedInstances[inst]=nil; continue
+			FinishESPFade(data); data.espObj:Destroy(); TrackedInstances[inst]=nil; continue
 		end
 
 		-- Resolve humanoid once here, pass it down — no double FindFirstChild
 		local humanoid = not data.NonHuman and inst:FindFirstChild("Humanoid") or nil
 		if humanoid and humanoid.Health<=0 then
-			data.espObj:Destroy(); TrackedInstances[inst]=nil; continue
+			if not ESPConfig.FadeOnDeath then
+				FinishESPFade(data); data.espObj:Destroy(); TrackedInstances[inst]=nil; continue
+			end
+			local fadeTime = math.max(ESPConfig.FadeOnDeathTime or 0.6, 0.05)
+			if not data.FadeStart then StartESPFade(data, now) end
+			local alpha = (now - data.FadeStart) / fadeTime
+			if alpha >= 1 then
+				FinishESPFade(data); data.espObj:Destroy(); TrackedInstances[inst]=nil; continue
+			end
+			data.FadeGroup.GroupTransparency = alpha
+		elseif data.FadeStart then
+			FinishESPFade(data)   -- revived / respawned on the same model: back to normal
 		end
 
 		local rootPart = inst:IsA("Model")
@@ -1600,6 +1647,7 @@ end
 function ESP:Unload()
 	for inst, data in pairs(TrackedInstances) do
 		if data.ChildConnections then for _,conn in ipairs(data.ChildConnections) do conn:Disconnect() end end
+		FinishESPFade(data)
 		if data.espObj then data.espObj:Destroy() end
 		TrackedInstances[inst]=nil
 	end
@@ -1625,7 +1673,7 @@ function ESP:Load(config)
 	PlayerRemovingConnection=Players.PlayerRemoving:Connect(function(player)
 		for inst, data in pairs(TrackedInstances) do
 			if Players:GetPlayerFromCharacter(inst)==player then
-				data.espObj:Destroy(); TrackedInstances[inst]=nil
+				FinishESPFade(data); data.espObj:Destroy(); TrackedInstances[inst]=nil
 			end
 		end
 	end)
