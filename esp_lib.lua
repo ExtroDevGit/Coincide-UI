@@ -112,7 +112,7 @@ local ESPConfig = {
 	Enabled = false,
 	Keybind = { Enabled = false, Key = Enum.KeyCode.B },
 	Players = true, LocalPlayer = false,
-	FadeOnDeath = true, FadeOnDeathTime = 0.6,   -- fade a player's ESP out when they die instead of removing it at once
+	FadeOnDeath = false, FadeOnDeathTime = 0.6,   -- fade a player's ESP out when they die instead of removing it at once
 	LimitFPS = 42,
 	DynamicBoxes = false, DynamicBoxesCheap = false, DynamicBoxesIncludeAll = false,
 	VisibilityCheckRate = 0.3,
@@ -1266,7 +1266,15 @@ local UpdateESPObj = LPHNoVirtualize(function(
 
 	-- Flags
 	for _, label in ipairs(espObj.FlagLabels) do label.Visible=false end
-	if GetCfg("Flags.Enabled") and instance:IsA("Model") and not noStatus and humanoid then
+	-- extra tags from the host script (Visible / Wallbangable / Aiming at you); shown even with Flags off
+	local extraFlags=nil
+	local extraFn=getgenv().HydrogenESP_ExtraFlags
+	if extraFn and instance:IsA("Model") and not nonHuman then
+		local okE, res=pcall(extraFn, instance)
+		if okE and type(res)=="table" and #res>0 then extraFlags=res end
+	end
+	local flagsOn=GetCfg("Flags.Enabled")
+	if (flagsOn or extraFlags) and instance:IsA("Model") and not noStatus and humanoid then
 		local state=humanoid:GetState()
 		local isMoving=humanoid.MoveDirection.Magnitude>0
 		local isJumping=(state==Enum.HumanoidStateType.Jumping or state==Enum.HumanoidStateType.FallingDown or state==Enum.HumanoidStateType.Freefall)
@@ -1280,11 +1288,16 @@ local UpdateESPObj = LPHNoVirtualize(function(
 		local flagSideGap=GetCfg("Flags.SideGap"); local flagPosition=GetCfg("Flags.Position")
 		-- reuse a local flags table each call (small, so ok)
 		local flags={}
-		if isMoving and isJumping and fOptMoving and fOptJumping then table.insert(flags,{text="Moving & Jumping",color=fColMoving})
-		elseif isJumping and fOptJumping then table.insert(flags,{text="Jumping",color=fColJumping})
-		elseif isMoving and fOptMoving   then table.insert(flags,{text="Moving", color=fColMoving})
-		elseif isSwimming and fOptSwimming then table.insert(flags,{text="Swimming",color=fColSwimming})
-		elseif fOptIdle then table.insert(flags,{text="Idle",color=fColIdle}) end
+		if flagsOn then
+			if isMoving and isJumping and fOptMoving and fOptJumping then table.insert(flags,{text="Moving & Jumping",color=fColMoving})
+			elseif isJumping and fOptJumping then table.insert(flags,{text="Jumping",color=fColJumping})
+			elseif isMoving and fOptMoving   then table.insert(flags,{text="Moving", color=fColMoving})
+			elseif isSwimming and fOptSwimming then table.insert(flags,{text="Swimming",color=fColSwimming})
+			elseif fOptIdle then table.insert(flags,{text="Idle",color=fColIdle}) end
+		end
+		if extraFlags then
+			for _, f in ipairs(extraFlags) do table.insert(flags, f) end
+		end
 
 		local isRight=flagPosition=="Right"
 		local fx=isRight and (x+sx+flagSideGap+rightOffset) or (x-100-flagSideGap-leftOffset)
