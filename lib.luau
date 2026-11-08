@@ -30,20 +30,6 @@ local SPIN_URL   = "https://raw.githubusercontent.com/ExtroDevGit/Coincide-UI/ma
 local SPIN_SHEET = { Frames = 75; Columns = 10; Cell = 64; Fps = 25; };
 
 local Fetching = {}
-
-local Library = {
-	Flags = {};
-	Toggles = {};
-	Options = {};
-	Connections = {};
-	Directory = "Hydrogen";
-	Folders = { "/Fonts", "/Configs", "/Logs" };
-	CurrentlyOpen = nil;
-	AnimationSpeed = 1;
-	LogFile = "Hydrogen/Logs/Session.log";
-    Version = "0.3c";
-};
-
 local function Download(Path, Url, Name)
     if isfile(Path) or Fetching[Path] then return end
     Fetching[Path] = true
@@ -69,41 +55,6 @@ end
 int();
 
 
-function Library:RegisterFont(Name, Url, Weight, Style)
-	local Folder = self.Directory .. "/Fonts";
-	local TtfPath = Folder .. "/" .. Name .. ".ttf";
-	local DescPath = Folder .. "/" .. Name .. ".font";
-
-	if not isfile(TtfPath) then
-		writefile(TtfPath, game:HttpGet(Url));
-	end;
-	if isfile(DescPath) then
-		delfile(DescPath);
-	end;
-
-	writefile(DescPath, HttpService:JSONEncode({
-		name = Name;
-		faces = {
-			{ name = "Regular", weight = Weight or 400, style = Style or "normal", assetId = getcustomasset(TtfPath) };
-		};
-	}));
-
-	print("Registered font " .. Name);
-	return getcustomasset(DescPath);
-end;
-
-local ProggyCleanFont;
-do
-	local Asset = Library:RegisterFont("ProggyClean", "https://github.com/networph-private874612748471/curly-octo-memory/raw/refs/heads/main/fs-tahoma-8px.ttf", 400, "normal");
-	if Asset then
-		ProggyCleanFont = Font.new(Asset, Enum.FontWeight.Regular, Enum.FontStyle.Normal);
-	else
-		print("font no work lmfao");
-	end;
-end;
-
-getgenv().proggyfont = ProggyCleanFont
-
 function FakePointer()
 	local A = math.random(0, 0xFFFFFF);
 	local B = math.random(0, 0xFFFFFF);
@@ -115,6 +66,19 @@ function FakePointer()
 		end;
 	});
 end;
+
+local Library = {
+	Flags = {};
+	Toggles = {};
+	Options = {};
+	Connections = {};
+	Directory = "Hydrogen";
+	Folders = { "/Fonts", "/Configs", "/Logs" };
+	CurrentlyOpen = nil;
+	AnimationSpeed = 1;
+	LogFile = "Hydrogen/Logs/Session.log";
+    Version = "0.4c";
+};
 
 Library._GradLerps = {}
 
@@ -701,6 +665,29 @@ function Library:Debounce(Delay, Fn)
 	end;
 end;
 
+function Library:RegisterFont(Name, Url, Weight, Style)
+	local Folder = self.Directory .. "/Fonts";
+	local TtfPath = Folder .. "/" .. Name .. ".ttf";
+	local DescPath = Folder .. "/" .. Name .. ".font";
+
+	if not isfile(TtfPath) then
+		writefile(TtfPath, game:HttpGet(Url));
+	end;
+	if isfile(DescPath) then
+		delfile(DescPath);
+	end;
+
+	writefile(DescPath, HttpService:JSONEncode({
+		name = Name;
+		faces = {
+			{ name = "Regular", weight = Weight or 400, style = Style or "normal", assetId = getcustomasset(TtfPath) };
+		};
+	}));
+
+	self:Log("Registered font " .. Name);
+	return getcustomasset(DescPath);
+end;
+
 function Library:Draggable(TargetFrame, DragHandle)
 	local Handle = DragHandle or TargetFrame;
 	local Dragging = false;
@@ -830,6 +817,18 @@ function Library:AddGlowingV2(frame,color,transparency)
 end
 
 print("rn8")
+
+local ProggyCleanFont;
+do
+	local Asset = Library:RegisterFont("ProggyClean", "https://github.com/networph-private874612748471/curly-octo-memory/raw/refs/heads/main/fs-tahoma-8px.ttf", 400, "normal");
+	if Asset then
+		ProggyCleanFont = Font.new(Asset, Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+	else
+		print("font no work lmfao");
+	end;
+end;
+
+getgenv().proggyfont = ProggyCleanFont
 
 print("rn9")
 
@@ -5584,6 +5583,8 @@ function Library:Watermark(Opts)
 	local Logo = self:CreateInstance("ImageLabel", {
 		Name = "Logo";
 		Parent = Inside;
+		-- 10px box: the H comes out about as tall as the text's capitals, centred in the bar,
+		-- with the same gap to the bar's left edge as to the text
 		Size = UDim2.fromOffset(10, 10);
 		AnchorPoint = Vector2.new(0, 0.5);
 		Position = UDim2.new(0, -1, 0.5, 0);
@@ -5623,7 +5624,7 @@ function Library:Watermark(Opts)
 		Name                   = "Label";
 		Parent                 = Inside;
 		AnchorPoint            = Vector2.new(0, 0.5);
-		Position               = UDim2.new(0, 22, 0.5, 0);
+		Position               = UDim2.new(0, 16, 0.5, 0);
 		Size                   = UDim2.new(0, 0, 1, 0);
 		AutomaticSize          = Enum.AutomaticSize.X;
 		BackgroundTransparency = 1;
@@ -6738,6 +6739,7 @@ function Library:SettingsWindow(Opts)
 			Callback = function(S) if Library._KeybindList then Library._KeybindList.Gui.Enabled = S end end;
 		});
 
+		Library.WatermarkExtras = Library.WatermarkExtras or {};
 		do
 			local LP = game:GetService("Players").LocalPlayer;
 			local Fps, FpsAcc, FpsCnt = 60, 0, 0;
@@ -6773,6 +6775,11 @@ function Library:SettingsWindow(Opts)
 				if Opts["User ID"] and LP  then table.insert(Parts, tostring(LP.UserId)) end;
 				if Opts["LocalPlayer Name"] and LP then table.insert(Parts, LP.Name) end;
 				if Opts.Date               then table.insert(Parts, os.date("%H:%M:%S")) end;
+				-- extra parts scripts add with table.insert(Library.WatermarkExtras, function() return "text" end)
+				for _, Extra in ipairs(Library.WatermarkExtras) do
+					local Ok, Txt = pcall(Extra);
+					if Ok and type(Txt) == "string" and Txt ~= "" then table.insert(Parts, Txt) end;
+				end;
 				if #Parts > 0 then
 					local Body   = table.concat(Parts, " | ");
 					local Prefix = Library.Flags.MenuPrefix or "";
