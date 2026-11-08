@@ -112,7 +112,7 @@ local ESPConfig = {
 	Enabled = false,
 	Keybind = { Enabled = false, Key = Enum.KeyCode.B },
 	Players = true, LocalPlayer = false,
-	FadeOnDeath = false, FadeOnDeathTime = 0.6,   -- fade a player's ESP out when they die instead of removing it at once
+	FadeOnDeath = true, FadeOnDeathTime = 0.6,   -- fade a player's ESP out when they die instead of removing it at once
 	LimitFPS = 42,
 	DynamicBoxes = false, DynamicBoxesCheap = false, DynamicBoxesIncludeAll = false,
 	VisibilityCheckRate = 0.3,
