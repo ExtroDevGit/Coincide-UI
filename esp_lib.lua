@@ -281,12 +281,15 @@ local _fontMap = {
 	["Minecraftia"]       = Enum.Font.SourceSans,
 	["Tahoma Modern Bold"]= Enum.Font.SourceSansBold,
 }
+-- raw.githubusercontent.com directly: the github.com/.../raw/... links redirect there and
+-- sometimes answer with an error page instead of the file
+local FONT_BASE = "https://raw.githubusercontent.com/ExtroDevGit/Coincide-UI/refs/heads/main/"
 local FontsToDownload = {
-	["Tahoma"]            = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/zekton_rg.ttf" },
-	["Minecraftia"]       = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/Minecraftia.ttf" },
-	["Smallest Pixel-7"]  = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/smallest_pixel-7.ttf" },
-	["Proggy Clean"]      = { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/ProggyClean.ttf" },
-	["Tahoma Modern Bold"]= { TTF = "https://github.com/ExtroDevGit/Coincide-UI/raw/refs/heads/main/Tahoma-Modern-Bold.ttf" },
+	["Tahoma"]            = { TTF = FONT_BASE .. "zekton_rg.ttf" },
+	["Minecraftia"]       = { TTF = FONT_BASE .. "Minecraftia.ttf" },
+	["Smallest Pixel-7"]  = { TTF = FONT_BASE .. "smallest_pixel-7.ttf" },
+	["Proggy Clean"]      = { TTF = FONT_BASE .. "ProggyClean.ttf" },
+	["Tahoma Modern Bold"]= { TTF = FONT_BASE .. "Tahoma-Modern-Bold.ttf" },
 }
 local ESPFonts = { Loaded = {} }
 local FontsStillLoading = true
@@ -349,15 +352,38 @@ end
 -- ─── Font loading ────────────────────────────────────────────────────────────
 local FontLoadingCapable = writefile and isfile and getcustomasset
 
+-- a real font starts with one of these; an error page or empty download doesn't
+local function LooksLikeFont(data)
+	if type(data) ~= "string" or #data < 1024 then return false end
+	local head = data:sub(1, 4)
+	return head == "\0\1\0\0" or head == "OTTO" or head == "true"
+end
+
+local FONT_DIR = "Hydrogen/Fonts"
+
 local function LoadCustomFont(Name, Link)
 	if not FontLoadingCapable then return end
-	local fn = Name:gsub("%s+","")
-	local okDL, data = pcall(function() return game:HttpGet(Link) end)
-	if not okDL or not data or data == "" then return end
-	local okWrite = pcall(writefile, fn..".ttf", data)
-	if not okWrite then return end
+	-- letters and digits only in file names ("Smallest Pixel-7" -> "SmallestPixel7")
+	local fn = FONT_DIR .. "/" .. Name:gsub("[^%w]", "")
+	pcall(function()
+		if makefolder and isfolder then
+			if not isfolder("Hydrogen") then makefolder("Hydrogen") end
+			if not isfolder(FONT_DIR) then makefolder(FONT_DIR) end
+		end
+	end)
+
+	-- reuse a good copy from an earlier run, download only when missing or broken
+	local data
+	pcall(function() if isfile(fn .. ".ttf") then data = readfile(fn .. ".ttf") end end)
+	if not LooksLikeFont(data) then
+		local okDL, got = pcall(function() return game:HttpGet(Link) end)
+		if not okDL or not LooksLikeFont(got) then return end -- not marked loaded, so it's retried later
+		data = got
+		if not pcall(writefile, fn .. ".ttf", data) then return end
+	end
+
 	local okConfig = pcall(function()
-		local cfg = { name = fn, faces = {{ name="Regular", weight=400, style="normal", assetId=getcustomasset(fn..".ttf") }} }
+		local cfg = { name = Name:gsub("[^%w]", ""), faces = {{ name="Regular", weight=400, style="normal", assetId=getcustomasset(fn..".ttf") }} }
 		writefile(fn..".ttf.json", HttpService:JSONEncode(cfg))
 	end)
 	if not okConfig then return end
