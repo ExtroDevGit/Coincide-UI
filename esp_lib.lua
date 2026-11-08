@@ -402,7 +402,7 @@ local function AttemptLoadFonts()
 	end
 end
 
-task.spawn(function() task.wait(1); AttemptLoadFonts() end)
+task.spawn(function() task.wait(1); pcall(AttemptLoadFonts) end)
 
 -- ─── Config cache (version-based, no per-frame wipe) ─────────────────────────
 local _defaultCfgCache    = {}
@@ -1559,6 +1559,13 @@ local ScanDirectories = LPHNoVirtualize(function()
 
 	for inst, data in pairs(TrackedInstances) do
 		if not newTracked[inst] or not inst.Parent then
+			-- A player who just died drops out of newTracked (the scan only adds living players) and
+			-- used to be deleted here within 0.2 s, before the fade could run. Keep them while their
+			-- ESP fades; RuntimeStep removes them when the fade ends.
+			local hum = inst.Parent and not data.NonHuman and inst:FindFirstChild("Humanoid")
+			if ESPConfig.FadeOnDeath and inst.Parent and (data.FadeStart or (hum and hum.Health <= 0)) then
+				continue
+			end
 			if data.ChildConnections then for _,conn in ipairs(data.ChildConnections) do conn:Disconnect() end end
 			FinishESPFade(data); data.espObj:Destroy(); TrackedInstances[inst]=nil
 		end
@@ -1602,6 +1609,7 @@ end
 local lastScan      = 0
 local lastRender    = 0
 local lastFontRetry = 0
+local FontRetryBusy, FontRetryCount, FontRetryDelay = false, 0, 5
 local _espDebugDone = true
 local _disabledChamsConfig = { Chams = { Enabled = false } }
 
@@ -1622,8 +1630,16 @@ local function RuntimeStep()
 
 	local now = tick()
 
-	if FontsStillLoading and now-lastFontRetry > 5 then
-		lastFontRetry=now; AttemptLoadFonts()
+	-- font retry runs off the render loop (a download can never stall a frame), waits longer after
+	-- each failure (5 s, 10 s, 20 s ... up to 2 min) and gives up after 8 tries
+	if FontsStillLoading and not FontRetryBusy and FontRetryCount < 8 and now-lastFontRetry > FontRetryDelay then
+		lastFontRetry=now; FontRetryBusy=true; FontRetryCount+=1
+		task.spawn(function()
+			pcall(AttemptLoadFonts)
+			FontRetryDelay = math.min(FontRetryDelay*2, 120)
+			lastFontRetry = tick()
+			FontRetryBusy = false
+		end)
 	end
 
 	if ESPConfig.LimitFPS and ESPConfig.LimitFPS > 0 then
