@@ -120,32 +120,47 @@ function Library:GetVersion()
 	return Library.Version or "Unknown"
 end
 
-local Logo = readfile("Hydrogen/logo2.png") or "will install"
+Library.LogoUrl = LOGO_URL
+
+-- The download at the top of the file runs in the background, so on a fresh install the logo isn't
+-- on disk yet when the loader needs it. This fetches it right away if missing; returns data or nil, never errors.
+function Library:EnsureLogo()
+	local Path = "Hydrogen/logo2.png"
+	pcall(function()
+		if not isfolder("Hydrogen") then makefolder("Hydrogen") end
+		if not isfile(Path) then
+			writefile(Path, game:HttpGet(Library.LogoUrl))
+			print("downloaded logo")
+		end
+	end)
+	local Ok, Data = pcall(function() return isfile(Path) and readfile(Path) or nil end)
+	return Ok and Data or nil
+end
 
 print(Library:GetVersion())
 
 do
 
 local function check()
-	local path = "Hydrogen"
-	local logourl = "https://www.dropbox.com/scl/fi/r3qlj26fdg2bniukw6ut9/logo2.png?rlkey=5kq8p4mpdm4e5laqd7havyfsn&st=od93q1vk&dl=1"
-	
+	-- makefolder / writefile return nothing on most executors, so check the result on disk instead
 	if not isfolder("Hydrogen") then
-		if not makefolder("Hydrogen") then
+		pcall(makefolder, "Hydrogen")
+		if not isfolder("Hydrogen") then
 			getgenv().failreason = 1
 			return false
 		end
 	end
-	
+
 	if not isfile("Hydrogen/logo2.png") then
 		local success, data = pcall(function()
-			return game:HttpGet(logourl)
+			return game:HttpGet(Library.LogoUrl)
 		end)
 		if not success or not data then
 			getgenv().failreason = 2
 			return false
 		end
-		if not writefile("Hydrogen/logo2.png", data) then
+		pcall(writefile, "Hydrogen/logo2.png", data)
+		if not isfile("Hydrogen/logo2.png") then
 			getgenv().failreason = 3
 			return false
 		end
@@ -322,8 +337,8 @@ MiddleIcon.Size = Vector2.new(185, 185);
 MiddleIcon.Rounding = 5;
 MiddleIcon.Transparency = 1;
 MiddleIcon.Visible = true;
-LogoData = readfile("Hydrogen/logo2.png");
-MiddleIcon.Data = LogoData;
+LogoData = Library:EnsureLogo();   -- the loader shows before check() runs, so it fetches the logo itself
+if LogoData then MiddleIcon.Data = LogoData end;
 table.insert(Drawings, MiddleIcon);
 
 SliderInline.Position = Vector2.new(
