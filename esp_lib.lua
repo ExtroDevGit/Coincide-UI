@@ -1562,8 +1562,10 @@ local ScanDirectories = LPHNoVirtualize(function()
 			-- A player who just died drops out of newTracked (the scan only adds living players) and
 			-- used to be deleted here within 0.2 s, before the fade could run. Keep them while their
 			-- ESP fades; RuntimeStep removes them when the fade ends.
-			local hum = inst.Parent and not data.NonHuman and inst:FindFirstChild("Humanoid")
-			if ESPConfig.FadeOnDeath and inst.Parent and (data.FadeStart or (hum and hum.Health <= 0)) then
+			-- Project Delta moves the body out of workspace (or straight to nil) the moment it dies, so the
+			-- parent is not required here; the cached humanoid still reads after the model is gone.
+			local hum = not data.NonHuman and (inst:FindFirstChild("Humanoid") or data.Humanoid)
+			if ESPConfig.FadeOnDeath and (data.FadeStart or (hum and hum.Health <= 0)) then
 				continue
 			end
 			if data.ChildConnections then for _,conn in ipairs(data.ChildConnections) do conn:Disconnect() end end
@@ -1655,13 +1657,17 @@ local function RuntimeStep()
 	end
 
 	for inst, data in pairs(TrackedInstances) do
-		if not inst or not inst.Parent then
+		-- Resolve humanoid once here, pass it down — no double FindFirstChild. It is cached so a body
+		-- that was destroyed / unparented on death can still be recognised as dead and faded out.
+		local humanoid = not data.NonHuman and (inst:FindFirstChild("Humanoid") or data.Humanoid) or nil
+		if humanoid then data.Humanoid = humanoid end
+		local dead = humanoid and humanoid.Health<=0
+
+		if not inst.Parent and not (dead and ESPConfig.FadeOnDeath) then
 			FinishESPFade(data); data.espObj:Destroy(); TrackedInstances[inst]=nil; continue
 		end
 
-		-- Resolve humanoid once here, pass it down — no double FindFirstChild
-		local humanoid = not data.NonHuman and inst:FindFirstChild("Humanoid") or nil
-		if humanoid and humanoid.Health<=0 then
+		if dead then
 			if not ESPConfig.FadeOnDeath then
 				FinishESPFade(data); data.espObj:Destroy(); TrackedInstances[inst]=nil; continue
 			end
@@ -1680,7 +1686,20 @@ local function RuntimeStep()
 			and (inst.PrimaryPart or inst:FindFirstChild("HumanoidRootPart") or inst:FindFirstChildWhichIsA("BasePart"))
 			or (inst:IsA("BasePart") and inst)
 
-		if rootPart then
+		-- while fading, a body whose parts are gone is drawn where it was last seen alive
+		if dead and data.LastRootPos and (not rootPart or #inst:GetChildren() == 0) then
+			local p = data.LastRootPos
+			local c, on = Camera:WorldToViewportPoint(p)
+			local t2 = Camera:WorldToViewportPoint(p + Vector3.new(0, 3, 0))
+			local b2 = Camera:WorldToViewportPoint(p - Vector3.new(0, 3.5, 0))
+			local h = math.abs(t2.Y - b2.Y)
+			UpdateESPObj(
+				data.espObj, on and Vector2.new(c.X, (t2.Y + b2.Y) / 2) or nil, on and Vector2.new(h * 0.65, h) or nil,
+				data.name, (Camera.CFrame.Position - p).Magnitude,
+				inst, humanoid, data.Cheap, data.NonHuman, data.NoStatus, data.Config, on
+			)
+		elseif rootPart then
+			if not dead then data.LastRootPos = rootPart.Position end
 			local onscreen,pos2d,size2d = Get2DBoundingBox(inst,data)
 			local distanceStuds = (Camera.CFrame.Position-rootPart.Position).Magnitude
 			UpdateESPObj(
