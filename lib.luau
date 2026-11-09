@@ -8581,14 +8581,15 @@ end;
 --   getgenv().welcome_ui({
 --       username = "emirdel", badge1 = "buyer", badge2 = "lifetime",
 --       time_left = "lifetime", progress = 1, executions = 167, time_used = "4h 0m",
---       key = "**** **** **** 1bfa", discord = "@emirdelmc", streak = "1 day",
+--       key = "**** **** **** 1bfa", discord = "@emirdelmc",
 --       online = "5 online now", server = "21/30 players", executor = "real",
 --   })
 -- Extra options:
 --   avatar        image for the picture (default: your Roblox headshot)
 --   progress      0..1, how full the bar under "time left" is (default 1)
 --   full_key      what "copy" puts on the clipboard (default: the key as shown)
---   comet_speed   px/sec of the two lines running around the border (default 300, 0 = still)
+--   spin_speed    degrees/sec the accent ring around the border turns (default 90, 0 = still)
+--   title         text top-left (default "hydrogen")
 --   dim           true (or a transparency 0..1) to darken the screen behind the panel
 --   greeting      fixed greeting text (default: follows the clock, re-checked every second)
 -- The accent colour follows Library.Accent (and updates live when the config changes it).
@@ -8616,6 +8617,11 @@ function Library:WelcomeUI(Opts)
 		else return "good night"; end
 	end
 
+	local function ClockText()
+		local Ok, S = pcall(os.date, "%H:%M");
+		return (Ok and type(S) == "string") and S or "";
+	end
+
 	local F = {
 		greeting   = Opts.greeting   or Greeting();
 		username   = Opts.username   or (LP and (LP.DisplayName ~= "" and LP.DisplayName or LP.Name)) or "n/a";
@@ -8626,45 +8632,37 @@ function Library:WelcomeUI(Opts)
 		time_used  = Opts.time_used  or "n/a";
 		key        = Opts.key        or "n/a";
 		discord    = Opts.discord    or "n/a";
-		streak     = Opts.streak     or "n/a";
-		online     = Opts.online;
+		online     = Opts.online     or "n/a";
 		server     = Opts.server     or "n/a";
 		executor   = Opts.executor   or "n/a";
 	};
-	local function JoinStreak()
-		local S = tostring(F.streak);
-		if not F.online then return S; end
-		if S == "n/a" then return tostring(F.online); end
-		return S .. "  •  " .. tostring(F.online);
-	end
-	local StreakText = JoinStreak();
 	local Progress  = math.clamp(tonumber(Opts.progress) or 1, 0, 1);
-	local CometSpeed = tonumber(Opts.comet_speed) or 300;
+	local SpinSpeed = tonumber(Opts.spin_speed) or 90;   -- degrees per second for the border ring
 
 	getgenv().welcome_ui1 = false;
 
-	-- palette (accent comes from the lib, so it matches the rest of the UI)
+	-- palette: the same layers as the rest of Hydrogen (black > grey > accent ring > dark gradient)
 	local WHITE  = Color3.new(1, 1, 1);
 	local BLACK  = Color3.new(0, 0, 0);
 	local ACCENT = typeof(Library.Accent) == "Color3" and Library.Accent or Color3.fromHex("99BCFF");
-	local LINE   = Color3.fromHex("343434");                            -- 1px grey outlines
-	local BAND   = Color3.fromHex("1C1C1C");                            -- 3px outer band the lines run in
-	local PANEL_T, PANEL_B = Color3.fromHex("1B1B1B"), Color3.fromHex("131313"); -- main background
-	local BOX_T, BOX_B = Color3.fromHex("252525"), Color3.fromHex("181818");     -- boxes
-	local SEP    = Color3.fromHex("242424");                            -- row separators
-	local BTN_T, BTN_B = Color3.fromHex("303030"), Color3.fromHex("1E1E1E"); -- continue
-	local HOV_T, HOV_B = Color3.fromHex("3A3A3A"), Color3.fromHex("262626"); -- continue (hover)
+	local GRAY   = Color3.fromHex("393939");                            -- outer grey line
+	local LINE   = Color3.fromHex("2E2E2E");                            -- box outlines
+	local PANEL_T, PANEL_B = Color3.fromHex("1F1F1F"), Color3.fromHex("141414"); -- main background
+	local BOX_T, BOX_B = Color3.fromHex("232323"), Color3.fromHex("191919");     -- cards
+	local SEP    = Color3.fromHex("262626");                            -- row separators
+	local BTN_T, BTN_B = Color3.fromHex("2A2A2A"), Color3.fromHex("1B1B1B"); -- continue
+	local HOV_T, HOV_B = Color3.fromHex("343434"), Color3.fromHex("222222"); -- continue (hover)
 	local DIM    = Color3.fromHex("7D7D7D");                            -- labels
 	local VAL    = Color3.fromHex("B4B4B4");                            -- values
-	local NAME   = Color3.fromHex("E4E4E4");                            -- username, button text
+	local NAME   = Color3.fromHex("E4E4E4");                            -- username, big values
 
 	-- layout
 	local W      = 360;                     -- outer width
-	local BORDER = 7;                       -- black, grey, 3px band, grey, black
+	local BORDER = 3;                       -- black, grey, accent ring
 	local PAD    = 10;                      -- space inside the border
 	local GAP    = 6;                       -- space between rows
-	local INSET  = 9;                       -- text inset inside boxes and rows
-	local CW     = W - (BORDER + PAD) * 2;  -- 326, content width
+	local INSET  = 9;                       -- text inset inside boxes
+	local CW     = W - (BORDER + PAD) * 2;  -- 334, content width
 	local TSIZE  = 12;                      -- same text size as the rest of the lib
 
 	local TextFont = ProggyCleanFont or Font.fromEnum(Enum.Font.Code);
@@ -8731,11 +8729,12 @@ function Library:WelcomeUI(Opts)
 		New("Frame", { Name = "Dim"; Parent = Gui; Size = UDim2.fromScale(1, 1); BackgroundColor3 = BLACK; BackgroundTransparency = typeof(Opts.dim) == "number" and Opts.dim or 0.5; BorderSizePixel = 0; });
 	end
 
-	-- PANEL: black > grey > 3px band > grey > black > background
+	-- PANEL: black > grey > accent ring (slowly spinning gradient) > dark gradient background.
 	-- Placed on whole pixels (no 0.5 anchor) so the 1px lines never land between pixels.
 	local Outer    = New("Frame", { Name = "Outer"; Parent = Gui; Size = UDim2.fromOffset(W, 300); BackgroundColor3 = BLACK; BorderSizePixel = 0; Active = true; ZIndex = 2; });
-	local Band     = Layer(Layer(Outer, LINE, 1), BAND, 1);
-	local Panel    = Layer(Layer(Layer(Band, LINE, 3), BLACK, 1), WHITE, 1);
+	local Ring     = Layer(Layer(Outer, GRAY, 1), WHITE, 1);
+	local RingGrad = New("UIGradient", { Parent = Ring; Rotation = 0; });
+	local Panel    = Layer(Ring, WHITE, 1);
 	New("UIGradient", { Parent = Panel; Rotation = 90; Color = ColorSequence.new(PANEL_T, PANEL_B); });
 	local Content  = New("Frame", { Name = "Content"; Parent = Panel; Position = UDim2.fromOffset(PAD, PAD); Size = UDim2.new(1, -PAD * 2, 1, -PAD * 2); BackgroundTransparency = 1; BorderSizePixel = 0; });
 
@@ -8747,7 +8746,6 @@ function Library:WelcomeUI(Opts)
 	end
 
 	local Closed, Finished = false, false;
-	local PaintComets = function() end;   -- replaced once the border lines exist
 	local MouseBind = "WelcomeUIMouse" .. tostring(math.random(1, 1e9));
 	local PrevMouseIcon, PrevMouseBehavior = UIS.MouseIconEnabled, UIS.MouseBehavior;
 	local function Cleanup()
@@ -8767,10 +8765,22 @@ function Library:WelcomeUI(Opts)
 		Cleanup();
 	end
 
-	-- HEADER: avatar, greeting, name, tags
+	local AccentLines = {};   -- 1px accent strips, repainted with the accent
+
+	-- TITLE: script name on the left, your local time on the right
+	local TitleRow = Row(12);
+	local TitleLbl = Text("TextLabel", { Parent = TitleRow; Size = UDim2.new(0.6, 0, 1, 0); Text = tostring(Opts.title or "hydrogen"); TextColor3 = ACCENT; TextXAlignment = Enum.TextXAlignment.Left; });
+	local ClockLbl = Text("TextLabel", { Parent = TitleRow; AnchorPoint = Vector2.new(1, 0); Position = UDim2.fromScale(1, 0); Size = UDim2.new(0.4, 0, 1, 0); Text = ClockText(); TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Right; });
+
+	-- accent line, strongest in the middle and fading out to both sides
+	local Divider = New("Frame", { Parent = Row(1); Size = UDim2.fromScale(1, 1); BackgroundColor3 = ACCENT; BorderSizePixel = 0; });
+	New("UIGradient", { Parent = Divider; Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.1), NumberSequenceKeypoint.new(1, 1) }); });
+
+	-- HEADER: avatar in an accent frame, greeting, name, tags
 	local Header = Row(48);
 	local AvBox  = New("Frame", { Parent = Header; Size = UDim2.fromOffset(48, 48); BackgroundColor3 = BLACK; BorderSizePixel = 0; });
-	local Avatar = New("ImageLabel", { Parent = Layer(Layer(AvBox, LINE, 1), Color3.fromHex("101010"), 1); Size = UDim2.fromScale(1, 1); BackgroundTransparency = 1; Image = ""; ScaleType = Enum.ScaleType.Crop; });
+	local AvEdge = Layer(AvBox, ACCENT, 1);
+	local Avatar = New("ImageLabel", { Parent = Layer(Layer(AvEdge, BLACK, 1), Color3.fromHex("101010"), 0); Size = UDim2.fromScale(1, 1); BackgroundTransparency = 1; Image = ""; ScaleType = Enum.ScaleType.Crop; });
 	if Opts.avatar and tostring(Opts.avatar) ~= "" then
 		Avatar.Image = tostring(Opts.avatar);
 	elseif LP then
@@ -8801,31 +8811,27 @@ function Library:WelcomeUI(Opts)
 	local Tag1, Tag1Edge = Tag(F.badge1, ACCENT, 1);
 	local Tag2 = Tag(F.badge2, VAL, 2);
 
-	-- accent line that fades out to the right
-	local Divider = New("Frame", { Parent = Row(1); Size = UDim2.fromScale(1, 1); BackgroundColor3 = ACCENT; BorderSizePixel = 0; });
-	New("UIGradient", { Parent = Divider; Transparency = NumberSequence.new(0.15, 1); });
-
-	-- STATS: one box split in three cells, value on top and label under it
-	local StatBox = Box("Frame", { Parent = Row(44); Size = UDim2.fromScale(1, 1); });
-	local CellW   = math.floor((CW - 4) / 3);
+	-- STATS: three separate cards, each with an accent strip on top, value over label
+	local StatsRow = Row(46);
+	local CardW = math.floor((CW - GAP * 2) / 3);
 	local BarFill;
-	local function Cell(Index, Value, Label, WithBar)
-		local X  = 2 + (Index - 1) * CellW;
-		local Wd = (Index == 3) and (CW - 4 - CellW * 2) or CellW;
-		if Index > 1 then
-			New("Frame", { Parent = StatBox; Position = UDim2.fromOffset(X, 8); Size = UDim2.new(0, 1, 1, -16); BackgroundColor3 = LINE; BorderSizePixel = 0; ZIndex = 2; });
-		end
-		local ValueLbl = Text("TextLabel", { Parent = StatBox; Position = UDim2.fromOffset(X + 8, 6);  Size = UDim2.fromOffset(Wd - 14, 14); Text = tostring(Value); TextColor3 = NAME; TextXAlignment = Enum.TextXAlignment.Left; });
-		Text("TextLabel", { Parent = StatBox; Position = UDim2.fromOffset(X + 8, 20); Size = UDim2.fromOffset(Wd - 14, 14); Text = Label; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
+	local function Card(Index, Value, Label, WithBar)
+		local X  = (Index - 1) * (CardW + GAP);
+		local Wd = (Index == 3) and (CW - X) or CardW;
+		local C = Box("Frame", { Parent = StatsRow; Position = UDim2.fromOffset(X, 0); Size = UDim2.new(0, Wd, 1, 0); });
+		local Strip = New("Frame", { Parent = C; Position = UDim2.fromOffset(2, 2); Size = UDim2.new(1, -4, 0, 1); BackgroundColor3 = ACCENT; BorderSizePixel = 0; ZIndex = 2; });
+		table.insert(AccentLines, Strip);
+		local ValueLbl = Text("TextLabel", { Parent = C; Position = UDim2.fromOffset(INSET, 6);  Size = UDim2.new(1, -INSET * 2, 0, 14); Text = tostring(Value); TextColor3 = NAME; TextXAlignment = Enum.TextXAlignment.Left; });
+		Text("TextLabel", { Parent = C; Position = UDim2.fromOffset(INSET, 20); Size = UDim2.new(1, -INSET * 2, 0, 14); Text = Label; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
 		if WithBar then
-			local Track = New("Frame", { Parent = StatBox; Position = UDim2.fromOffset(X + 8, 35); Size = UDim2.fromOffset(Wd - 16, 4); BackgroundColor3 = BLACK; BorderSizePixel = 0; ZIndex = 2; });
+			local Track = New("Frame", { Parent = C; Position = UDim2.fromOffset(INSET, 36); Size = UDim2.new(1, -INSET * 2, 0, 4); BackgroundColor3 = BLACK; BorderSizePixel = 0; ZIndex = 2; });
 			BarFill = New("Frame", { Parent = Layer(Track, Color3.fromHex("101010"), 1); Size = UDim2.fromScale(Progress, 1); BackgroundColor3 = ACCENT; BorderSizePixel = 0; });
 		end
 		return ValueLbl;
 	end
-	local TimeLeftLbl   = Cell(1, F.time_left, "time left", true);
-	local ExecutionsLbl = Cell(2, F.executions, "executions", false);
-	local TimeUsedLbl   = Cell(3, F.time_used, "time used", false);
+	local TimeLeftLbl   = Card(1, F.time_left, "time left", true);
+	local ExecutionsLbl = Card(2, F.executions, "executions", false);
+	local TimeUsedLbl   = Card(3, F.time_used, "time used", false);
 
 	-- KEY: value on the right, small "copy" button inside the box
 	local KeyBox = Box("Frame", { Parent = Row(24); Size = UDim2.fromScale(1, 1); });
@@ -8843,37 +8849,53 @@ function Library:WelcomeUI(Opts)
 		task.delay(1, function() if CopyLbl.Parent then CopyLbl.Text = "copy"; end; end);
 	end);
 
-	-- INFO ROWS with thin separators between them
-	local InfoCount = 0;
-	local function Info(Label, Value)
-		local R = Row(16);
-		InfoCount = InfoCount + 1;
-		if InfoCount > 1 then
-			New("Frame", { Parent = R; Position = UDim2.fromOffset(INSET - 2, -4); Size = UDim2.new(1, -(INSET - 2) * 2, 0, 1); BackgroundColor3 = SEP; BorderSizePixel = 0; });
+	-- INFO: one box, label left / value right, thin separators between rows
+	local INFO_ROWS = {
+		{ "discord", "discord" },
+		{ "online", "online" },
+		{ "server", "server" },
+		{ "performance", nil },        -- live fps / ping
+		{ "executor", "executor" },
+	};
+	local RH = 18;
+	local InfoBox = Box("Frame", { Parent = Row(#INFO_ROWS * RH + 4); Size = UDim2.fromScale(1, 1); });
+	local InfoLbls = {};
+	for I, Def in ipairs(INFO_ROWS) do
+		local Yr = 2 + (I - 1) * RH;
+		if I > 1 then
+			New("Frame", { Parent = InfoBox; Position = UDim2.fromOffset(INSET - 2, Yr); Size = UDim2.new(1, -(INSET - 2) * 2, 0, 1); BackgroundColor3 = SEP; BorderSizePixel = 0; ZIndex = 2; });
 		end
-		Text("TextLabel", { Parent = R; Position = UDim2.fromOffset(INSET, 0); Size = UDim2.new(0.4, 0, 1, 0); Text = Label; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
-		return Text("TextLabel", { Parent = R; AnchorPoint = Vector2.new(1, 0); Position = UDim2.new(1, -INSET, 0, 0); Size = UDim2.new(0.6, -INSET, 1, 0); Text = tostring(Value); TextColor3 = VAL; TextXAlignment = Enum.TextXAlignment.Right; });
+		Text("TextLabel", { Parent = InfoBox; Position = UDim2.fromOffset(INSET, Yr); Size = UDim2.new(0.4, 0, 0, RH); Text = Def[1]; TextColor3 = DIM; TextXAlignment = Enum.TextXAlignment.Left; });
+		InfoLbls[Def[1]] = Text("TextLabel", { Parent = InfoBox; AnchorPoint = Vector2.new(1, 0); Position = UDim2.new(1, -INSET, 0, Yr); Size = UDim2.new(0.6, -INSET, 0, RH); Text = Def[2] and tostring(F[Def[2]]) or "..."; TextColor3 = VAL; TextXAlignment = Enum.TextXAlignment.Right; });
 	end
-	local DiscordLbl  = Info("discord", F.discord);
-	local StreakLbl   = Info("streak", StreakText);
-	local ServerLbl   = Info("server", F.server);
-	local ExecutorLbl = Info("executor", F.executor);
+	local PerfLbl = InfoLbls.performance;
 
-	-- CONTINUE: grey button, lighter on hover
-	local ContinueBtn, _, ContinueGrad = Box("TextButton", { Parent = Row(26); Size = UDim2.fromScale(1, 1); Text = ""; AutoButtonColor = false; Modal = true; }, BTN_T, BTN_B);
-	local ContinueLbl = Text("TextLabel", { Parent = ContinueBtn; Size = UDim2.fromScale(1, 1); Text = "continue"; TextColor3 = VAL; });
+	-- CONTINUE: accent-edged button, lighter on hover
+	local ContinueBtn, _, ContinueGrad, ContinueEdge = Box("TextButton", { Parent = Row(26); Size = UDim2.fromScale(1, 1); Text = ""; AutoButtonColor = false; Modal = true; }, BTN_T, BTN_B, ACCENT:Lerp(BLACK, 0.45));
+	local ContinueLbl = Text("TextLabel", { Parent = ContinueBtn; Size = UDim2.fromScale(1, 1); Text = "continue"; TextColor3 = NAME; });
+	local ContinueHot = false;
 	Hover(ContinueBtn,
-		function() ContinueGrad.Color = ColorSequence.new(HOV_T, HOV_B); ContinueLbl.TextColor3 = NAME; end,
-		function() ContinueGrad.Color = ColorSequence.new(BTN_T, BTN_B); ContinueLbl.TextColor3 = VAL; end);
+		function() ContinueHot = true;  ContinueGrad.Color = ColorSequence.new(HOV_T, HOV_B); ContinueLbl.TextColor3 = ACCENT; ContinueEdge.BackgroundColor3 = ACCENT; end,
+		function() ContinueHot = false; ContinueGrad.Color = ColorSequence.new(BTN_T, BTN_B); ContinueLbl.TextColor3 = NAME;   ContinueEdge.BackgroundColor3 = ACCENT:Lerp(BLACK, 0.45); end);
 	Bind(ContinueBtn.MouseButton1Click, Finish);
 
 	-- everything that uses the accent, repainted on SetAccent / config load
 	local function Paint()
+		RingGrad.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0,   ACCENT:Lerp(BLACK, 0.55)),
+			ColorSequenceKeypoint.new(0.5, ACCENT:Lerp(WHITE, 0.3)),
+			ColorSequenceKeypoint.new(1,   ACCENT:Lerp(BLACK, 0.55)),
+		});
+		TitleLbl.TextColor3 = ACCENT;
+		AvEdge.BackgroundColor3 = ACCENT;
 		Tag1.TextColor3 = ACCENT;
 		Tag1Edge.BackgroundColor3 = ACCENT:Lerp(BLACK, 0.45);
 		Divider.BackgroundColor3 = ACCENT;
+		for _, L in ipairs(AccentLines) do L.BackgroundColor3 = ACCENT; end
 		if BarFill then BarFill.BackgroundColor3 = ACCENT; end
 		CopyLbl.TextColor3 = ACCENT;
+		ContinueEdge.BackgroundColor3 = ContinueHot and ACCENT or ACCENT:Lerp(BLACK, 0.45);
+		if ContinueHot then ContinueLbl.TextColor3 = ACCENT; end
 	end
 	Paint();
 
@@ -8882,7 +8904,6 @@ function Library:WelcomeUI(Opts)
 			if Closed or typeof(C) ~= "Color3" then return end;
 			ACCENT = C;
 			pcall(Paint);
-			pcall(PaintComets);
 		end);
 	end
 
@@ -8890,73 +8911,8 @@ function Library:WelcomeUI(Opts)
 	local H = (Y - GAP) + (BORDER + PAD) * 2;
 	Outer.Size = UDim2.fromOffset(W, H);
 
-	-- BORDER LINES: two lines with a fading tail running clockwise through the middle of the
-	-- 3px band, half a lap apart. Each line is 63 solid 2px pieces (no gradients on 1px frames,
-	-- which Roblox sometimes draws wrong); each frame only moves the pieces. A 2px piece always
-	-- lands exactly on the path, corners included, because the path turns one pixel at a time.
-	local PW, PH = W - 7, H - 7;              -- path = centre line of the band
-	local Sides  = { PW, PH, PW, PH };        -- top, right, bottom, left
-	local Lap    = (PW + PH) * 2;
-	local PIECES = 63;                        -- 63 x 2px = 126px per line
-
-	local Comets = {};
-	for C = 1, 2 do
-		local Line = {};
-		for K = 1, PIECES do
-			Line[K] = { Frame = New("Frame", { Parent = Outer; BorderSizePixel = 0; ZIndex = 3; Size = UDim2.fromOffset(2, 1); Position = UDim2.fromOffset(-10, -10); }); Dir = 1; };
-		end
-		Comets[C] = Line;
-	end
-
-	-- piece 1 = end of the tail (faded, accent), piece 63 = head (solid, brighter)
-	PaintComets = function()
-		local Head = ACCENT:Lerp(WHITE, 0.5);
-		for _, Line in ipairs(Comets) do
-			for K, Piece in ipairs(Line) do
-				local T = (K - 0.5) / PIECES;
-				Piece.Frame.BackgroundColor3 = ACCENT:Lerp(Head, T);
-				Piece.Frame.BackgroundTransparency = 1 - T;
-			end
-		end
-	end
-	PaintComets();
-
-	local function SideOf(S)
-		local Side, Off = 1, S % Lap;
-		while Side < 4 and Off >= Sides[Side] do Off = Off - Sides[Side]; Side = Side + 1; end
-		return Side, Off;
-	end
-
-	local function DrawComet(Line, HeadPos)
-		local Tail = HeadPos - PIECES * 2 + 1;
-		for K, Piece in ipairs(Line) do
-			local Side, Off = SideOf(Tail + (K - 1) * 2);
-			local X, Yp;
-			if Side == 1 then     X, Yp = 3 + Off, 3;
-			elseif Side == 2 then X, Yp = W - 4, 3 + Off;
-			elseif Side == 3 then X, Yp = W - 5 - Off, H - 4;
-			else                  X, Yp = 3, H - 5 - Off; end
-			local Dir = (Side % 2 == 1) and 1 or 2;   -- 1 = horizontal piece, 2 = vertical piece
-			if Piece.Dir ~= Dir then
-				Piece.Dir = Dir;
-				Piece.Frame.Size = (Dir == 1) and UDim2.fromOffset(2, 1) or UDim2.fromOffset(1, 2);
-			end
-			Piece.Frame.Position = UDim2.fromOffset(X, Yp);
-		end
-	end
-
-	local CometOffset, LastHead = PW + math.floor(PH / 2), nil; -- first line starts halfway down the right edge
-	local function DrawComets()
-		local HeadPos = math.floor(CometOffset) % Lap;
-		if HeadPos == LastHead then return end;          -- nothing moved a whole pixel yet
-		LastHead = HeadPos;
-		DrawComet(Comets[1], HeadPos);
-		DrawComet(Comets[2], (HeadPos + math.floor(Lap / 2)) % Lap);
-	end
-	DrawComets();
-
 	-- DRAGGING: grab anywhere except the buttons; the panel glides to the mouse and stays on screen
-	local Target, Current = Vector2.new(0, 0), Vector2.new(0, 0);  -- offset from the centred spot
+	local Target, Current = Vector2.new(0, 0), Vector2.new(0, 28);  -- starts a bit low and slides up into place
 	local Dragging, DragStart, DragFrom = false, nil, nil;
 	local LastX, LastY;
 
@@ -9000,30 +8956,44 @@ function Library:WelcomeUI(Opts)
 	end);
 	PlacePanel();
 
-	-- one loop for the drag glide, the border lines and the clock greeting
+	-- PERFORMANCE: frames counted over half a second, ping from the network
+	local Frames, PerfTimer = 0, 0;
+	local function UpdatePerf()
+		local Fps = PerfTimer > 0 and math.floor(Frames / PerfTimer + 0.5) or 0;
+		local Ping;
+		pcall(function() Ping = math.floor(LP:GetNetworkPing() * 1000 + 0.5); end);
+		PerfLbl.Text = Fps .. " fps" .. (Ping and ("  •  " .. Ping .. " ms") or "");
+		Frames, PerfTimer = 0, 0;
+	end
+
+	-- one loop for the slide/drag glide, the spinning ring, the clock and the performance row
 	local ClockTimer = 0;
-	Bind(RunService.RenderStepped, function(Dt)
+	Bind(RunService.RenderStepped, function(RawDt)
 		if Closed then return end;
 		if not Gui.Parent then Cleanup(); return end;
-		Dt = math.clamp(Dt, 0, 0.1);               -- no jumps after alt-tab or a lag spike
+		local Dt = math.clamp(RawDt, 0, 0.1);      -- no jumps after alt-tab or a lag spike
 
 		local Diff = Target - Current;
 		if Diff.Magnitude > 0.1 then
-			Current = Current + Diff * (1 - math.exp(-Dt * 18));
+			Current = Current + Diff * (1 - math.exp(-Dt * 14));
 			PlacePanel();
 		elseif Current ~= Target then
 			Current = Target;
 			PlacePanel();
 		end
 
-		if CometSpeed ~= 0 then
-			CometOffset = (CometOffset + Dt * CometSpeed) % Lap;
-			DrawComets();
+		if SpinSpeed ~= 0 then
+			RingGrad.Rotation = (RingGrad.Rotation + Dt * SpinSpeed) % 360;
 		end
+
+		Frames = Frames + 1;
+		PerfTimer = PerfTimer + RawDt;
+		if PerfTimer >= 0.5 then UpdatePerf(); end
 
 		ClockTimer = ClockTimer + Dt;
 		if ClockTimer >= 1 then
 			ClockTimer = 0;
+			ClockLbl.Text = ClockText();
 			if not Opts.greeting then
 				local Now = Greeting();
 				if Now ~= F.greeting then F.greeting = Now; GreetLbl.Text = Now .. ","; end
@@ -9050,7 +9020,6 @@ function Library:WelcomeUI(Opts)
 			if K == "executions" then F[K] = tostring(V) else F[K] = V end;
 		end
 		if New.progress ~= nil then Progress = math.clamp(tonumber(New.progress) or 1, 0, 1); end
-		local Streak = JoinStreak();
 		pcall(function()
 			GreetLbl.Text      = tostring(F.greeting) .. ",";
 			UserLbl.Text       = tostring(F.username);
@@ -9060,10 +9029,10 @@ function Library:WelcomeUI(Opts)
 			ExecutionsLbl.Text = tostring(F.executions);
 			TimeUsedLbl.Text   = tostring(F.time_used);
 			KeyLbl.Text        = tostring(F.key);
-			DiscordLbl.Text    = tostring(F.discord);
-			StreakLbl.Text     = Streak;
-			ServerLbl.Text     = tostring(F.server);
-			ExecutorLbl.Text   = tostring(F.executor);
+			InfoLbls.discord.Text  = tostring(F.discord);
+			InfoLbls.online.Text   = tostring(F.online or "n/a");
+			InfoLbls.server.Text   = tostring(F.server);
+			InfoLbls.executor.Text = tostring(F.executor);
 			if BarFill then BarFill.Size = UDim2.fromScale(Progress, 1); end
 			if New.avatar and tostring(New.avatar) ~= "" then Avatar.Image = tostring(New.avatar); end
 			if New.full_key ~= nil then Opts.full_key = New.full_key; end
