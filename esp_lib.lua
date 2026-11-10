@@ -107,6 +107,14 @@ local DrawLine = LPHNoVirtualize(function(line, p1, p2, thickness, color)
 	line.Visible          = true
 end)
 
+-- one shared helper (used to be a closure created inside UpdateESPObj on every call)
+local function ApplyTextOutline(label, style, color)
+	local stroke = labelStrokeMap[label] or label:FindFirstChildOfClass("UIStroke")
+	if not stroke then return end
+	if style == "None" then stroke.Enabled=false
+	else stroke.Enabled=true; stroke.Thickness=1; stroke.Color=color or Color3.fromRGB(0,0,0) end
+end
+
 -- ─── ESPConfig ───────────────────────────────────────────────────────────────
 local ESPConfig = {
 	Enabled = false,
@@ -116,6 +124,7 @@ local ESPConfig = {
 	LimitFPS = 42,
 	DynamicBoxes = false, DynamicBoxesCheap = false, DynamicBoxesIncludeAll = false,
 	VisibilityCheckRate = 0.3,
+	ExtraFlagsRate = 0.15,   -- how often (s) the host's Visible / Wallbang / Aiming tags are re-checked per player
 
 	Boxes = false, BoxType = "Corner",
 	BoxColor = Color3.fromRGB(255,255,255), BoxThickness = 1,
@@ -293,6 +302,7 @@ local FontsToDownload = {
 }
 local ESPFonts = { Loaded = {} }
 local FontsStillLoading = true
+local _fontVersion = 0   -- bumped when a font loads; ESP objects re-apply their fonts when it changes
 
 -- ─── Skeleton bone definitions ───────────────────────────────────────────────
 local SKELETON_BONE_DEFS = {
@@ -388,7 +398,7 @@ local function LoadCustomFont(Name, Link)
 	end)
 	if not okConfig then return end
 	local okLoad, font = pcall(Font.new, getcustomasset(fn..".ttf.json"), Enum.FontWeight.Regular)
-	if okLoad and font then ESPFonts.Loaded[Name] = font end
+	if okLoad and font then ESPFonts.Loaded[Name] = font; _fontVersion += 1 end
 end
 
 local function AttemptLoadFonts()
@@ -481,6 +491,18 @@ end
 local _leftTags       = {}
 local _rightTags      = {}
 local _bonePositions  = {}   -- reused every skeleton draw call
+local _flagText, _flagColor = {}, {}   -- reused flag slots, no per-frame tables
+
+-- IsFriendsWith is a web-backed call; cache it per player instead of asking every frame
+local _friendCache = setmetatable({}, { __mode = "k" })
+local _friendlyTag = { color = nil, text = nil, tag = "" }   -- the formatted [F] tag, rebuilt only when its color/text change
+local function IsFriend(player, now)
+	local c = _friendCache[player]
+	if c and now - c.at < 30 then return c.ok end
+	local ok, res = pcall(LocalPlayer.IsFriendsWith, LocalPlayer, player.UserId)
+	c = c or {}; c.ok = (ok and res == true); c.at = now; _friendCache[player] = c
+	return c.ok
+end
 
 -- ─── Team tag cache (invalidate on team change, not every frame) ──────────────
 local _teamTagCache    = {}
@@ -745,16 +767,20 @@ local UpdateESPObj = LPHNoVirtualize(function(
 
 		if chamType == "Highlight" and (instance:IsA("Model") or instance:IsA("BasePart")) then
 			if espObj.MeshShell then espObj.MeshShell:Destroy(); espObj.MeshShell=nil; espObj.MeshHighlight=nil end
-			if not espObj.Highlight then espObj.Highlight = Instance.new("Highlight") end
+			if not espObj.Highlight then espObj.Highlight = Instance.new("Highlight"); espObj.ChamsStyleVersion = nil end
 			local h = espObj.Highlight
-			h.Parent             = ChamsContainer
-			h.Adornee            = instance
-			h.FillColor          = GetCfg("Chams.Highlight.FillColor")
-			h.FillTransparency   = GetCfg("Chams.Highlight.FillTransparency")
-			h.OutlineColor       = GetCfg("Chams.Highlight.OutlineColor")
-			h.OutlineTransparency= GetCfg("Chams.Highlight.OutlineTransparency")
-			h.DepthMode          = GetCfg("Chams.Highlight.VisibleCheck") and Enum.HighlightDepthMode.Occluded or Enum.HighlightDepthMode.AlwaysOnTop
-			h.Enabled            = true
+			-- its look only depends on the config: written on creation and on config change, not per frame
+			if espObj.ChamsStyleVersion ~= _configVersion or espObj.ChamsStyleOverride ~= configOverride then
+				espObj.ChamsStyleVersion, espObj.ChamsStyleOverride = _configVersion, configOverride
+				h.Parent             = ChamsContainer
+				h.Adornee            = instance
+				h.FillColor          = GetCfg("Chams.Highlight.FillColor")
+				h.FillTransparency   = GetCfg("Chams.Highlight.FillTransparency")
+				h.OutlineColor       = GetCfg("Chams.Highlight.OutlineColor")
+				h.OutlineTransparency= GetCfg("Chams.Highlight.OutlineTransparency")
+				h.DepthMode          = GetCfg("Chams.Highlight.VisibleCheck") and Enum.HighlightDepthMode.Occluded or Enum.HighlightDepthMode.AlwaysOnTop
+				h.Enabled            = true
+			end
 			if espObj.Adornments then for _, a in pairs(espObj.Adornments) do a.Visible=false end end
 
 		elseif chamType == "Adornment" then
@@ -784,18 +810,25 @@ local UpdateESPObj = LPHNoVirtualize(function(
 
 			local finalColor = (visCheck and espObj.CachedModelVisible)
 				and GetCfg("Chams.Adornment.VisibleColor") or GetCfg("Chams.Adornment.Color")
+			-- transparency / depth only change with the config; color follows the visibility check per frame
+			local adornDirty = espObj.ChamsStyleVersion ~= _configVersion or espObj.ChamsStyleOverride ~= configOverride
+			espObj.ChamsStyleVersion, espObj.ChamsStyleOverride = _configVersion, configOverride
 			for _, p in ipairs(parts) do
 				if p:IsA("BasePart") and p.Name ~= "HumanoidRootPart" then
 					idx = idx + 1
 					local a = espObj.Adornments[idx]
-					if not a then
+					local fresh = not a
+					if fresh then
 						a = Instance.new("BoxHandleAdornment"); a.Name="Cham"; a.Parent=ChamsContainer
 						espObj.Adornments[idx] = a
 					end
 					a.Adornee    = p; a.Size = p.Size; a.Color3 = finalColor
-					a.Transparency = GetCfg("Chams.Adornment.Transparency")
-					a.AlwaysOnTop  = GetCfg("Chams.Adornment.AlwaysOnTop")
-					a.ZIndex=10; a.Visible=true
+					if adornDirty or fresh then
+						a.Transparency = GetCfg("Chams.Adornment.Transparency")
+						a.AlwaysOnTop  = GetCfg("Chams.Adornment.AlwaysOnTop")
+						a.ZIndex=10
+					end
+					a.Visible=true
 				end
 			end
 			for i=idx+1,#espObj.Adornments do espObj.Adornments[i].Visible=false end
@@ -844,9 +877,11 @@ local UpdateESPObj = LPHNoVirtualize(function(
 					hl:SetAttribute("HydrogenESP_RunId",   CurrentRunId)
 					hl.Adornee=shellModel; hl.Parent=shellModel
 					espObj.MeshShell=shellModel; espObj.MeshHighlight=hl
+					espObj.ChamsStyleVersion = nil   -- fresh highlight: apply its look below
 				end
 
-				if espObj.MeshHighlight then
+				if espObj.MeshHighlight and (espObj.ChamsStyleVersion ~= _configVersion or espObj.ChamsStyleOverride ~= configOverride) then
+					espObj.ChamsStyleVersion, espObj.ChamsStyleOverride = _configVersion, configOverride
 					local hl = espObj.MeshHighlight
 					hl.FillColor          = GetCfg("Chams.MeshChams.FillColor")
 					hl.FillTransparency   = GetCfg("Chams.MeshChams.FillTransparency")
@@ -861,14 +896,6 @@ local UpdateESPObj = LPHNoVirtualize(function(
 		if espObj.Highlight then espObj.Highlight:Destroy(); espObj.Highlight=nil end
 		if espObj.Adornments then for _, a in pairs(espObj.Adornments) do a.Visible=false end end
 		if espObj.MeshShell  then espObj.MeshShell:Destroy(); espObj.MeshShell=nil; espObj.MeshHighlight=nil end
-	end
-
-	-- ── ApplyTextOutline (local helper) ────────────────────────────────────
-	local function ApplyTextOutline(label, style, color)
-		local stroke = labelStrokeMap[label] or label:FindFirstChildOfClass("UIStroke")
-		if not stroke then return end
-		if style == "None" then stroke.Enabled=false
-		else stroke.Enabled=true; stroke.Thickness=1; stroke.Color=color or Color3.fromRGB(0,0,0) end
 	end
 
 	-- ── Off-screen arrows ──────────────────────────────────────────────────
@@ -973,7 +1000,6 @@ local UpdateESPObj = LPHNoVirtualize(function(
 
 	espObj.Container.Visible = true
 	espObj.Container.ZIndex  = nonHuman and 1 or 10
-	if GetCfg("Names") then espObj.Text.Text = name end
 
 	local textOutlineStyle = GetCfg("TextOutlineStyle")
 	if GetCfg("TextOutline") == false then textOutlineStyle = "None" end
@@ -982,31 +1008,109 @@ local UpdateESPObj = LPHNoVirtualize(function(
 	local t        = GetCfg("BoxThickness")
 	local o        = GetCfg("Outlines.Thickness")
 	local textSize = GetCfg("TextSize")
-	local textColor= GetCfg("TextColor")
-	local fontName = GetCfg("Font")
-	local fontObj  = _fontMap[fontName] or Enum.Font.Code
-	local fontLoaded = ESPFonts.Loaded[fontName]
-	local boxColor = GetCfg("BoxColor")
+	local boxesEnabled   = GetCfg("Boxes")
+	local useCornerBoxes = (GetCfg("BoxType") or "Normal") == "Corner"
+	local outlineStyle   = GetCfg("Outlines.Style")
+	if GetCfg("Outlines.Enabled") == false then outlineStyle="None" end
+	local hasOutline     = outlineStyle ~= "None"
+	local fillGradient   = GetCfg("BoxFill.Gradient.Enabled")
+	local fillAnimated   = fillGradient and GetCfg("BoxFill.Gradient.Animated")
+	local hpOutlineStyle = GetCfg("HealthBar.Outline.Style")
+	if GetCfg("HealthBar.Outline.Enabled")==false then hpOutlineStyle="None" end
 
-	espObj.Text.TextSize=textSize; espObj.Text.TextColor3=textColor; espObj.Text.Font=fontObj
-	if fontLoaded then espObj.Text.FontFace=fontLoaded end
-	ApplyTextOutline(espObj.Text, textOutlineStyle, textOutlineColor)
+	-- ── Style pass ─────────────────────────────────────────────────────────
+	-- Everything in here only depends on the config (fonts, colors, outlines, gradient sequences),
+	-- so it is written once per object and again only when the config, the active override or the
+	-- loaded fonts change. Geometry, text and state are written every frame further down.
+	if espObj.StyleVersion ~= _configVersion or espObj.StyleFonts ~= _fontVersion or espObj.StyleOverride ~= configOverride then
+		espObj.StyleVersion, espObj.StyleFonts, espObj.StyleOverride = _configVersion, _fontVersion, configOverride
 
-	do
-		local distFont=GetCfg("Distance.Font"); local distFontObj=_fontMap[distFont] or Enum.Font.Code
-		espObj.DistanceText.TextSize=GetCfg("Distance.TextSize") or textSize
-		espObj.DistanceText.TextColor3=GetCfg("Distance.Color"); espObj.DistanceText.Font=distFontObj
-		if ESPFonts.Loaded[distFont] then espObj.DistanceText.FontFace=ESPFonts.Loaded[distFont] end
-		ApplyTextOutline(espObj.DistanceText, GetCfg("Distance.OutlineStyle") or textOutlineStyle, textOutlineColor)
+		local fontName   = GetCfg("Font")
+		local fontObj    = _fontMap[fontName] or Enum.Font.Code
+		local fontLoaded = ESPFonts.Loaded[fontName]
+		local nameL = espObj.Text
+		nameL.TextSize=textSize; nameL.TextColor3=GetCfg("TextColor"); nameL.Font=fontObj
+		if fontLoaded then nameL.FontFace=fontLoaded end
+		ApplyTextOutline(nameL, textOutlineStyle, textOutlineColor)
+
+		local distFont=GetCfg("Distance.Font"); local distL=espObj.DistanceText
+		distL.TextSize=GetCfg("Distance.TextSize") or textSize
+		distL.TextColor3=GetCfg("Distance.Color"); distL.Font=_fontMap[distFont] or Enum.Font.Code
+		if ESPFonts.Loaded[distFont] then distL.FontFace=ESPFonts.Loaded[distFont] end
+		ApplyTextOutline(distL, GetCfg("Distance.OutlineStyle") or textOutlineStyle, textOutlineColor)
+
+		local wepFont=GetCfg("Weapon.Font"); local wepL=espObj.WeaponText
+		wepL.TextSize=GetCfg("Weapon.TextSize") or textSize
+		wepL.TextColor3=GetCfg("Weapon.Color"); wepL.Font=_fontMap[wepFont] or Enum.Font.Code
+		if ESPFonts.Loaded[wepFont] then wepL.FontFace=ESPFonts.Loaded[wepFont] end
+		ApplyTextOutline(wepL, GetCfg("Weapon.OutlineStyle") or textOutlineStyle, textOutlineColor)
+
+		-- box lines: colors and the outline inset never change between config changes
+		local boxColor=GetCfg("BoxColor"); local outlineColor=GetCfg("Outlines.Color")
+		local outlinePos=UDim2.new(0,-o,0,-o); local outlineSize=UDim2.new(1,o*2,1,o*2)
+		for i=1,4 do
+			local l,ol=espObj.Lines[i],espObj.Outlines[i]
+			l.BackgroundColor3=boxColor; ol.BackgroundColor3=outlineColor
+			ol.Position=outlinePos; ol.Size=outlineSize; ol.BackgroundTransparency=0
+		end
+		for i=1,8 do
+			local l,ol=espObj.CornerLines[i],espObj.CornerOutlines[i]
+			l.BackgroundColor3=boxColor; ol.BackgroundColor3=outlineColor
+			ol.Position=outlinePos; ol.Size=outlineSize; ol.BackgroundTransparency=0
+		end
+
+		-- box fill: the sequences are built here; only the rotation (animated) or the size-based
+		-- alpha (plain fill) move per frame
+		local fill=espObj.BoxFill; local grad=espObj.BoxFillGradient
+		if fillGradient then
+			fill.BackgroundTransparency=0; fill.BackgroundColor3=Color3.fromRGB(255,255,255); grad.Enabled=true
+			grad.Color=ColorSequence.new({
+				ColorSequenceKeypoint.new(0,   GetCfg("BoxFill.Gradient.Color1")),
+				ColorSequenceKeypoint.new(0.5, GetCfg("BoxFill.Gradient.Color2")),
+				ColorSequenceKeypoint.new(1,   GetCfg("BoxFill.Gradient.Color3")),
+			})
+			grad.Transparency=NumberSequence.new({
+				NumberSequenceKeypoint.new(0,   GetCfg("BoxFill.Gradient.Alpha1") or 0.1),
+				NumberSequenceKeypoint.new(0.5, GetCfg("BoxFill.Gradient.Alpha2") or 0.3),
+				NumberSequenceKeypoint.new(1,   GetCfg("BoxFill.Gradient.Alpha3") or 0.5),
+			})
+			if not fillAnimated then grad.Rotation=GetCfg("BoxFill.Gradient.Rotation") or 90 end
+		else
+			grad.Enabled=false; fill.BackgroundColor3=GetCfg("BoxFill.Color")
+		end
+
+		-- health bar: outline color, gradient (used to be fixed at creation), text font / alignment
+		espObj.HealthBarOutline.BackgroundColor3=GetCfg("HealthBar.Outline.Color")
+		espObj.HealthBarOutline.BackgroundTransparency=0
+		local hg=espObj.HealthGradient
+		hg.Rotation=90; hg.Enabled=GetCfg("HealthBar.Gradient.Enabled")
+		hg.Color=ColorSequence.new({
+			ColorSequenceKeypoint.new(0,   GetCfg("HealthBar.Gradient.Color1")),
+			ColorSequenceKeypoint.new(0.5, GetCfg("HealthBar.Gradient.Color2")),
+			ColorSequenceKeypoint.new(1,   GetCfg("HealthBar.Gradient.Color3")),
+		})
+		local hpL=espObj.HealthText; local hpFont=GetCfg("HealthBar.Font")
+		hpL.TextSize=GetCfg("HealthBar.TextSize"); hpL.Font=_fontMap[hpFont] or Enum.Font.Code
+		if ESPFonts.Loaded[hpFont] then hpL.FontFace=ESPFonts.Loaded[hpFont] end
+		hpL.Size=UDim2.new(0,0,0,0)
+		local hpPos=GetCfg("HealthBar.Position")
+		hpL.TextXAlignment=(hpPos=="Top" or hpPos=="Bottom") and Enum.TextXAlignment.Center
+			or (hpPos=="Left" and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left)
+		ApplyTextOutline(hpL, hpOutlineStyle, textOutlineColor)
+
+		-- flag labels: font, size, side and outline
+		local flagFont=GetCfg("Flags.Font"); local flagFontObj=_fontMap[flagFont] or Enum.Font.Code
+		local flagFontLoaded=ESPFonts.Loaded[flagFont]; local flagTextSize=GetCfg("Flags.TextSize")
+		local flagAlign=(GetCfg("Flags.Position")=="Right") and Enum.TextXAlignment.Left or Enum.TextXAlignment.Right
+		local flagOutlineStyle=GetCfg("Flags.OutlineStyle") or textOutlineStyle
+		for _, label in ipairs(espObj.FlagLabels) do
+			label.Font=flagFontObj; if flagFontLoaded then label.FontFace=flagFontLoaded end
+			label.TextSize=flagTextSize; label.TextXAlignment=flagAlign
+			ApplyTextOutline(label, flagOutlineStyle, textOutlineColor)
+		end
 	end
-	do
-		local wepFont=GetCfg("Weapon.Font"); local wepFontObj=_fontMap[wepFont] or Enum.Font.Code
-		espObj.WeaponText.TextSize=GetCfg("Weapon.TextSize") or textSize
-		espObj.WeaponText.TextColor3=GetCfg("Weapon.Color"); espObj.WeaponText.Font=wepFontObj
-		if ESPFonts.Loaded[wepFont] then espObj.WeaponText.FontFace=ESPFonts.Loaded[wepFont] end
-		ApplyTextOutline(espObj.WeaponText, GetCfg("Weapon.OutlineStyle") or textOutlineStyle, textOutlineColor)
-	end
 
+	-- ── Geometry / state (every frame) ─────────────────────────────────────
 	local px,py = math.floor(position.X), math.floor(position.Y)
 	local sx,sy = math.floor(size.X),     math.floor(size.Y)
 	local x,y   = math.floor(px-sx/2),    math.floor(py-sy/2)
@@ -1018,7 +1122,8 @@ local UpdateESPObj = LPHNoVirtualize(function(
 	end
 
 	local topOffset,bottomOffset,leftOffset,rightOffset = 0,0,0,0
-	if GetCfg("HealthBar.Enabled") and instance:IsA("Model") and humanoid then
+	local hpEnabled = GetCfg("HealthBar.Enabled") and instance:IsA("Model") and humanoid
+	if hpEnabled then
 		local hpPos     = GetCfg("HealthBar.Position")
 		local thickness = GetCfg("HealthBar.Width")+2+GetCfg("HealthBar.SideGap")
 		local textExtra = (GetCfg("HealthBar.ShowText") and health < maxHealth) and 20 or 0
@@ -1046,15 +1151,6 @@ local UpdateESPObj = LPHNoVirtualize(function(
 	espObj.Lines[3].Position=UDim2.new(0,x,0,y);          espObj.Lines[3].Size=UDim2.new(0,t,0,sy)
 	espObj.Lines[4].Position=UDim2.new(0,x+sx,0,y);       espObj.Lines[4].Size=UDim2.new(0,t,0,sy+t)
 
-	local boxesEnabled   = GetCfg("Boxes")
-	local boxType        = GetCfg("BoxType") or "Normal"
-	local useCornerBoxes = boxType == "Corner"
-	local outlineStyle   = GetCfg("Outlines.Style")
-	if GetCfg("Outlines.Enabled") == false then outlineStyle="None" end
-	local outlineColor      = GetCfg("Outlines.Color")
-	local outlineThickness  = GetCfg("Outlines.Thickness")
-	local hasOutline        = outlineStyle ~= "None"
-
 	local _glowMinDim = math.min(sx,sy)
 	if ESPConfig.Glow and boxesEnabled and _glowMinDim >= 20 then
 		local glowPad=23; local pulse=math.sin(_now*3)*0.2
@@ -1065,56 +1161,35 @@ local UpdateESPObj = LPHNoVirtualize(function(
 	else espObj.Glow.Visible=false end
 
 	if useCornerBoxes then
+		-- written straight to the frames: no tables are built per frame any more
 		local cw=math.max(math.floor(sx*0.25),t*3); local ch=math.max(math.floor(sy*0.25),t*3)
-		local cd={{x,y,cw,t},{x,y,t,ch},{x+sx-cw+t,y,cw,t},{x+sx,y,t,ch},{x,y+sy,cw,t},{x,y+sy-ch+t,t,ch},{x+sx-cw+t,y+sy,cw,t},{x+sx,y+sy-ch+t,t,ch}}
-		for i=1,8 do
-			espObj.CornerLines[i].Position=UDim2.new(0,cd[i][1],0,cd[i][2])
-			espObj.CornerLines[i].Size=UDim2.new(0,cd[i][3],0,cd[i][4])
-		end
+		local cl=espObj.CornerLines
+		cl[1].Position=UDim2.new(0,x,0,y);                 cl[1].Size=UDim2.new(0,cw,0,t)
+		cl[2].Position=UDim2.new(0,x,0,y);                 cl[2].Size=UDim2.new(0,t,0,ch)
+		cl[3].Position=UDim2.new(0,x+sx-cw+t,0,y);         cl[3].Size=UDim2.new(0,cw,0,t)
+		cl[4].Position=UDim2.new(0,x+sx,0,y);              cl[4].Size=UDim2.new(0,t,0,ch)
+		cl[5].Position=UDim2.new(0,x,0,y+sy);              cl[5].Size=UDim2.new(0,cw,0,t)
+		cl[6].Position=UDim2.new(0,x,0,y+sy-ch+t);         cl[6].Size=UDim2.new(0,t,0,ch)
+		cl[7].Position=UDim2.new(0,x+sx-cw+t,0,y+sy);      cl[7].Size=UDim2.new(0,cw,0,t)
+		cl[8].Position=UDim2.new(0,x+sx,0,y+sy-ch+t);      cl[8].Size=UDim2.new(0,t,0,ch)
 	end
 
-	for i=1,4 do
-		espObj.Lines[i].Visible=boxesEnabled and not useCornerBoxes
-		espObj.Outlines[i].Visible=boxesEnabled and hasOutline and not useCornerBoxes
-		espObj.Outlines[i].Position=UDim2.new(0,-outlineThickness,0,-outlineThickness)
-		espObj.Outlines[i].Size=UDim2.new(1,outlineThickness*2,1,outlineThickness*2)
-		espObj.Outlines[i].BackgroundTransparency=0
-		espObj.Lines[i].BackgroundColor3=boxColor; espObj.Outlines[i].BackgroundColor3=outlineColor
-	end
-	for i=1,8 do
-		espObj.CornerLines[i].Visible=boxesEnabled and useCornerBoxes
-		espObj.CornerOutlines[i].Visible=boxesEnabled and hasOutline and useCornerBoxes
-		espObj.CornerOutlines[i].Position=UDim2.new(0,-outlineThickness,0,-outlineThickness)
-		espObj.CornerOutlines[i].Size=UDim2.new(1,outlineThickness*2,1,outlineThickness*2)
-		espObj.CornerOutlines[i].BackgroundTransparency=0
-		espObj.CornerLines[i].BackgroundColor3=boxColor; espObj.CornerOutlines[i].BackgroundColor3=outlineColor
-	end
+	local showLines=boxesEnabled and not useCornerBoxes; local showLineOutlines=showLines and hasOutline
+	for i=1,4 do espObj.Lines[i].Visible=showLines; espObj.Outlines[i].Visible=showLineOutlines end
+	local showCorners=boxesEnabled and useCornerBoxes; local showCornerOutlines=showCorners and hasOutline
+	for i=1,8 do espObj.CornerLines[i].Visible=showCorners; espObj.CornerOutlines[i].Visible=showCornerOutlines end
 
-	-- BoxFill
-	local fill=espObj.BoxFill; local grad=espObj.BoxFillGradient
+	-- BoxFill (sequences and colors come from the style pass)
+	local fill=espObj.BoxFill
 	if GetCfg("BoxFill.Enabled") and boxesEnabled then
 		fill.Visible=true; fill.Position=UDim2.new(0,x,0,y); fill.Size=UDim2.new(0,sx,0,sy)
-		if GetCfg("BoxFill.Gradient.Enabled") then
-			fill.BackgroundTransparency=0; fill.BackgroundColor3=Color3.fromRGB(255,255,255); grad.Enabled=true
-			grad.Color=ColorSequence.new({
-				ColorSequenceKeypoint.new(0,   GetCfg("BoxFill.Gradient.Color1")),
-				ColorSequenceKeypoint.new(0.5, GetCfg("BoxFill.Gradient.Color2")),
-				ColorSequenceKeypoint.new(1,   GetCfg("BoxFill.Gradient.Color3")),
-			})
-			grad.Transparency=NumberSequence.new({
-				NumberSequenceKeypoint.new(0,   GetCfg("BoxFill.Gradient.Alpha1") or 0.1),
-				NumberSequenceKeypoint.new(0.5, GetCfg("BoxFill.Gradient.Alpha2") or 0.3),
-				NumberSequenceKeypoint.new(1,   GetCfg("BoxFill.Gradient.Alpha3") or 0.5),
-			})
-			local rot=GetCfg("BoxFill.Gradient.Rotation") or 90
-			if GetCfg("BoxFill.Gradient.Animated") then
+		if fillGradient then
+			if fillAnimated then
 				local speed=GetCfg("BoxFill.Gradient.Speed")
 				local dir=(GetCfg("BoxFill.Gradient.Direction")=="Left") and -1 or 1
-				rot=(rot+(_now*speed*dir))%360
+				espObj.BoxFillGradient.Rotation=((GetCfg("BoxFill.Gradient.Rotation") or 90)+(_now*speed*dir))%360
 			end
-			grad.Rotation=rot
 		else
-			grad.Enabled=false; fill.BackgroundColor3=GetCfg("BoxFill.Color")
 			local fdc=math.clamp(1-(math.min(sx,sy)/60),0,0.45)
 			fill.BackgroundTransparency=math.max(0,GetCfg("BoxFill.Transparency")-fdc)
 		end
@@ -1144,15 +1219,18 @@ local UpdateESPObj = LPHNoVirtualize(function(
 			isFriendly = true
 		end
 		if not isFriendly and GetCfg("FriendlyIndicator.CheckFriends") then
-			local ok, result = pcall(function() return LocalPlayer:IsFriendsWith(teamOwner.UserId) end)
-			if ok and result then isFriendly=true end
+			isFriendly = IsFriend(teamOwner, _now)   -- cached per player; this used to be a web call every frame
 		end
 	end
 
 	if isFriendly then
-		local friendlyTag=string.format('<font color="%s">%s</font>',ColorToHex(GetCfg("FriendlyIndicator.Color")),GetCfg("FriendlyIndicator.Text"))
-		if GetCfg("FriendlyIndicator.Position")=="Left" then table.insert(_leftTags,friendlyTag)
-		else table.insert(_rightTags,friendlyTag) end
+		local fCol=GetCfg("FriendlyIndicator.Color"); local fTxt=GetCfg("FriendlyIndicator.Text")
+		if _friendlyTag.color ~= fCol or _friendlyTag.text ~= fTxt then
+			_friendlyTag.color, _friendlyTag.text = fCol, fTxt
+			_friendlyTag.tag = string.format('<font color="%s">%s</font>', ColorToHex(fCol), fTxt)
+		end
+		if GetCfg("FriendlyIndicator.Position")=="Left" then table.insert(_leftTags,_friendlyTag.tag)
+		else table.insert(_rightTags,_friendlyTag.tag) end
 	end
 
 	local finalNameText = name
@@ -1190,16 +1268,12 @@ local UpdateESPObj = LPHNoVirtualize(function(
 		else espObj.WeaponText.Visible=false end
 	else espObj.WeaponText.Visible=false end
 
-	-- HealthBar
-	if GetCfg("HealthBar.Enabled") and instance:IsA("Model") and humanoid then
+	-- HealthBar (fonts, outline color, gradient and alignment come from the style pass)
+	if hpEnabled then
 		local hpPos=GetCfg("HealthBar.Position"); local isHorizontal=(hpPos=="Top" or hpPos=="Bottom")
 		local hpWidth=GetCfg("HealthBar.Width"); local hpSideGap=GetCfg("HealthBar.SideGap")
 		local hpTextFollowBar=GetCfg("HealthBar.TextFollowBar")
-		local hpOutlineStyle=GetCfg("HealthBar.Outline.Style")
-		if GetCfg("HealthBar.Outline.Enabled")==false then hpOutlineStyle="None" end
 		espObj.HealthBarOutline.Visible=hpOutlineStyle ~= "None"
-		espObj.HealthBarOutline.BackgroundTransparency=0
-		espObj.HealthBarOutline.BackgroundColor3=GetCfg("HealthBar.Outline.Color")
 		local barWidth
 		if isHorizontal then
 			barWidth=math.floor((sx+1)*healthPercent)
@@ -1218,14 +1292,13 @@ local UpdateESPObj = LPHNoVirtualize(function(
 			espObj.HealthBar.Size=UDim2.new(0,hpWidth,0,sy+1); espObj.HealthBar.Position=UDim2.new(0,0,0,-(sy+1-barHeight))
 		end
 
-		local gradientEnabled=GetCfg("HealthBar.Gradient.Enabled")
 		local showText=GetCfg("HealthBar.ShowText")
 		if GetCfg("HealthBar.HideWhenFullHP") and health>=maxHealth then showText=false end
 		local followColorText=showText and GetCfg("HealthBar.FollowGradientColorText")
 		local healthColor=Color3.fromHSV(healthPercent*0.3,1,1)
 
-		if gradientEnabled and not isHorizontal then
-			espObj.HealthGradient.Rotation=90; espObj.HealthBar.BackgroundColor3=Color3.fromRGB(255,255,255)
+		if GetCfg("HealthBar.Gradient.Enabled") and not isHorizontal then
+			espObj.HealthBar.BackgroundColor3=Color3.fromRGB(255,255,255)
 			if followColorText then
 				if healthPercent>0.5 then
 					local ratio=(1-healthPercent)*2
@@ -1239,24 +1312,14 @@ local UpdateESPObj = LPHNoVirtualize(function(
 
 		if showText then
 			espObj.HealthText.Visible=true; espObj.HealthText.Text=math.floor(health)
-			espObj.HealthText.TextSize=GetCfg("HealthBar.TextSize")
-			local hpFont=GetCfg("HealthBar.Font"); local hpFontObj=_fontMap[hpFont] or Enum.Font.Code
-			espObj.HealthText.Font=hpFontObj
-			if ESPFonts.Loaded[hpFont] then espObj.HealthText.FontFace=ESPFonts.Loaded[hpFont] end
 			espObj.HealthText.TextColor3=followColorText and healthColor or GetCfg("TextColor")
-			ApplyTextOutline(espObj.HealthText, hpOutlineStyle, textOutlineColor)
-
 			if isHorizontal then
-				barWidth=math.floor((sx+1)*healthPercent)
 				local barLeftX=x+barWidth-1; local textY=espObj.HealthBarOutline.Position.Y.Offset
-				espObj.HealthText.TextXAlignment=Enum.TextXAlignment.Center; espObj.HealthText.Size=UDim2.new(0,0,0,0)
 				if hpTextFollowBar then espObj.HealthText.Position=UDim2.new(0,barLeftX,0,textY+(hpWidth/2)+1)
 				else espObj.HealthText.Position=UDim2.new(0,x+sx,0,textY+(hpWidth/2)+1) end
 			else
 				local barHeight=math.floor((sy+1)*healthPercent)
 				local barOutlineX=espObj.HealthBarOutline.Position.X.Offset; local barTopY=y+(sy+1)-barHeight
-				espObj.HealthText.TextXAlignment=hpPos=="Left" and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left
-				espObj.HealthText.Size=UDim2.new(0,0,0,0)
 				local textX=hpPos=="Left" and (barOutlineX-2) or (barOutlineX+hpWidth+4)
 				local textY=hpTextFollowBar and barTopY or y
 				espObj.HealthText.Position=UDim2.new(0,textX,0,textY)
@@ -1264,59 +1327,56 @@ local UpdateESPObj = LPHNoVirtualize(function(
 		else espObj.HealthText.Visible=false end
 	else espObj.HealthBarOutline.Visible=false; espObj.HealthText.Visible=false end
 
-	-- Flags
-	for _, label in ipairs(espObj.FlagLabels) do label.Visible=false end
-	-- extra tags from the host script (Visible / Wallbangable / Aiming at you); shown even with Flags off
-	local extraFlags=nil
+	-- Flags. The host's extra tags (Visible / Wallbang / Aiming at you) do wall checks, so they are
+	-- refreshed every ExtraFlagsRate seconds per player and reused in between, not every frame.
 	local extraFn=getgenv().HydrogenESP_ExtraFlags
 	if extraFn and instance:IsA("Model") and not nonHuman then
-		local okE, res=pcall(extraFn, instance)
-		if okE and type(res)=="table" and #res>0 then extraFlags=res end
-	end
+		if _now - (espObj.LastExtraCheck or 0) >= (ESPConfig.ExtraFlagsRate or 0.15) then
+			espObj.LastExtraCheck=_now
+			local okE, res=pcall(extraFn, instance)
+			espObj.ExtraFlags=(okE and type(res)=="table" and #res>0) and res or nil
+		end
+	else espObj.ExtraFlags=nil end
+	local extraFlags=espObj.ExtraFlags
+
+	local nFlags=0
 	local flagsOn=GetCfg("Flags.Enabled")
 	if (flagsOn or extraFlags) and instance:IsA("Model") and not noStatus and humanoid then
-		local state=humanoid:GetState()
-		local isMoving=humanoid.MoveDirection.Magnitude>0
-		local isJumping=(state==Enum.HumanoidStateType.Jumping or state==Enum.HumanoidStateType.FallingDown or state==Enum.HumanoidStateType.Freefall)
-		local isSwimming=state==Enum.HumanoidStateType.Swimming
-		local fOptMoving=GetCfg("Flags.Options.Moving"); local fOptJumping=GetCfg("Flags.Options.Jumping")
-		local fOptSwimming=GetCfg("Flags.Options.Swimming"); local fOptIdle=GetCfg("Flags.Options.Idle")
-		local fColMoving=GetCfg("Flags.Colors.Moving"); local fColJumping=GetCfg("Flags.Colors.Jumping")
-		local fColSwimming=GetCfg("Flags.Colors.Swimming"); local fColIdle=GetCfg("Flags.Colors.Idle")
-		local flagFont=GetCfg("Flags.Font"); local flagTextSize=GetCfg("Flags.TextSize")
-		local flagTextGap=GetCfg("Flags.TextGap"); local flagGap=GetCfg("Flags.Gap") or 2
-		local flagSideGap=GetCfg("Flags.SideGap"); local flagPosition=GetCfg("Flags.Position")
-		-- reuse a local flags table each call (small, so ok)
-		local flags={}
 		if flagsOn then
-			if isMoving and isJumping and fOptMoving and fOptJumping then table.insert(flags,{text="Moving & Jumping",color=fColMoving})
-			elseif isJumping and fOptJumping then table.insert(flags,{text="Jumping",color=fColJumping})
-			elseif isMoving and fOptMoving   then table.insert(flags,{text="Moving", color=fColMoving})
-			elseif isSwimming and fOptSwimming then table.insert(flags,{text="Swimming",color=fColSwimming})
-			elseif fOptIdle then table.insert(flags,{text="Idle",color=fColIdle}) end
+			local state=humanoid:GetState()
+			local isMoving=humanoid.MoveDirection.Magnitude>0
+			local isJumping=(state==Enum.HumanoidStateType.Jumping or state==Enum.HumanoidStateType.FallingDown or state==Enum.HumanoidStateType.Freefall)
+			local isSwimming=state==Enum.HumanoidStateType.Swimming
+			local text,color
+			if isMoving and isJumping and GetCfg("Flags.Options.Moving") and GetCfg("Flags.Options.Jumping") then text,color="Moving & Jumping",GetCfg("Flags.Colors.Moving")
+			elseif isJumping and GetCfg("Flags.Options.Jumping") then text,color="Jumping",GetCfg("Flags.Colors.Jumping")
+			elseif isMoving and GetCfg("Flags.Options.Moving") then text,color="Moving",GetCfg("Flags.Colors.Moving")
+			elseif isSwimming and GetCfg("Flags.Options.Swimming") then text,color="Swimming",GetCfg("Flags.Colors.Swimming")
+			elseif GetCfg("Flags.Options.Idle") then text,color="Idle",GetCfg("Flags.Colors.Idle") end
+			if text then nFlags=1; _flagText[1]=text; _flagColor[1]=color end
 		end
+		local maxFlags=#espObj.FlagLabels
 		if extraFlags then
-			for _, f in ipairs(extraFlags) do table.insert(flags, f) end
+			for _, f in ipairs(extraFlags) do
+				if nFlags>=maxFlags then break end
+				nFlags+=1; _flagText[nFlags]=f.text; _flagColor[nFlags]=f.color
+			end
 		end
-
-		local isRight=flagPosition=="Right"
-		local fx=isRight and (x+sx+flagSideGap+rightOffset) or (x-100-flagSideGap-leftOffset)
-		local fy=y-flagGap
-		if flagFont=="Smallest Pixel-7" then fy=fy-3 end
-		local flagsFontObj=_fontMap[flagFont] or Enum.Font.Code; local flagsFontLoaded=ESPFonts.Loaded[flagFont]
-		local flagOutlineStyle=GetCfg("Flags.OutlineStyle") or textOutlineStyle
-		for i, data in ipairs(flags) do
-			local label=espObj.FlagLabels[i]
-			if label then
-				label.Visible=true; label.Text=data.text; label.TextColor3=data.color
-				label.Font=flagsFontObj; if flagsFontLoaded then label.FontFace=flagsFontLoaded end
-				label.TextSize=flagTextSize
-				label.TextXAlignment=isRight and Enum.TextXAlignment.Left or Enum.TextXAlignment.Right
+		if nFlags>0 then
+			local flagTextSize=GetCfg("Flags.TextSize"); local flagTextGap=GetCfg("Flags.TextGap")
+			local flagGap=GetCfg("Flags.Gap") or 2; local flagSideGap=GetCfg("Flags.SideGap")
+			local isRight=GetCfg("Flags.Position")=="Right"
+			local fx=isRight and (x+sx+flagSideGap+rightOffset) or (x-100-flagSideGap-leftOffset)
+			local fy=y-flagGap
+			if GetCfg("Flags.Font")=="Smallest Pixel-7" then fy=fy-3 end
+			for i=1,nFlags do
+				local label=espObj.FlagLabels[i]
+				label.Visible=true; label.Text=_flagText[i]; label.TextColor3=_flagColor[i]
 				label.Position=UDim2.new(0,fx,0,fy+(i-1)*(flagTextSize+flagTextGap))
-				ApplyTextOutline(label,flagOutlineStyle,textOutlineColor)
 			end
 		end
 	end
+	for i=nFlags+1,#espObj.FlagLabels do espObj.FlagLabels[i].Visible=false end
 
 	-- Skeleton (module-level _bonePositions reused, no alloc per frame)
 	if GetCfg("Skeleton.Enabled") and instance:IsA("Model") then
