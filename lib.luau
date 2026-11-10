@@ -141,103 +141,56 @@ print(Library:GetVersion())
 
 do
 
-local function check()
-	-- makefolder / writefile return nothing on most executors, so check the result on disk instead
-	if not isfolder("Hydrogen") then
-		pcall(makefolder, "Hydrogen")
-		if not isfolder("Hydrogen") then
-			getgenv().failreason = 1
-			return false
-		end
-	end
-
-	if not isfile("Hydrogen/logo2.png") then
-		local success, data = pcall(function()
-			return game:HttpGet(Library.LogoUrl)
-		end)
-		if not success or not data then
-			getgenv().failreason = 2
-			return false
-		end
-		pcall(writefile, "Hydrogen/logo2.png", data)
-		if not isfile("Hydrogen/logo2.png") then
-			getgenv().failreason = 3
-			return false
-		end
+-- Every start-up requirement in one list: { code, what it is, test }. The code is what the crash
+-- screen shows and what support looks up, so codes are never renumbered. Executor functions are
+-- tested first so an unsupported executor fails before any network round trip; the logo is last.
+-- A test returns a truthy value when the requirement is met; an error counts as not met.
+Library.Requirements = {
+	{ 4,  "hookmetamethod",    function() return hookmetamethod end },
+	{ 5,  "hookfunction",      function() return hookfunction end },
+	{ 6,  "setreadonly",       function() return setreadonly end },
+	{ 7,  "getrawmetatable",   function() return getrawmetatable end },
+	{ 8,  "setrawmetatable",   function() return setrawmetatable end },
+	{ 9,  "debug library",     function() return debug end },
+	{ 10, "getscriptbytecode", function() return getscriptbytecode end },
+	{ 11, "game",              function() return game end },
+	{ 12, "game:HttpGet",      function() return game.HttpGet end },
+	{ 13, "game:GetObjects",   function() return game.GetObjects end },
+	{ 14, "loadstring",        function() return loadstring end },
+	{ 15, "workspace",         function() return workspace end },
+	{ 16, "Players service",   function() return game:GetService("Players") end },
+	{ 17, "firetouchinterest", function() return firetouchinterest end },
+	{ 1,  "Hydrogen folder",   function()
+		-- makefolder returns nothing on most executors, so the result is checked on disk
+		if not isfolder("Hydrogen") then pcall(makefolder, "Hydrogen") end
+		return isfolder("Hydrogen")
+	end },
+	{ 2,  "logo download",     function()
+		if isfile("Hydrogen/logo2.png") then return true end
+		local ok, data = pcall(game.HttpGet, game, Library.LogoUrl)
+		if not ok or type(data) ~= "string" or #data == 0 then return false end
+		pcall(writefile, "Hydrogen/logo2.png", data)   -- whether it saved is code 3's test
 		print("downloaded logo")
-	end
-	
-	if not hookmetamethod then
-		getgenv().failreason = 4
-		return false
-	end
-	
-	if not hookfunction then
-		getgenv().failreason = 5
-		return false
-	end
-	
-	if not setreadonly then
-		getgenv().failreason = 6
-		return false
-	end
-	
-	if not getrawmetatable then
-		getgenv().failreason = 7
-		return false
-	end
-	
-	if not setrawmetatable then
-		getgenv().failreason = 8
-		return false
-	end
-	
-	if not debug then
-		getgenv().failreason = 9
-		return false
-	end
-	
-	if not getscriptbytecode then
-		getgenv().failreason = 10
-		return false
-	end
+		return true
+	end },
+	{ 3,  "logo save",         function() return isfile("Hydrogen/logo2.png") end },
+}
 
-	if not game then
-		getgenv().failreason = 11
-		return false
-	end
-	
-	if not game.HttpGet then
-		getgenv().failreason = 12
-		return false
-	end
-	
-	if not game.GetObjects then
-		getgenv().failreason = 13
-		return false
-	end
-	
-	if not loadstring then
-		getgenv().failreason = 14
-		return false
-	end
-	
-	if not workspace then
-		getgenv().failreason = 15
-		return false
-	end
-	
-	if not game:GetService("Players") then
-		getgenv().failreason = 16
-		return false
-	end
+-- what a code means, for the crash screen: Library.FailReasonText[4] == "hookmetamethod"
+Library.FailReasonText = {}
+for _, req in ipairs(Library.Requirements) do Library.FailReasonText[req[1]] = req[2] end
 
-	if not firetouchinterest then
-		getgenv().failreason = 17
-		return false
+local function check()
+	for _, req in ipairs(Library.Requirements) do
+		local ok, met = pcall(req[3])
+		if not ok or not met then
+			getgenv().failreason = req[1]
+			getgenv().failreasontext = req[2]
+			return false
+		end
 	end
-	
 	getgenv().failreason = 0
+	getgenv().failreasontext = nil
 	return true
 end
 
